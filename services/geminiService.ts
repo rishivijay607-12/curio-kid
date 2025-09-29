@@ -1,4 +1,5 @@
 
+
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
 // --- Local Enum Definitions to Avoid Top-Level Imports ---
@@ -953,8 +954,7 @@ Maintain the persona throughout the conversation. Keep your responses concise an
 };
 
 export const live = {
-    connect: async (options: any) => {
-        const ai = await getAiInstance();
-        return ai.live.connect(options);
+    connect: (options: any) => {
+        return getAiInstance().then(ai => ai.live.connect(options));
     },
 };
