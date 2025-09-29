@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getQuizScores } from '../services/userService';
+import { getLeaderboard } from '../services/userService';
 import { QuizScore } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -16,7 +16,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
   useEffect(() => {
     const fetchScores = async () => {
       try {
-        const fetchedScores = await getQuizScores();
+        const fetchedScores = await getLeaderboard();
         setScores(fetchedScores);
       } catch (err) {
         setError("Could not load leaderboard data.");
@@ -40,7 +40,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
         <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
           Leaderboard
         </h1>
-        <p className="text-slate-400 mt-2">Top 20 Quiz Scores</p>
+        <p className="text-slate-400 mt-2">Top 20 Curious Minds</p>
       </div>
 
       <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl shadow-2xl p-6">
@@ -52,7 +52,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
           <div className="text-center py-12 text-red-400">{error}</div>
         ) : scores.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
-            No scores recorded yet. Be the first to take a quiz!
+            The leaderboard is empty. Complete a quiz to get started!
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -85,15 +85,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
             </table>
           </div>
         )}
-      </div>
-
-      <div className="text-center mt-8">
-        <button
-          onClick={onBack}
-          className="px-8 py-3 bg-slate-800 text-white font-bold rounded-lg shadow-lg hover:bg-slate-700 transition-colors"
-        >
-          &larr; Back to Home
-        </button>
       </div>
     </div>
   );

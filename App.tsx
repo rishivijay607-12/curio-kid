@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist } from './types';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
 
 // Service Imports
 import {
@@ -17,48 +17,48 @@ import {
     generateScientistGreeting,
     getHistoricalChatResponse,
 } from './services/geminiService';
-import { login, register, getCurrentUser, logout, saveQuizScore } from './services/userService';
+import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService';
 
 // Component Imports
-import GradeSelector from './components/GradeSelector';
-import TopicSelector from './components/TopicSelector';
-import DifficultySelector from './components/DifficultySelector';
-import QuestionCountSelector from './components/QuestionCountSelector';
-import TimerSelector from './components/TimerSelector';
-import Quiz from './components/Quiz';
-import ScoreScreen from './components/ScoreScreen';
-import WorksheetCountSelector from './components/WorksheetCountSelector';
-import Worksheet from './components/Worksheet';
-import Notes from './components/Notes';
-import LanguageSelector from './components/LanguageSelector';
-import DoubtSolver from './components/DoubtSolver';
-import DiagramIdeaSelector from './components/DiagramIdeaSelector';
-import DiagramGenerator from './components/DiagramGenerator';
-import GenerativeText from './components/GenerativeText';
-import ScienceLens from './components/ScienceLens';
-import ScienceFairBuddy from './components/ScienceFairBuddy';
-import ScienceFairIdeas from './components/ScienceFairIdeas';
-import ScienceFairPlan from './components/ScienceFairPlan';
-import VoiceTutor from './components/VoiceTutor';
-import ScientistSelector from './components/ScientistSelector';
-import HistoricalChat from './components/HistoricalChat';
-import LoginScreen from './components/LoginScreen';
-import RegistrationScreen from './components/RegistrationScreen';
-import Leaderboard from './components/Leaderboard';
-import ProfileScreen from './components/ProfileScreen';
-import HomeScreen from './components/HomeScreen';
+const GradeSelector = React.lazy(() => import('./components/GradeSelector'));
+const TopicSelector = React.lazy(() => import('./components/TopicSelector'));
+const DifficultySelector = React.lazy(() => import('./components/DifficultySelector'));
+const QuestionCountSelector = React.lazy(() => import('./components/QuestionCountSelector'));
+const TimerSelector = React.lazy(() => import('./components/TimerSelector'));
+const Quiz = React.lazy(() => import('./components/Quiz'));
+const ScoreScreen = React.lazy(() => import('./components/ScoreScreen'));
+const WorksheetCountSelector = React.lazy(() => import('./components/WorksheetCountSelector'));
+const Worksheet = React.lazy(() => import('./components/Worksheet'));
+const Notes = React.lazy(() => import('./components/Notes'));
+const LanguageSelector = React.lazy(() => import('./components/LanguageSelector'));
+const DoubtSolver = React.lazy(() => import('./components/DoubtSolver'));
+const DiagramIdeaSelector = React.lazy(() => import('./components/DiagramIdeaSelector'));
+const DiagramGenerator = React.lazy(() => import('./components/DiagramGenerator'));
+const GenerativeText = React.lazy(() => import('./components/GenerativeText'));
+const ScienceLens = React.lazy(() => import('./components/ScienceLens'));
+const ScienceFairBuddy = React.lazy(() => import('./components/ScienceFairBuddy'));
+const ScienceFairIdeas = React.lazy(() => import('./components/ScienceFairIdeas'));
+const ScienceFairPlan = React.lazy(() => import('./components/ScienceFairPlan'));
+const VoiceTutor = React.lazy(() => import('./components/VoiceTutor'));
+const ScientistSelector = React.lazy(() => import('./components/ScientistSelector'));
+const HistoricalChat = React.lazy(() => import('./components/HistoricalChat'));
+const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
+const RegistrationScreen = React.lazy(() => import('./components/RegistrationScreen'));
+const Leaderboard = React.lazy(() => import('./components/Leaderboard'));
+const ProfileScreen = React.lazy(() => import('./components/ProfileScreen'));
+const HomeScreen = React.lazy(() => import('./components/HomeScreen'));
+import LoadingSpinner from './components/LoadingSpinner';
+
 
 // --- Main App Component ---
 const App: React.FC = () => {
-    // Authentication State
-    const [view, setView] = useState<'login' | 'register' | 'app'>('login');
-    const [currentUser, setCurrentUser] = useState<string | null>(null);
+    // Game State
+    const [gameState, setGameState] = useState<string>('login');
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-    // App State
-    const [appMode, setAppMode] = useState<AppMode>('home');
-    const [appState, setAppState] = useState<string>('home'); // More granular state for multi-step features
-    
     // Config State
+    const [appMode, setAppMode] = useState<AppMode>('home');
     const [grade, setGrade] = useState<Grade | null>(null);
     const [topic, setTopic] = useState<string | null>(null);
     const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
@@ -71,12 +71,11 @@ const App: React.FC = () => {
     // Data & UI State
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
+    const [lastScore, setLastScore] = useState(0);
     const [worksheetQuestions, setWorksheetQuestions] = useState<QuizQuestion[]>([]);
     const [notes, setNotes] = useState<NoteSection[]>([]);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
-    const [lastScore, setLastScore] = useState(0);
     const [diagramIdeas, setDiagramIdeas] = useState<DiagramIdea[]>([]);
     const [diagrams, setDiagrams] = useState<Diagram[]>([]);
     const [isGenerationCancelled, setIsGenerationCancelled] = useState(false);
@@ -92,14 +91,14 @@ const App: React.FC = () => {
         const user = getCurrentUser();
         if (user) {
             setCurrentUser(user);
-            setView('app');
+            setGameState('home');
         }
     }, []);
 
     // --- State Resets ---
     const resetToHome = useCallback(() => {
+        setGameState('home');
         setAppMode('home');
-        setAppState('home');
         setGrade(null);
         setTopic(null);
         setDifficulty(null);
@@ -108,7 +107,6 @@ const App: React.FC = () => {
         setLanguage(null);
         setError(null);
         setIsLoading(false);
-        setQuizQuestions([]);
         setWorksheetQuestions([]);
         setNotes([]);
         setChatHistory([]);
@@ -121,50 +119,73 @@ const App: React.FC = () => {
         setSelectedScienceFairIdea(null);
         setScienceFairPlan([]);
         setSelectedScientist(null);
+        setUserProfile(null); // Clear profile data
     }, []);
 
     // --- Handlers ---
 
     // Auth
     const handleLogin = async (username: string, password: string) => {
-        await login(username, password);
-        setCurrentUser(username);
-        setView('app');
+        const user = await login(username, password);
+        setCurrentUser(user);
+        setGameState('home');
         return true;
     };
     
     const handleRegister = async (username: string, password: string) => {
-        await register(username, password);
-        await handleLogin(username, password);
+        const user = await register(username, password);
+        setCurrentUser(user);
+        setGameState('home');
         return true;
     };
     
     const handleLogout = () => {
         logout();
         setCurrentUser(null);
-        setView('login');
+        setGameState('login');
         resetToHome();
     };
 
     // Navigation
-    const handleSelectMode = (mode: AppMode) => {
-        resetToHome();
-        if (['leaderboard', 'profile', 'science_fair_buddy', 'science_lens', 'chat_with_history'].includes(mode)) {
-            setAppMode(mode);
-            setAppState(mode);
+    const handleStartFeature = (mode: AppMode) => {
+        setAppMode(mode);
+        // Direct to feature for those that don't need grade/topic
+        if (['science_lens', 'science_fair_buddy', 'what_if', 'concept_deep_dive', 'virtual_lab', 'story_weaver'].includes(mode)) {
+            setGameState('generative_text_input');
+        } else if (mode === 'chat_with_history') {
+            setGameState('HISTORICAL_SCIENTIST_SELECTION');
         } else {
-            setAppMode(mode);
-            setAppState('selecting_grade');
+             setGameState('GRADE_SELECTION');
         }
     };
     
-    // Quiz Flow
-    const handleQuizEnd = (finalScore: number) => {
-        setLastScore(finalScore);
-        if (currentUser && quizLength) {
-             saveQuizScore({ username: currentUser, score: finalScore, total: quizLength });
+    const handleShowLeaderboard = () => setGameState('LEADERBOARD');
+    const handleShowProfile = async () => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        try {
+            const profileData = await getProfile(currentUser.username);
+            setUserProfile(profileData);
+            setGameState('PROFILE_SCREEN');
+        } catch(err) {
+            setError(err instanceof Error ? err.message : 'Could not load profile.');
+        } finally {
+            setIsLoading(false);
         }
-        setAppState('quiz_score');
+    };
+
+    // Quiz Flow
+    const handleQuizEnd = async (finalScore: number, totalQuestions: number) => {
+        setLastScore(finalScore);
+        if (currentUser && totalQuestions) {
+            try {
+                await addQuizScore(currentUser.username, finalScore, totalQuestions);
+            } catch (err) {
+                console.error("Failed to save score or update profile:", err);
+                setError("There was an issue saving your score.");
+            }
+        }
+        setGameState('SCORE_SCREEN');
     };
     
     // Worksheet Flow
@@ -175,7 +196,7 @@ const App: React.FC = () => {
         try {
             const questions = await generateWorksheet(topic, grade, difficulty, count, setGenerationProgress);
             setWorksheetQuestions(questions);
-            setAppState('worksheet_display');
+            setGameState('WORKSHEET_DISPLAY');
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -192,7 +213,7 @@ const App: React.FC = () => {
         try {
             const notesData = await generateNotes(selectedTopic, grade);
             setNotes(notesData);
-            setAppState('notes_display');
+            setGameState('NOTES_DISPLAY');
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -209,8 +230,10 @@ const App: React.FC = () => {
         setError(null);
         try {
             const greeting = await generateGreeting(grade, selectedLanguage, selectedTopic);
-            setChatHistory([{ role: 'model', parts: [{ text: greeting }] }]);
-            setAppState('doubt_solver_chat');
+            // FIX: Explicitly type the new chat message object to conform to ChatMessage type.
+            const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
+            setChatHistory([greetingMessage]);
+            setGameState('DOUBT_SOLVER_SESSION');
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -220,13 +243,16 @@ const App: React.FC = () => {
     
     const handleSendMessage = async (message: string) => {
         if (!grade || !topic || !language) return;
-        const newHistory = [...chatHistory, { role: 'user', parts: [{ text: message }] }];
+        // FIX: Explicitly type the new history array to prevent type widening.
+        const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', parts: [{ text: message }] }];
         setChatHistory(newHistory);
         setIsLoading(true);
         setError(null);
         try {
             const response = await getChatResponse(grade, newHistory, language, topic);
-            setChatHistory(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
+            // FIX: Explicitly create a ChatMessage object before adding it to state to prevent type widening.
+            const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
+            setChatHistory(prev => [...prev, modelMessage]);
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -236,11 +262,13 @@ const App: React.FC = () => {
     
     const handleScientistSelect = async (scientist: Scientist) => {
         setSelectedScientist(scientist);
-        setAppState('historical_chat_active');
+        setGameState('HISTORICAL_CHAT_SESSION');
         setIsLoading(true);
         try {
             const greeting = await generateScientistGreeting(scientist);
-            setChatHistory([{ role: 'model', parts: [{ text: greeting }] }]);
+            // FIX: Explicitly type the new chat message object to conform to ChatMessage type.
+            const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
+            setChatHistory([greetingMessage]);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to get a greeting.');
         } finally {
@@ -256,7 +284,9 @@ const App: React.FC = () => {
         setError(null);
         try {
             const response = await getHistoricalChatResponse(selectedScientist, newHistory);
-            setChatHistory(prev => [...prev, { role: 'model', parts: [{ text: response }] }]);
+            // FIX: Explicitly create a ChatMessage object before adding it to state.
+            const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
+            setChatHistory(prev => [...prev, modelMessage]);
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -274,7 +304,7 @@ const App: React.FC = () => {
         try {
             const ideas = await generateDiagramIdeas(selectedTopic, grade);
             setDiagramIdeas(ideas);
-            setAppState('diagram_idea_selection');
+            setGameState('DIAGRAM_IDEA_SELECTION');
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -283,7 +313,7 @@ const App: React.FC = () => {
     };
 
     const handleGenerateDiagrams = async (selectedIdeas: DiagramIdea[]) => {
-        setAppState('diagram_display');
+        setGameState('DIAGRAM_DISPLAY');
         setIsLoading(true);
         setIsGenerationCancelled(false);
         setGenerationProgress({ current: 0, total: selectedIdeas.length });
@@ -359,7 +389,7 @@ const App: React.FC = () => {
         try {
             const ideas = await generateScienceFairIdeas(userInput);
             setScienceFairIdeas(ideas);
-            setAppState('science_fair_ideas');
+            setGameState('SCIENCE_FAIR_IDEAS');
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
@@ -369,11 +399,11 @@ const App: React.FC = () => {
 
     const handleSelectScienceFairIdea = async (idea: ScienceFairIdea) => {
         setSelectedScienceFairIdea(idea);
-        setAppState('science_fair_plan');
+        setGameState('SCIENCE_FAIR_PLAN');
         setIsLoading(true);
         try {
             const plan = await generateScienceFairPlan(idea.title, idea.description, (progress) => {
-                // Could update UI with progress messages here if needed
+                 setGenerationProgress({current: progress.current, total: progress.total});
             });
             setScienceFairPlan(plan);
         } catch (err) {
@@ -385,89 +415,100 @@ const App: React.FC = () => {
 
     // --- Render Logic ---
     const renderContent = () => {
-        if (view === 'login') return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setView('register')} />;
-        if (view === 'register') return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setView('login')} />;
+        switch (gameState) {
+            case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
+            case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
+            case 'home': return <HomeScreen onStartFeature={handleStartFeature} username={currentUser?.username ?? null} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} />;
+            case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
+            case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
 
-        if (appState === 'home') return <HomeScreen onSelectMode={handleSelectMode} username={currentUser} onNavigateToProfile={() => handleSelectMode('profile')} onNavigateToLeaderboard={() => handleSelectMode('leaderboard')} />;
+            // FIX: Add missing required props: isSolverSetup, isLoading, and error.
+            case 'GRADE_SELECTION': return <GradeSelector 
+                onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
+                appMode={appMode} 
+                isSolverSetup={['doubt_solver', 'voice_tutor'].includes(appMode)}
+                isLoading={isLoading}
+                error={error}
+            />;
+            case 'TOPIC_SELECTION': return <TopicSelector onTopicSelect={(t) => {
+                setTopic(t);
+                if (appMode === 'notes') handleNotesTopicSelect(t);
+                else if (appMode === 'diagram') handleDiagramTopicSelect(t);
+                else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
+                else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
+                else setGameState('DIFFICULTY_SELECTION');
+            }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} />;
+            
+            case 'DIFFICULTY_SELECTION': return <DifficultySelector onDifficultySelect={d => { setDifficulty(d); setGameState('COUNT_SELECTION'); }} />;
+            
+            case 'COUNT_SELECTION':
+                if (appMode === 'quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); setGameState('TIMER_SELECTION'); }} />;
+                if (appMode === 'worksheet') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} generationProgress={generationProgress} />;
+                return null;
+            
+            case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setGameState('QUIZ_RUNNING'); }} />;
+            case 'QUIZ_RUNNING': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={(score) => handleQuizEnd(score, quizLength!)} />;
+            case 'SCORE_SCREEN': return <ScoreScreen score={lastScore} onRestart={() => setGameState('DIFFICULTY_SELECTION')} quizLength={quizLength!} />;
+            
+            case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('DIFFICULTY_SELECTION')} grade={grade!} topic={topic!} />;
+            case 'NOTES_DISPLAY': return <Notes notes={notes} onRestart={resetToHome} grade={grade!} topic={topic!} />;
+           
+            case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={lang => {
+                setLanguage(lang);
+                if(appMode === 'doubt_solver') handleStartChat(topic!, lang);
+                else setGameState('VOICE_TUTOR_SESSION');
+            }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} />;
 
-        if (appMode === 'profile' && currentUser) return <ProfileScreen username={currentUser} onLogout={handleLogout} onNavigateToLeaderboard={() => handleSelectMode('leaderboard')} />;
-        if (appMode === 'leaderboard') return <Leaderboard onBack={resetToHome} currentUser={currentUser} />;
+            case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
+            
+            case 'DIAGRAM_IDEA_SELECTION': return <DiagramIdeaSelector ideas={diagramIdeas} onGenerate={handleGenerateDiagrams} />;
+            case 'DIAGRAM_DISPLAY': return <DiagramGenerator diagrams={diagrams} isGenerating={isLoading} grade={grade!} topic={topic!} onRestart={resetToHome} onCancelGeneration={() => setIsGenerationCancelled(true)} generationProgress={generationProgress} onRegenerate={handleRegenerateDiagram} regeneratingId={regeneratingId} />;
+            
+            case 'generative_text_input': return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerateText} isLoading={isLoading} result={generativeTextResult} error={error} />;
+            
+            case 'science_lens': return <ScienceLens onGenerate={handleScienceLensGenerate} isLoading={isLoading} result={scienceLensResult} error={error} />;
+           
+            case 'science_fair_buddy': return <ScienceFairBuddy onGenerate={handleScienceFairIdeasGenerate} isLoading={isLoading} error={error} />;
+            case 'SCIENCE_FAIR_IDEAS': return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={userScienceFairTopic} />;
+            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} plan={scienceFairPlan} />;
 
-        if (appState === 'selecting_grade') return <GradeSelector onGradeSelect={grade => { setGrade(grade); setAppState('selecting_topic'); }} appMode={appMode} isSolverSetup={appMode === 'doubt_solver'} isLoading={isLoading} error={error} />;
-        if (appState === 'selecting_topic') return <TopicSelector onTopicSelect={(t) => {
-            setTopic(t);
-            if (appMode === 'notes') handleNotesTopicSelect(t);
-            else if (appMode === 'diagram') handleDiagramTopicSelect(t);
-            else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setAppState('selecting_language');
-            else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setAppState('generative_text_input');
-            else setAppState('selecting_difficulty');
-        }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} isSolverSetup={appMode === 'doubt_solver'} />;
+            case 'VOICE_TUTOR_SESSION': return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
 
-        if (appMode === 'quiz') {
-            if (appState === 'selecting_difficulty') return <DifficultySelector onDifficultySelect={d => { setDifficulty(d); setAppState('selecting_count'); }} />;
-            if (appState === 'selecting_count') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); setAppState('selecting_timer'); }} />;
-            if (appState === 'selecting_timer') return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setAppState('quiz_running'); }} />;
-            if (appState === 'quiz_running' && topic && grade && difficulty && quizLength !== null && timerDuration !== null) {
-                return <Quiz topic={topic} grade={grade} difficulty={difficulty} quizLength={quizLength} timerDuration={timerDuration} onQuizEnd={handleQuizEnd} />;
-            }
-            if (appState === 'quiz_score') return <ScoreScreen score={lastScore} onRestart={() => setAppState('selecting_difficulty')} quizLength={quizLength!} />;
-        }
-        
-        if (appMode === 'worksheet') {
-             if (appState === 'selecting_difficulty') return <DifficultySelector onDifficultySelect={d => { setDifficulty(d); setAppState('selecting_count'); }} />;
-             if (appState === 'selecting_count') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} generationProgress={generationProgress} />;
-             if (appState === 'worksheet_display') return <Worksheet questions={worksheetQuestions} onRestart={() => setAppState('selecting_difficulty')} grade={grade!} topic={topic!} />;
-        }
+            case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
+            case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
 
-        if (appMode === 'notes' && appState === 'notes_display') return <Notes notes={notes} onRestart={resetToHome} grade={grade!} topic={topic!} />;
-        
-        if (appMode === 'doubt_solver') {
-            if (appState === 'selecting_language') return <LanguageSelector onLanguageSelect={lang => handleStartChat(topic!, lang)} title="AI Doubt Solver" grade={grade!} topic={topic!} />;
-            if (appState === 'doubt_solver_chat') return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
+            default: return <p className="text-center">Oops! Something went wrong. <button onClick={resetToHome} className="text-cyan-400 underline">Go Home</button></p>;
         }
-        
-        if (appMode === 'diagram') {
-            if (appState === 'diagram_idea_selection') return <DiagramIdeaSelector ideas={diagramIdeas} onGenerate={handleGenerateDiagrams} />;
-            if (appState === 'diagram_display') return <DiagramGenerator diagrams={diagrams} isGenerating={isLoading} grade={grade!} topic={topic!} onRestart={resetToHome} onCancelGeneration={() => setIsGenerationCancelled(true)} generationProgress={generationProgress} onRegenerate={handleRegenerateDiagram} regeneratingId={regeneratingId} />;
-        }
-        
-        if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) {
-            return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerateText} isLoading={isLoading} result={generativeTextResult} error={error} />;
-        }
-
-        if (appMode === 'science_lens') return <ScienceLens onGenerate={handleScienceLensGenerate} isLoading={isLoading} result={scienceLensResult} error={error} />;
-       
-        if (appMode === 'science_fair_buddy') {
-            if (appState === 'science_fair_buddy') return <ScienceFairBuddy onGenerate={handleScienceFairIdeasGenerate} isLoading={isLoading} error={error} />;
-            if (appState === 'science_fair_ideas') return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={userScienceFairTopic} />;
-            if (appState === 'science_fair_plan') return <ScienceFairPlan idea={selectedScienceFairIdea!} plan={scienceFairPlan} />;
-        }
-        
-        if (appMode === 'voice_tutor') {
-            if (appState === 'selecting_language') return <LanguageSelector onLanguageSelect={lang => { setLanguage(lang); setAppState('voice_tutor_active');}} title="Live Voice Tutor" grade={grade!} topic={topic!} />;
-            if (appState === 'voice_tutor_active') return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
-        }
-
-        if (appMode === 'chat_with_history') {
-            if (appState === 'chat_with_history') return <ScientistSelector onScientistSelect={handleScientistSelect} />;
-            if (appState === 'historical_chat_active') return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
-        }
-
-        return <p className="text-center">Oops! Something went wrong. <button onClick={resetToHome} className="text-cyan-400 underline">Go Home</button></p>;
     };
+    
+    const showHeader = gameState !== 'login' && gameState !== 'register';
 
     return (
-        <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex items-center justify-center p-4 relative">
-            <div className="absolute inset-0 bg-grid-slate-800/[0.2] [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
-            <div className="relative z-10 w-full">
-                {renderContent()}
-                {appState !== 'home' && view === 'app' &&
-                    <button onClick={resetToHome} className="fixed top-4 left-4 px-4 py-2 bg-slate-800 text-slate-300 font-semibold rounded-lg shadow-lg hover:bg-slate-700 transition-colors z-20">
-                        &larr; Home
-                    </button>
-                }
+        <React.Suspense fallback={
+            <div className="w-full h-screen flex flex-col items-center justify-center">
+                <LoadingSpinner />
+                <p className="mt-4 text-slate-300">Loading App...</p>
             </div>
-        </main>
+        }>
+            <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">
+                <div className="absolute inset-0 bg-grid-slate-800/[0.2] [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
+                
+                {showHeader && (
+                    <header className="w-full max-w-screen-2xl mx-auto flex justify-between items-center p-4 sticky top-0 z-50">
+                        <button onClick={resetToHome} aria-label="Home" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                        </button>
+                         <button onClick={handleLogout} aria-label="Logout" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </button>
+                    </header>
+                )}
+
+                <div className="relative z-10 w-full flex-grow flex items-center justify-center">
+                    {renderContent()}
+                </div>
+            </main>
+        </React.Suspense>
     );
 };
 

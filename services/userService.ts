@@ -1,128 +1,149 @@
-import type { QuizScore, UserStats } from '../types';
+import type { QuizScore, User, UserProfile } from '../types';
 
 const USERS_KEY = 'curiosity_users';
+const PROFILES_KEY = 'curiosity_profiles';
 const SCORES_KEY = 'curiosity_scores';
 const CURRENT_USER_KEY = 'curiosity_current_user';
 
-// Helper to get users from localStorage
-const getUsers = (): Record<string, string> => {
+// --- Helper Functions ---
+const getFromStorage = <T>(key: string, defaultValue: T): T => {
   try {
-    const users = localStorage.getItem(USERS_KEY);
-    return users ? JSON.parse(users) : {};
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
   } catch (e) {
-    return {};
+    console.error(`Failed to parse ${key} from localStorage`, e);
+    return defaultValue;
   }
 };
 
-// Helper to save users to localStorage
-const saveUsers = (users: Record<string, string>) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const saveToStorage = (key: string, value: any) => {
+  localStorage.setItem(key, JSON.stringify(value));
 };
 
-export const register = async (username: string, password: string): Promise<boolean> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const users = getUsers();
-      if (users[username]) {
-        reject(new Error("Username already exists."));
-        return;
-      }
-      users[username] = password; // In a real app, hash the password!
-      saveUsers(users);
-      resolve(true);
-    }, 500);
-  });
+// --- Profile Management ---
+const createProfile = async (username: string): Promise<UserProfile> => {
+    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+    if (profiles[username]) {
+        return profiles[username]; // Profile already exists
+    }
+    const newProfile: UserProfile = {
+        quizzesCompleted: 0,
+        totalScore: 0,
+        currentStreak: 0,
+        lastQuizDate: null,
+    };
+    profiles[username] = newProfile;
+    saveToStorage(PROFILES_KEY, profiles);
+    return newProfile;
+}
+
+export const getProfile = async (username: string): Promise<UserProfile> => {
+    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+    if (!profiles[username]) {
+        return createProfile(username);
+    }
+    return profiles[username];
+}
+
+export const updateProfile = async (username: string, updatedProfile: UserProfile): Promise<UserProfile> => {
+    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+    profiles[username] = updatedProfile;
+    saveToStorage(PROFILES_KEY, profiles);
+    return updatedProfile;
+}
+
+// --- Auth Management ---
+export const register = async (username: string, password: string): Promise<User> => {
+  const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+  if (users[username]) {
+    throw new Error("Username already exists.");
+  }
+  users[username] = password; // In a real app, hash the password!
+  saveToStorage(USERS_KEY, users);
+  await createProfile(username);
+  return { username };
 };
 
-export const login = async (username: string, password: string): Promise<boolean> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const users = getUsers();
-      if (!users[username] || users[username] !== password) {
-        reject(new Error("Invalid username or password."));
-        return;
-      }
-      localStorage.setItem(CURRENT_USER_KEY, username);
-      resolve(true);
-    }, 500);
-  });
+export const login = async (username: string, password: string): Promise<User> => {
+  const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+  if (!users[username] || users[username] !== password) {
+    throw new Error("Invalid username or password.");
+  }
+  saveToStorage(CURRENT_USER_KEY, { username });
+  return { username };
 };
 
 export const logout = (): void => {
   localStorage.removeItem(CURRENT_USER_KEY);
 };
 
-export const getCurrentUser = (): string | null => {
-  return localStorage.getItem(CURRENT_USER_KEY);
+export const getCurrentUser = (): User | null => {
+  return getFromStorage<User | null>(CURRENT_USER_KEY, null);
 };
 
-export const getQuizScores = async (): Promise<QuizScore[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      try {
-        const scores = localStorage.getItem(SCORES_KEY);
-        const parsedScores: QuizScore[] = scores ? JSON.parse(scores) : [];
-        // Sort scores by percentage desc, then score desc
-        parsedScores.sort((a, b) => {
-          if (b.percentage !== a.percentage) {
-            return b.percentage - a.percentage;
-          }
-          return b.score - a.score;
-        });
-        resolve(parsedScores.slice(0, 20)); // Return top 20
-      } catch (e) {
-        resolve([]);
-      }
-    }, 300);
-  });
-};
 
-export const saveQuizScore = async (score: Omit<QuizScore, 'date' | 'percentage'>): Promise<void> => {
-  return new Promise((resolve) => {
-    let parsedScores: QuizScore[] = [];
-    try {
-        const scores = localStorage.getItem(SCORES_KEY);
-        parsedScores = scores ? JSON.parse(scores) : [];
-    } catch(e) {
-        parsedScores = [];
-    }
+// --- Leaderboard/Score Management ---
+export const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
+    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
     
     const newScore: QuizScore = {
-      ...score,
+      username,
+      score,
+      total,
       date: new Date().toISOString(),
-      percentage: score.total > 0 ? Math.round((score.score / score.total) * 100) : 0,
+      percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
 
-    parsedScores.push(newScore);
-    localStorage.setItem(SCORES_KEY, JSON.stringify(parsedScores));
-    resolve();
-  });
+    // Keep only the user's best score
+    const userScores = scores.filter(s => s.username === username);
+    const otherScores = scores.filter(s => s.username !== username);
+    
+    if (userScores.length > 0) {
+        const bestScore = userScores.reduce((best, current) => current.percentage > best.percentage ? current : best);
+        if (newScore.percentage > bestScore.percentage) {
+            saveToStorage(SCORES_KEY, [...otherScores, newScore]);
+        }
+    } else {
+         scores.push(newScore);
+         saveToStorage(SCORES_KEY, scores);
+    }
+
+    // Update user profile stats
+    const profile = await getProfile(username);
+    profile.quizzesCompleted += 1;
+    profile.totalScore += score;
+    
+    // Streak logic
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
+    if(lastQuizDay) {
+        lastQuizDay.setHours(0, 0, 0, 0);
+    }
+   
+    if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        if (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) {
+            profile.currentStreak += 1;
+        } else {
+            profile.currentStreak = 1;
+        }
+        profile.lastQuizDate = today.toISOString();
+    }
+    
+    await updateProfile(username, profile);
 };
 
-
-export const getUserStats = async (username: string): Promise<UserStats> => {
-    return new Promise((resolve) => {
-        let parsedScores: QuizScore[] = [];
-        try {
-            const scores = localStorage.getItem(SCORES_KEY);
-            parsedScores = scores ? JSON.parse(scores) : [];
-        } catch (e) {
-            parsedScores = [];
-        }
-        
-        const userScores = parsedScores.filter(s => s.username === username);
-
-        const quizzesTaken = userScores.length;
-        const totalPercentage = userScores.reduce((acc, s) => acc + s.percentage, 0);
-        const averageScore = quizzesTaken > 0 ? Math.round(totalPercentage / quizzesTaken) : 0;
-        
-        // This is a mock value for now
-        const worksheetsCompleted = userScores.filter(s => s.total > 10).length;
-
-        resolve({
-            quizzesTaken,
-            averageScore,
-            worksheetsCompleted,
-        });
+export const getLeaderboard = async (): Promise<QuizScore[]> => {
+    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
+    // Sort scores by percentage desc, then score desc
+    scores.sort((a, b) => {
+      if (b.percentage !== a.percentage) {
+        return b.percentage - a.percentage;
+      }
+      return b.score - a.score;
     });
+    return scores.slice(0, 20); // Return top 20
 };

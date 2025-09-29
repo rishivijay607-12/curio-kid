@@ -100,8 +100,13 @@ export interface QuizScore {
     date: string; // ISO date string
 }
 
-export interface UserStats {
-  quizzesTaken: number;
-  averageScore: number;
-  worksheetsCompleted: number;
+export interface User {
+    username: string;
+}
+
+export interface UserProfile {
+    quizzesCompleted: number;
+    totalScore: number;
+    currentStreak: number;
+    lastQuizDate: string | null; // ISO date string
 }
