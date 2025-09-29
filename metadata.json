@@ -1,5 +1,5 @@
 {
-  "name": "Copy of curio kid",
+  "name": "curio kid",
   "description": "An interactive science quiz for Grades 6-10. AI generates an endless stream of questions, turning the school science curriculum into an exciting adventure.",
   "requestFramePermissions": [
     "microphone"
