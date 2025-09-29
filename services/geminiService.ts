@@ -1,10 +1,9 @@
 
 
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
-// --- Local Enum Definitions to Avoid Top-Level Imports ---
-// This is the key fix to prevent the app from crashing on startup.
-
+// --- Type Definitions for Schemas ---
 const Type = {
     OBJECT: 'OBJECT',
     ARRAY: 'ARRAY',
@@ -14,26 +13,22 @@ const Type = {
     BOOLEAN: 'BOOLEAN',
 } as const;
 
-let aiPromise: Promise<any> | null = null;
+// --- Singleton AI Instance ---
+let ai: any;
 
-function getAiInstance(): Promise<any> {
-    if (!aiPromise) {
-        aiPromise = (async () => {
-            const { GoogleGenAI } = await import('@google/genai');
-            const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
-
-            if (!apiKey) {
-                throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
-            }
-            return new GoogleGenAI({ apiKey });
-        })();
+function getAiInstance() {
+    if (!ai) {
+        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+        if (!apiKey) {
+            throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
+        }
+        ai = new GoogleGenAI({ apiKey });
     }
-    return aiPromise;
+    return ai;
 }
 
-// Fix: Asynchronously load enums and create safety settings to avoid top-level imports and type errors.
-async function getSafetySettings() {
-    const { HarmCategory, HarmBlockThreshold } = await import("@google/genai");
+// --- Safety Settings (now synchronous) ---
+function getSafetySettings() {
     return [
       {
         category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -46,9 +41,7 @@ async function getSafetySettings() {
     ];
 }
 
-
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
 
 const questionSchema = {
     type: Type.OBJECT,
@@ -115,7 +108,7 @@ export const generateQuizQuestions = async (
     count: number,
     onProgress: (progress: { current: number; total: number }) => void
 ): Promise<QuizQuestion[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     const questions: QuizQuestion[] = [];
     const BATCH_SIZE = 5; // Generate questions in batches for speed
@@ -212,7 +205,7 @@ export const generateWorksheet = async (
     count: number,
     onProgress: (progress: { current: number, total: number }) => void
 ): Promise<QuizQuestion[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     onProgress({ current: 0, total: count });
     
@@ -334,7 +327,7 @@ For every question, you must provide a brief, easy-to-understand explanation for
 };
 
 export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSection[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -398,7 +391,7 @@ The language used should be clear, simple, and easy for a Grade ${grade} student
 };
 
 export const generateGreeting = async (grade: Grade, language: Language, topic: string): Promise<string> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -461,7 +454,7 @@ Keep it to one or two sentences. For example: "Hello! I'm Curio, your science tu
 };
 
 export const getChatResponse = async (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -504,7 +497,7 @@ ${langInstruction}
 8.  **Stay on Topic:** Stick to science topics related to the chapter "${topic}". If asked something else, gently guide them back.`;
             
             const contents = history;
-            const safetySettings = await getSafetySettings();
+            const safetySettings = getSafetySettings();
 
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
@@ -579,7 +572,7 @@ const diagramIdeasSchema = {
 };
 
 export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -640,7 +633,7 @@ Generate exactly 8 diagram ideas.`;
 };
 
 export const generateDiagramImage = async (prompt: string): Promise<string> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
     
@@ -693,7 +686,7 @@ export const generateTextForMode = async (
     grade?: Grade,
     topic?: string
 ): Promise<GenerativeTextResult> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = false;
@@ -745,7 +738,7 @@ export const generateTextForMode = async (
 };
 
 export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     try {
         const imagePart = {
             inlineData: {
@@ -787,7 +780,7 @@ const scienceFairIdeasSchema = {
 };
 
 export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const prompt = `You are a helpful and creative science fair assistant. The student is interested in the following topics: "${userInput}".
 Brainstorm 3 unique and engaging science fair project ideas based on their interests.
 For each idea, provide a unique, catchy 'title' and a detailed 'description' (3-4 sentences) explaining the project, what the student will investigate, and why it's a good project.`;
@@ -838,7 +831,7 @@ export const generateScienceFairPlan = async (
     projectDescription: string,
     onProgress: (progress: { current: number; total: number; message: string }) => void
 ): Promise<ScienceFairPlanStep[]> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     onProgress({ current: 0, total: 5, message: "Generating project plan text..." });
 
     // 1. Generate the text for all 5 steps first
@@ -894,7 +887,7 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
 
 
 const chatWithRetry = async (config: any): Promise<string> => {
-    const ai = await getAiInstance();
+    const ai = getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -943,7 +936,7 @@ You must consistently act and speak as this person, in the first person ("I").
 Answer the user's questions from their historical perspective, knowledge, and personality.
 Maintain the persona throughout the conversation. Keep your responses concise and engaging for a student.`;
 
-    const safetySettings = await getSafetySettings();
+    const safetySettings = getSafetySettings();
 
     const response = await chatWithRetry({
         model: "gemini-2.5-flash",
@@ -955,6 +948,11 @@ Maintain the persona throughout the conversation. Keep your responses concise an
 
 export const live = {
     connect: (options: any) => {
-        return getAiInstance().then(ai => ai.live.connect(options));
+        try {
+            const ai = getAiInstance();
+            return ai.live.connect(options);
+        } catch (error) {
+            return Promise.reject(error);
+        }
     },
 };

@@ -240,8 +240,10 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                         },
                         onerror: (e: ErrorEvent) => {
                             console.error('Session error:', e);
-                            setError('An error occurred with the connection.');
-                            setStatus('error');
+                            if (!isCancelled) {
+                                setError('An error occurred with the connection.');
+                                setStatus('error');
+                            }
                         },
                         onclose: () => {
                              if (!isCancelled) {
@@ -250,6 +252,15 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                         },
                     },
                 });
+
+                sessionPromiseRef.current.catch((err: unknown) => {
+                    if (isCancelled) return;
+                    const message = err instanceof Error ? err.message : 'An unknown connection error occurred.';
+                    console.error("Live session connection promise rejected:", err);
+                    setError(`Failed to connect. Please check your network and browser permissions. Details: ${message}`);
+                    setStatus('error');
+                });
+
 
             } catch (err) {
                 if (isCancelled) return;
