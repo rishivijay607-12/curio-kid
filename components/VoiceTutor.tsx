@@ -64,6 +64,30 @@ function createBlob(data: Float32Array): Blob {
   };
 }
 
+// --- Speaking Indicator Icon ---
+const SpeakingIndicatorIcon = ({ isSpeaking }: { isSpeaking: boolean }) => {
+    return (
+        <div className="relative">
+            <svg className="h-48 w-48 text-slate-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                {/* Face and Eyes */}
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+                {/* Mouth */}
+                {isSpeaking ? (
+                    <ellipse cx="10" cy="14.5" rx="3" ry="1.5" className="animate-pulse" />
+                ) : (
+                    <path d="M 7 13.5 Q 10 15.5 13 13.5" stroke="currentColor" strokeWidth="1" fill="none" strokeLinecap="round" />
+                )}
+            </svg>
+            {isSpeaking && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="h-56 w-56 border-4 border-cyan-400 rounded-full animate-pulse"></div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 // --- Component ---
 
 interface VoiceTutorProps {
@@ -271,27 +295,16 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
 
     }, [grade, topic, language]);
     
-    const SmileyIcon = () => (
-        <div className="relative">
-             <svg className="h-48 w-48 text-slate-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a.5.5 0 01.707 0 5 5 0 01-7.474 0 .5.5 0 01.707-.707 4 4 0 006.06 0 .5.5 0 01.707.707z" clipRule="evenodd" />
-            </svg>
-            {status === 'speaking' && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="h-56 w-56 border-4 border-cyan-400 rounded-full animate-pulse"></div>
-                </div>
-            )}
-        </div>
-    );
     
     const renderStatus = () => {
+        const isSpeaking = status === 'speaking';
         switch(status) {
             case 'connecting':
                 return <><LoadingSpinner /> <p className="mt-4">Connecting to AI Tutor...</p></>;
             case 'listening':
-                return <><SmileyIcon /><p className="mt-4 text-xl">I'm listening...</p></>;
+                return <><SpeakingIndicatorIcon isSpeaking={isSpeaking} /><p className="mt-4 text-xl">I'm listening...</p></>;
             case 'speaking':
-                return <><SmileyIcon /><p className="mt-4 text-xl">AI is speaking...</p></>;
+                return <><SpeakingIndicatorIcon isSpeaking={isSpeaking} /><p className="mt-4 text-xl">AI is speaking...</p></>;
             case 'error':
                  return (
                     <div className="text-center">
