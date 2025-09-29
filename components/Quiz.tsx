@@ -25,7 +25,8 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: quizLength });
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   
-  const timerIdRef = useRef<NodeJS.Timeout | null>(null);
+  // Fix: Replaced `NodeJS.Timeout` with `ReturnType<typeof setInterval>` for browser compatibility.
+  const timerIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerIdRef.current) {

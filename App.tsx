@@ -7,6 +7,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import { generateWorksheet, generateNotes, getChatResponse, generateGreeting, generateDiagramIdeas, generateDiagramImage } from './services/geminiService';
 
 // Lazy-loaded components for code-splitting
+const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
 const GradeSelector = React.lazy(() => import('./components/GradeSelector'));
 const LanguageSelector = React.lazy(() => import('./components/LanguageSelector'));
 const TopicSelector = React.lazy(() => import('./components/TopicSelector'));
@@ -43,7 +44,7 @@ const SuspenseLoader: React.FC = () => (
 
 
 const App: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>(GameState.HOME_SCREEN);
+  const [gameState, setGameState] = useState<GameState>(GameState.LOGIN_SCREEN);
   const [appMode, setAppMode] = useState<AppMode>('quiz');
   const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
@@ -292,7 +293,7 @@ const App: React.FC = () => {
   };
 
   const handleRestart = () => {
-    setGameState(GameState.HOME_SCREEN);
+    setGameState(GameState.LOGIN_SCREEN);
     setAppMode('quiz');
     setSelectedGrade(null);
     setSelectedTopic('');
@@ -314,6 +315,8 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (gameState) {
+      case GameState.LOGIN_SCREEN:
+        return <LoginScreen onLoginSuccess={() => setGameState(GameState.HOME_SCREEN)} />;
       case GameState.PLAYING:
         if (!selectedGrade || !selectedTopic || !selectedDifficulty) {
             handleRestart();
@@ -415,7 +418,7 @@ const App: React.FC = () => {
 
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white font-sans relative">
-      {gameState !== GameState.HOME_SCREEN && <HomeButton onClick={handleGoHome} />}
+      {gameState !== GameState.HOME_SCREEN && gameState !== GameState.LOGIN_SCREEN && <HomeButton onClick={handleGoHome} />}
       <div className="w-full">
         <Suspense fallback={<SuspenseLoader />}>
           {renderContent()}

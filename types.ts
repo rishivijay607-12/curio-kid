@@ -33,6 +33,7 @@ export interface Diagram {
 }
 
 export enum GameState {
+  LOGIN_SCREEN,
   HOME_SCREEN,
   GRADE_SELECTION,
   LANGUAGE_SELECTION,
