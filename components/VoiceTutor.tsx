@@ -108,7 +108,26 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 const outputNode = outputAudioContextRef.current.createGain();
                 outputNode.connect(outputAudioContextRef.current.destination);
                 
-                let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". Engage the student in a spoken conversation. Ask questions, explain concepts clearly, and guide them through the topic.`;
+                let langInstruction = "Engage the student in a spoken conversation in clear and simple English.";
+                switch (language) {
+                    case 'English+Tamil':
+                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Tamil (Tanglish).";
+                        break;
+                    case 'English+Malayalam':
+                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Malayalam (Manglish).";
+                        break;
+                    case 'English+Hindi':
+                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Hindi (Hinglish).";
+                        break;
+                    case 'English+Telugu':
+                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Telugu (Tenglish).";
+                        break;
+                    case 'English+Kannada':
+                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Kannada (Kanglish).";
+                        break;
+                }
+
+                let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
                 
                 sessionPromiseRef.current = ai.live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -135,6 +154,20 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                         },
                         onmessage: async (message: LiveServerMessage) => {
                              if (isCancelled || !outputAudioContextRef.current) return;
+                             
+                             const interrupted = message.serverContent?.interrupted;
+                             if (interrupted) {
+                                 for (const source of audioQueueRef.current) {
+                                     source.stop();
+                                 }
+                                 audioQueueRef.current = [];
+                                 nextStartTimeRef.current = 0;
+                                 if (!isCancelled) {
+                                     setStatus('listening');
+                                 }
+                                 return;
+                             }
+
                              const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
                              if (base64Audio) {
                                  setStatus('speaking');

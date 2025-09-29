@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult } from '../types';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -291,7 +291,7 @@ For every question, you must provide a brief, easy-to-understand explanation for
             }
         }
         if (lastError) {
-            console.error(`Failed to generate questions for type ${type} after retries. Continuing with other types.`, lastError);
+            console.error(`Failed to generate questions for type ${type} after retries.`, lastError);
         }
     }
 
@@ -677,9 +677,6 @@ export const generateTextForMode = async (
         case 'story_weaver':
             systemInstruction += `\nYou are a creative storyteller. Your task is to weave a short, fun, and educational story based on the science concept the student provides. The story should be engaging${grade ? ` for a Grade ${grade} student` : ''} and accurately explain the science concept within the narrative.`;
             break;
-        case 'science_fair_buddy':
-            systemInstruction += "\nYou are a helpful and creative science fair assistant. The student needs help with a project idea. Brainstorm 3 unique and creative science fair project ideas based on their query. For each idea, provide a project title, a brief description, and a list of materials needed.";
-            break;
         case 'what_if':
             systemInstruction += "\nYou are a creative and scientific thinker. Your task is to answer the student's hypothetical 'What if...?' questions. Provide a scientifically plausible, yet imaginative and engaging explanation.";
             break;
@@ -727,4 +724,127 @@ export const explainImageWithText = async (base64Image: string, mimeType: string
         console.error("Error in explainImageWithText:", error);
         throw new Error("Failed to analyze the image. Please try another image or prompt.");
     }
+};
+
+const scienceFairIdeasSchema = {
+    type: Type.OBJECT,
+    properties: {
+        ideas: {
+            type: Type.ARRAY,
+            description: "An array of exactly 3 science fair project ideas.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    title: { type: Type.STRING, description: "A catchy and descriptive title for the project." },
+                    description: { type: Type.STRING, description: "A detailed, 3-4 sentence paragraph describing the project, its goals, and why it's interesting." }
+                },
+                required: ['title', 'description']
+            }
+        }
+    },
+    required: ['ideas'],
+};
+
+export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
+    const prompt = `You are a helpful and creative science fair assistant. The student is interested in the following topics: "${userInput}".
+Brainstorm 3 unique and engaging science fair project ideas based on their interests.
+For each idea, provide a unique, catchy 'title' and a detailed 'description' (3-4 sentences) explaining the project, what the student will investigate, and why it's a good project.`;
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: scienceFairIdeasSchema,
+            },
+        });
+        const jsonText = response.text.trim();
+        const parsed = JSON.parse(jsonText);
+        if (!parsed.ideas || !Array.isArray(parsed.ideas)) {
+            throw new Error("API returned malformed data for science fair ideas.");
+        }
+        return parsed.ideas;
+    } catch (error) {
+        console.error("Error generating science fair ideas:", error);
+        throw new Error("Failed to brainstorm project ideas. Please try again.");
+    }
+};
+
+
+const scienceFairPlanSchema = {
+    type: Type.OBJECT,
+    properties: {
+        plan: {
+            type: Type.ARRAY,
+            description: "An array of exactly 5 steps for the science fair project plan.",
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    stepTitle: { type: Type.STRING, description: "The title for this step (e.g., 'Step 1: Research and Hypothesis')." },
+                    instructions: { type: Type.STRING, description: "Detailed, paragraph-form instructions for this step, including materials needed, procedure, and what to document. Written clearly for a student." }
+                },
+                required: ['stepTitle', 'instructions']
+            }
+        }
+    },
+    required: ['plan'],
+};
+
+export const generateScienceFairPlan = async (
+    projectTitle: string,
+    projectDescription: string,
+    onProgress: (progress: { current: number; total: number; message: string }) => void
+): Promise<ScienceFairPlanStep[]> => {
+    onProgress({ current: 0, total: 5, message: "Generating project plan text..." });
+
+    // 1. Generate the text for all 5 steps first
+    const textPlanPrompt = `You are an expert science fair mentor. A student has chosen the project:
+Title: "${projectTitle}"
+Description: "${projectDescription}"
+Create a detailed, 5-step plan to guide the student through this project. For each of the 5 steps, provide a 'stepTitle' and detailed 'instructions'. The instructions should be a paragraph covering what to do, materials needed, and how to document the work. The language must be clear and encouraging for a middle or high school student.`;
+
+    let textSteps: { stepTitle: string; instructions: string }[] = [];
+    try {
+        const textResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: textPlanPrompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: scienceFairPlanSchema,
+            },
+        });
+        const jsonText = textResponse.text.trim();
+        const parsed = JSON.parse(jsonText);
+        if (!parsed.plan || !Array.isArray(parsed.plan) || parsed.plan.length !== 5) {
+            throw new Error("API returned a malformed project plan.");
+        }
+        textSteps = parsed.plan;
+    } catch (error) {
+        console.error("Error generating science fair plan text:", error);
+        throw new Error("Failed to generate the project plan steps. Please try again.");
+    }
+
+    // 2. Generate an image for each step
+    const finalPlan: ScienceFairPlanStep[] = [];
+    for (let i = 0; i < textSteps.length; i++) {
+        const step = textSteps[i];
+        onProgress({ current: i, total: 5, message: `Generating visual for step ${i + 1}/5...` });
+        
+        try {
+            const imagePrompt = `Photorealistic image of a student diligently working on a science fair project. The current step is "${step.stepTitle}". The scene should visually represent the instructions: "${step.instructions.substring(0, 200)}...". The setting is a well-lit home study area or a school lab. The tone is focused and inspiring.`;
+            const imageBytes = await generateDiagramImage(imagePrompt);
+            finalPlan.push({
+                ...step,
+                image: `data:image/png;base64,${imageBytes}`
+            });
+        } catch(imgError) {
+             console.error(`Failed to generate image for step ${i+1}. Using a placeholder.`, imgError);
+             // In a real app, you might have a generic placeholder image base64 string
+             finalPlan.push({ ...step, image: '' });
+        }
+    }
+    
+    onProgress({ current: 5, total: 5, message: "Plan generated successfully!" });
+    return finalPlan;
 };

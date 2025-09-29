@@ -1,9 +1,9 @@
-import React, { useState, useRef, Suspense } from 'react';
+import React, { useState, useRef, Suspense, useEffect } from 'react';
 import { GameState } from './types';
-import type { Grade, Difficulty, AppMode, QuizQuestion, ChatMessage, Language, NoteSection, Diagram, DiagramIdea, GenerativeTextResult } from './types';
+import type { Grade, Difficulty, AppMode, QuizQuestion, ChatMessage, Language, NoteSection, Diagram, DiagramIdea, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep } from './types';
 import HomeScreen from './components/HomeScreen';
 import LoadingSpinner from './components/LoadingSpinner';
-import { generateWorksheet, generateNotes, getChatResponse, generateGreeting, generateDiagramIdeas, generateDiagramImage, generateTextForMode, explainImageWithText } from './services/geminiService';
+import { generateWorksheet, generateNotes, getChatResponse, generateGreeting, generateDiagramIdeas, generateDiagramImage, generateTextForMode, explainImageWithText, generateScienceFairIdeas, generateScienceFairPlan } from './services/geminiService';
 
 // Lazy-loaded components for code-splitting
 const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
@@ -24,6 +24,9 @@ const DiagramGenerator = React.lazy(() => import('./components/DiagramGenerator'
 const GenerativeText = React.lazy(() => import('./components/GenerativeText'));
 const ScienceLens = React.lazy(() => import('./components/ScienceLens'));
 const VoiceTutor = React.lazy(() => import('./components/VoiceTutor'));
+const ScienceFairBuddy = React.lazy(() => import('./components/ScienceFairBuddy'));
+const ScienceFairIdeas = React.lazy(() => import('./components/ScienceFairIdeas'));
+const ScienceFairPlan = React.lazy(() => import('./components/ScienceFairPlan'));
 
 
 const HomeButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
@@ -50,9 +53,10 @@ const LogoutButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   </button>
 );
 
-const SuspenseLoader: React.FC = () => (
-  <div className="flex justify-center items-center py-20">
+const SuspenseLoader: React.FC<{ message?: string }> = ({ message }) => (
+  <div className="flex flex-col justify-center items-center py-20">
     <LoadingSpinner />
+    {message && <p className="text-slate-300 mt-4 text-lg">{message}</p>}
   </div>
 );
 
@@ -77,10 +81,14 @@ const App: React.FC = () => {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [generativeTextResult, setGenerativeTextResult] = useState<GenerativeTextResult | null>(null);
   const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
+  const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
+  const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
+  const [scienceFairPlan, setScienceFairPlan] = useState<ScienceFairPlanStep[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generationCancelledRef = useRef(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
+  const [generationProgressMessage, setGenerationProgressMessage] = useState('');
 
   // --- Navigation and Mode Setting ---
   const startFeature = (mode: AppMode) => {
@@ -102,6 +110,15 @@ const App: React.FC = () => {
       setScienceLensResult(null);
       setError(null);
       setGameState(GameState.SCIENCE_LENS_INPUT);
+  };
+  
+  const handleStartScienceFairBuddy = () => {
+      setAppMode('science_fair_buddy');
+      setScienceFairIdeas([]);
+      setSelectedScienceFairIdea(null);
+      setScienceFairPlan(null);
+      setError(null);
+      setGameState(GameState.SCIENCE_FAIR_IDEAS_INPUT);
   };
 
   const handleStartGenerativeFeature = (mode: AppMode) => {
@@ -156,6 +173,9 @@ const App: React.FC = () => {
     setChatHistory([]);
     setGenerativeTextResult(null);
     setScienceLensResult(null);
+    setScienceFairIdeas([]);
+    setSelectedScienceFairIdea(null);
+    setScienceFairPlan(null);
     setError(null);
     setIsGenerating(false);
   };
@@ -194,7 +214,6 @@ const App: React.FC = () => {
             case 'real_world_links':
             case 'chat_with_history':
             case 'story_weaver':
-            case 'science_fair_buddy':
             case 'what_if':
                 setGenerativeTextResult(null);
                 setGameState(GameState.GENERATIVE_TEXT_INPUT);
@@ -374,6 +393,50 @@ const App: React.FC = () => {
           setIsGenerating(false);
       }
   };
+  
+  const handleGenerateScienceFairIdeas = async (userInput: string) => {
+      setIsGenerating(true);
+      setError(null);
+      try {
+          const ideas = await generateScienceFairIdeas(userInput);
+          setScienceFairIdeas(ideas);
+          setGameState(GameState.SCIENCE_FAIR_IDEAS_RESULT);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      } finally {
+          setIsGenerating(false);
+      }
+  };
+  
+  const handleSelectScienceFairIdea = (idea: ScienceFairIdea) => {
+    setSelectedScienceFairIdea(idea);
+    setScienceFairPlan(null);
+    setError(null);
+    setGameState(GameState.SCIENCE_FAIR_PLAN_RESULT); // This state will show the loading screen
+  };
+
+  useEffect(() => {
+    if (gameState === GameState.SCIENCE_FAIR_PLAN_RESULT && !scienceFairPlan && selectedScienceFairIdea) {
+        const generatePlan = async () => {
+            setIsGenerating(true);
+            setError(null);
+            try {
+                const plan = await generateScienceFairPlan(
+                    selectedScienceFairIdea.title,
+                    selectedScienceFairIdea.description,
+                    (progress) => setGenerationProgressMessage(progress.message)
+                );
+                setScienceFairPlan(plan);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+            } finally {
+                setIsGenerating(false);
+                setGenerationProgressMessage('');
+            }
+        };
+        generatePlan();
+    }
+  }, [gameState, scienceFairPlan, selectedScienceFairIdea]);
 
   const handleCancelGeneration = () => {
     generationCancelledRef.current = true;
@@ -509,6 +572,19 @@ const App: React.FC = () => {
                     isLoading={isGenerating}
                     error={error}
                 />;
+      case GameState.SCIENCE_FAIR_IDEAS_INPUT:
+        return <ScienceFairBuddy onGenerate={handleGenerateScienceFairIdeas} isLoading={isGenerating} error={error} />;
+      case GameState.SCIENCE_FAIR_IDEAS_RESULT:
+        return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={selectedScienceFairIdea?.title || ''} />;
+      case GameState.SCIENCE_FAIR_PLAN_RESULT:
+         if (isGenerating || !scienceFairPlan) {
+            return <SuspenseLoader message={generationProgressMessage} />;
+         }
+         if (error) {
+            // Handle error state properly
+         }
+        if (!selectedScienceFairIdea) { handleGoHome(); return null; }
+        return <ScienceFairPlan idea={selectedScienceFairIdea} plan={scienceFairPlan} />;
       case GameState.HOME_SCREEN:
       default:
         return <HomeScreen 
@@ -521,11 +597,11 @@ const App: React.FC = () => {
             onStartVoiceTutor={handleStartVoiceTutor}
             onStartScienceLens={handleStartScienceLens}
             onStartConceptDeepDive={() => handleStartGenerativeFeature('concept_deep_dive')}
-            onStartVirtualLab={() => startFeature('virtual_lab')}
+            onStartVirtualLab={() => handleStartGenerativeFeature('virtual_lab')}
             onStartRealWorldLinks={() => startFeature('real_world_links')}
             onStartChatWithHistory={() => handleStartGenerativeFeature('chat_with_history')}
-            onStartStoryWeaver={() => startFeature('story_weaver')}
-            onStartScienceFairBuddy={() => handleStartGenerativeFeature('science_fair_buddy')}
+            onStartStoryWeaver={() => handleStartGenerativeFeature('story_weaver')}
+            onStartScienceFairBuddy={handleStartScienceFairBuddy}
             onStartWhatIf={() => handleStartGenerativeFeature('what_if')}
          />;
     }

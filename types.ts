@@ -44,6 +44,17 @@ export interface GenerativeTextResult {
     sources?: GroundingChunk[];
 }
 
+export interface ScienceFairIdea {
+    title: string;
+    description: string;
+}
+
+export interface ScienceFairPlanStep {
+    stepTitle: string;
+    instructions: string;
+    image: string; // base64 encoded image
+}
+
 
 export enum GameState {
   LOGIN_SCREEN,
@@ -66,6 +77,9 @@ export enum GameState {
   SCIENCE_LENS_INPUT,
   VOICE_TUTOR_LANGUAGE_SELECTION,
   VOICE_TUTOR_SESSION,
+  SCIENCE_FAIR_IDEAS_INPUT,
+  SCIENCE_FAIR_IDEAS_RESULT,
+  SCIENCE_FAIR_PLAN_RESULT,
 }
 
 export type AppMode = 

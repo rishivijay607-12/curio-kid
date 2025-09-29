@@ -12,47 +12,48 @@ interface GenerativeTextProps {
     error: string | null;
 }
 
-const featureDetails: { [key in AppMode]?: { title: string; description: string, placeholder: string } } = {
+const featureDetails: { [key in AppMode]?: { title: string; description: string, placeholder: string, resultTitle: string } } = {
     'concept_deep_dive': {
         title: 'Concept Deep Dive',
         description: 'Go beyond the textbook. Ask about a concept for an in-depth explanation.',
-        placeholder: 'e.g., What is Newton\'s third law of motion?'
+        placeholder: 'e.g., What is Newton\'s third law of motion?',
+        resultTitle: 'In-Depth Explanation'
     },
     'virtual_lab': {
         title: 'Virtual Lab',
         description: 'Get step-by-step instructions for a science experiment.',
-        placeholder: 'e.g., How to make a simple electric circuit?'
+        placeholder: 'e.g., How to make a simple electric circuit?',
+        resultTitle: 'Virtual Lab Procedure'
     },
     'real_world_links': {
         title: 'Real World Links',
         description: 'See how science applies to everyday life around you.',
-        placeholder: 'e.g., How does refraction work in eyeglasses?'
+        placeholder: 'e.g., How does refraction work in eyeglasses?',
+        resultTitle: 'Real World Connections'
     },
     'chat_with_history': {
         title: 'Chat with History',
         description: "Talk to a simulation of one of science's greatest minds.",
-        placeholder: 'e.g., Ask Marie Curie about radioactivity.'
+        placeholder: 'e.g., Ask Marie Curie about radioactivity.',
+        resultTitle: 'A Message from the Past'
     },
     'story_weaver': {
         title: 'AI Story Weaver',
         description: 'Turn any science concept into a fun, educational story.',
-        placeholder: 'e.g., A story about photosynthesis from the perspective of a leaf.'
-    },
-    'science_fair_buddy': {
-        title: 'Science Fair Buddy',
-        description: 'Get help with brainstorming project ideas and planning your experiment.',
-        placeholder: 'e.g., I need a science fair project idea about electricity.'
+        placeholder: 'e.g., A story about photosynthesis from the perspective of a leaf.',
+        resultTitle: 'Your AI-Crafted Story'
     },
     'what_if': {
         title: "'What If?' Scenarios",
         description: 'Explore wild hypothetical questions with creative, scientific answers.',
-        placeholder: 'e.g., What if humans could photosynthesize?'
+        placeholder: 'e.g., What if humans could photosynthesize?',
+        resultTitle: 'Hypothetical Scenario'
     },
 };
 
 const GenerativeText: React.FC<GenerativeTextProps> = ({ appMode, grade, topic, onGenerate, isLoading, result, error }) => {
     const [userInput, setUserInput] = useState('');
-    const details = featureDetails[appMode] || { title: 'AI Tool', description: 'Ask the AI a question.', placeholder: 'Type your question...' };
+    const details = featureDetails[appMode] || { title: 'AI Tool', description: 'Ask the AI a question.', placeholder: 'Type your question...', resultTitle: 'AI Response' };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -108,7 +109,7 @@ const GenerativeText: React.FC<GenerativeTextProps> = ({ appMode, grade, topic, 
                 )}
                 {result && (
                     <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-lg animate-fade-in">
-                        <h3 className="font-semibold text-lg text-cyan-400 mb-2">AI Response</h3>
+                        <h3 className="font-semibold text-lg text-cyan-400 mb-2">{details.resultTitle}</h3>
                         <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{result.text}</p>
                         
                         {result.sources && result.sources.length > 0 && (
