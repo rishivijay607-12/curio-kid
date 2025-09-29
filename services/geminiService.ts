@@ -2,7 +2,7 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/gen
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
 // --- Singleton AI Instance ---
-// FIX: Removed the explicit check for `process.env.API_KEY`. This check was causing a `ReferenceError: process is not defined` in the browser, leading to a blank screen. The coding guidelines require assuming the variable is present in the execution context, so the check was both redundant and causing a fatal crash.
+// FIX: Corrected API key access to use `process.env.API_KEY` as per guidelines. This resolves the TypeScript error with `import.meta.env`.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 

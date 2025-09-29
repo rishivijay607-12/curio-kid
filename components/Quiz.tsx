@@ -9,7 +9,7 @@ interface QuizProps {
   difficulty: Difficulty;
   quizLength: number;
   timerDuration: number;
-  onQuizEnd: (finalScore: number, skipsUsed: number) => void;
+  onQuizEnd: (finalScore: number, totalQuestions: number) => void;
 }
 
 const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timerDuration, onQuizEnd }) => {
@@ -21,11 +21,9 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [skipsRemaining, setSkipsRemaining] = useState(Math.floor(quizLength / 5));
-  const [skipsUsed, setSkipsUsed] = useState(0);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: quizLength });
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   
-  // Fix: Replaced `NodeJS.Timeout` with `ReturnType<typeof setInterval>` for browser compatibility.
   const timerIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearTimer = useCallback(() => {
@@ -38,14 +36,14 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   const goToNextQuestion = useCallback(() => {
     clearTimer();
     if (currentQuestionIndex >= questions.length - 1) {
-      onQuizEnd(score, skipsUsed);
+      onQuizEnd(score, questions.length);
       return;
     }
     
     setCurrentQuestionIndex(prev => prev + 1);
     setSelectedAnswer(null);
     setIsAnswered(false);
-  }, [clearTimer, currentQuestionIndex, questions.length, onQuizEnd, score, skipsUsed]);
+  }, [clearTimer, currentQuestionIndex, questions.length, onQuizEnd, score]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -114,7 +112,6 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
     
     clearTimer();
     setSkipsRemaining(prev => prev - 1);
-    setSkipsUsed(prev => prev + 1);
     goToNextQuestion();
   };
   

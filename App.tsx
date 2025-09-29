@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
 
@@ -452,7 +451,7 @@ const App: React.FC = () => {
                 return null;
             
             case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setGameState('QUIZ_RUNNING'); }} />;
-            case 'QUIZ_RUNNING': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={(score) => handleQuizEnd(score, quizLength!)} />;
+            case 'QUIZ_RUNNING': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={handleQuizEnd} />;
             case 'SCORE_SCREEN': return <ScoreScreen score={lastScore} onRestart={() => setGameState('DIFFICULTY_SELECTION')} quizLength={quizLength!} />;
             
             case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('DIFFICULTY_SELECTION')} grade={grade!} topic={topic!} />;
