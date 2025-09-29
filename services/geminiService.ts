@@ -1,29 +1,18 @@
-
-
-
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
-
-// --- Type Definitions for Schemas ---
-const Type = {
-    OBJECT: 'OBJECT',
-    ARRAY: 'ARRAY',
-    STRING: 'STRING',
-    NUMBER: 'NUMBER',
-    INTEGER: 'INTEGER',
-    BOOLEAN: 'BOOLEAN',
-} as const;
 
 // --- Singleton AI Instance ---
 let ai: any;
 
 function getAiInstance() {
     if (!ai) {
-        const apiKey = process.env.API_KEY;
-        if (!apiKey) {
+        // Directly check and use process.env.API_KEY.
+        // This avoids an intermediate variable and might help with some build tool's
+        // environment variable replacement strategies.
+        if (!process.env.API_KEY) {
             throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
         }
-        ai = new GoogleGenAI({ apiKey });
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
     return ai;
 }
