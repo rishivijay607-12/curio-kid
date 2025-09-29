@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface TimerSelectorProps {
@@ -15,7 +14,7 @@ const AtomIcon: React.FC = () => (
 const TimerButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
   <button
     onClick={onClick}
-    className="w-full text-center px-6 py-5 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-lg hover:bg-slate-700 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
+    className="w-full text-center px-6 py-5 bg-slate-900 border-2 border-slate-800 rounded-xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
   >
     <span className="text-2xl font-bold text-slate-100">{label}</span>
   </button>

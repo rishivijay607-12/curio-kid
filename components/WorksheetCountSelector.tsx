@@ -1,4 +1,3 @@
-
 import React from 'react';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -20,7 +19,7 @@ const CountButton: React.FC<{ count: number; onClick: (count: number) => void, d
   <button
     onClick={() => onClick(count)}
     disabled={disabled}
-    className="w-full text-center px-6 py-5 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-lg hover:bg-slate-700 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+    className="w-full text-center px-6 py-5 bg-slate-900 border-2 border-slate-800 rounded-xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
   >
     <span className="text-2xl font-bold text-slate-100">{count}</span>
     <span className="text-lg text-slate-300"> Questions</span>
@@ -47,7 +46,7 @@ const WorksheetCountSelector: React.FC<WorksheetCountSelectorProps> = ({ onCount
       </div>
       
       {isGenerating ? (
-        <div className="flex flex-col items-center justify-center p-8 bg-slate-800/50 rounded-xl min-h-[150px]">
+        <div className="flex flex-col items-center justify-center p-8 bg-slate-900/50 rounded-xl min-h-[150px]">
             <LoadingSpinner />
             <p className="text-slate-300 mt-4 text-lg">Generating your worksheet...</p>
             {generationProgress.total > 0 && (
@@ -56,7 +55,7 @@ const WorksheetCountSelector: React.FC<WorksheetCountSelectorProps> = ({ onCount
                         <span>Progress</span>
                         <span>{generationProgress.current} / {generationProgress.total}</span>
                     </div>
-                    <div className="w-full bg-slate-700 rounded-full h-2.5">
+                    <div className="w-full bg-slate-800 rounded-full h-2.5">
                         <div className="bg-cyan-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
                     </div>
                 </div>

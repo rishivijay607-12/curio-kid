@@ -130,15 +130,15 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto flex flex-col h-[85vh] bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+        <div className="w-full max-w-3xl mx-auto flex flex-col h-[85vh] bg-slate-900 rounded-xl shadow-2xl border border-slate-800">
             {/* Header */}
-            <div className="p-4 border-b border-slate-700 text-center">
+            <div className="p-4 border-b border-slate-800 text-center">
                 <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
                     AI Doubt Solver
                 </h1>
                 <p className="text-slate-400 text-sm mt-1 truncate px-4">
                     <span>Grade {grade}</span>
-                    <span className="mx-2 text-slate-500">&bull;</span>
+                    <span className="mx-2 text-slate-600">&bull;</span>
                     <span className="font-semibold">{topic}</span>
                 </p>
             </div>
@@ -149,7 +149,7 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
                     {history.map((msg, index) => (
                         <div key={index} className={`flex gap-4 items-start ${msg.role === 'user' ? 'justify-end' : ''}`}>
                              {msg.role === 'model' && <ModelIcon />}
-                            <div className={`max-w-md p-4 rounded-xl ${msg.role === 'user' ? 'bg-slate-700 text-slate-100 rounded-br-none' : 'bg-slate-900/50 text-slate-300 rounded-bl-none'}`}>
+                            <div className={`max-w-md p-4 rounded-xl ${msg.role === 'user' ? 'bg-slate-800 text-slate-100 rounded-br-none' : 'bg-slate-950/50 text-slate-300 rounded-bl-none'}`}>
                                 <p className="whitespace-pre-wrap">{msg.parts[0].text}</p>
                             </div>
                              {msg.role === 'user' && <UserIcon />}
@@ -158,7 +158,7 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
                     {isLoading && (
                         <div className="flex gap-4 items-start">
                              <ModelIcon />
-                            <div className="max-w-md p-4 rounded-xl bg-slate-900/50 text-slate-300 rounded-bl-none flex items-center gap-4">
+                            <div className="max-w-md p-4 rounded-xl bg-slate-950/50 text-slate-300 rounded-bl-none flex items-center gap-4">
                                <div className="flex items-center space-x-2">
                                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
                                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse delay-75"></div>
@@ -166,7 +166,7 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
                                </div>
                                <button
                                  onClick={onCancelGeneration}
-                                 className="px-3 py-1 text-sm bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600 transition-colors"
+                                 className="px-3 py-1 text-sm bg-slate-800 text-slate-300 rounded-md hover:bg-slate-700 transition-colors"
                                >
                                  Stop Generating
                                </button>
@@ -184,7 +184,7 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
             </div>
 
             {/* Input Form */}
-            <div className="p-4 border-t border-slate-700">
+            <div className="p-4 border-t border-slate-800">
                 <form onSubmit={handleSubmit} className="flex items-center gap-2">
                     <textarea
                         value={input}
@@ -197,14 +197,14 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
                         }}
                         placeholder={isListening ? "Listening..." : "Ask a science question..."}
                         rows={1}
-                        className="flex-grow bg-slate-700 text-slate-100 p-3 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-shadow disabled:opacity-50"
+                        className="flex-grow bg-slate-800 text-slate-100 p-3 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-shadow disabled:opacity-50"
                         disabled={isLoading}
                     />
                     {isSpeechSupported && (
                         <button
                             type="button"
                             onClick={handleMicClick}
-                            className={`p-3 rounded-lg shadow-lg transition-colors disabled:opacity-50 ${isListening ? 'bg-red-600 hover:bg-red-500 animate-pulse' : 'bg-slate-600 hover:bg-slate-500'}`}
+                            className={`p-3 rounded-lg shadow-lg transition-colors disabled:opacity-50 ${isListening ? 'bg-red-600 hover:bg-red-500 animate-pulse' : 'bg-slate-700 hover:bg-slate-600'}`}
                             disabled={isLoading}
                             aria-label={isListening ? 'Stop listening' : 'Start listening'}
                         >
@@ -216,7 +216,7 @@ const DoubtSolver: React.FC<DoubtSolverProps> = ({ grade, topic, history, onSend
                     <button 
                         type="submit" 
                         disabled={isLoading || !input.trim()}
-                        className="p-3 bg-cyan-600 text-white rounded-lg shadow-lg hover:bg-cyan-500 transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+                        className="p-3 bg-cyan-600 text-white rounded-lg shadow-lg hover:bg-cyan-500 transition-colors disabled:bg-slate-700 disabled:cursor-not-allowed"
                         aria-label="Send message"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

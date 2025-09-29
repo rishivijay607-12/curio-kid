@@ -11,7 +11,7 @@ interface LanguageSelectorProps {
 const LanguageButton: React.FC<{ language: Language, label: string, onClick: (lang: Language) => void }> = ({ language, label, onClick }) => (
   <button
     onClick={() => onClick(language)}
-    className="w-full text-center px-6 py-5 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-lg hover:bg-slate-700 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
+    className="w-full text-center px-6 py-5 bg-slate-900 border-2 border-slate-800 rounded-xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
   >
     <span className="text-xl font-bold text-slate-100">{label}</span>
   </button>
@@ -36,8 +36,8 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ onLanguageSelect, t
         </h1>
         {grade && topic && (
             <div className="mt-4 flex justify-center items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 text-sm font-semibold text-slate-200 bg-slate-700 rounded-full">Grade {grade}</span>
-                <span className="px-3 py-1 text-sm font-semibold text-slate-200 bg-slate-700 rounded-full max-w-xs truncate">{topic}</span>
+                <span className="px-3 py-1 text-sm font-semibold text-slate-200 bg-slate-800 rounded-full">{`Grade ${grade}`}</span>
+                <span className="px-3 py-1 text-sm font-semibold text-slate-200 bg-slate-800 rounded-full max-w-xs truncate">{topic}</span>
             </div>
         )}
       </div>

@@ -63,9 +63,9 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
     };
     
     return (
-         <div className="w-full max-w-3xl mx-auto p-6 md:p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+         <div className="w-full max-w-3xl mx-auto p-6 md:p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800">
             {/* Header */}
-            <div className="text-center border-b border-slate-700 pb-4 mb-6">
+            <div className="text-center border-b border-slate-800 pb-4 mb-6">
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
                     Science Lens
                 </h1>
@@ -76,7 +76,7 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
                 {/* Image Upload Area */}
                 <div className="flex flex-col items-center">
                     <div 
-                        className="w-full aspect-square bg-slate-900/50 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-center p-4 cursor-pointer hover:border-cyan-500 transition-colors"
+                        className="w-full aspect-square bg-slate-950/50 border-2 border-dashed border-slate-700 rounded-lg flex items-center justify-center text-center p-4 cursor-pointer hover:border-cyan-500 transition-colors"
                         onClick={() => fileInputRef.current?.click()}
                     >
                         {imagePreview ? (
@@ -102,13 +102,13 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="Ask a question about the image... e.g., 'What is happening in this picture?' or 'Explain the physics of this.'"
                         rows={5}
-                        className="w-full bg-slate-900/50 text-slate-100 p-3 rounded-lg resize-y border border-slate-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-shadow disabled:opacity-50"
+                        className="w-full bg-slate-950/50 text-slate-100 p-3 rounded-lg resize-y border border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-shadow disabled:opacity-50"
                         disabled={isLoading}
                     />
                     <button
                         type="submit"
                         disabled={isLoading || !prompt.trim() || !imageFile}
-                        className="mt-4 w-full px-8 py-3 bg-cyan-600 text-white font-bold rounded-lg shadow-lg hover:bg-cyan-500 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:bg-slate-600 disabled:cursor-not-allowed"
+                        className="mt-4 w-full px-8 py-3 bg-cyan-600 text-white font-bold rounded-lg shadow-lg hover:bg-cyan-500 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 disabled:bg-slate-700 disabled:cursor-not-allowed"
                     >
                         {isLoading ? 'Analyzing...' : 'Analyze Image'}
                     </button>
@@ -129,7 +129,7 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
                     </div>
                 )}
                 {result && (
-                     <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg animate-fade-in">
+                     <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-lg animate-fade-in">
                         <h3 className="font-semibold text-lg text-cyan-400 mb-2">AI Analysis</h3>
                         <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{result}</p>
                     </div>

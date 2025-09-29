@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Difficulty } from '../types';
 
@@ -16,7 +15,7 @@ const AtomIcon: React.FC = () => (
 const DifficultyButton: React.FC<{ difficulty: Difficulty; onClick: (difficulty: Difficulty) => void, colorClass: string }> = ({ difficulty, onClick, colorClass }) => (
   <button
     onClick={() => onClick(difficulty)}
-    className={`w-full text-center px-8 py-6 bg-slate-800 border-2 ${colorClass} rounded-xl shadow-lg hover:bg-slate-700 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-opacity-75`}
+    className={`w-full text-center px-8 py-6 bg-slate-900 border-2 ${colorClass} rounded-xl shadow-lg hover:bg-slate-800 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-opacity-75`}
   >
     <span className="text-2xl font-bold text-slate-100">{difficulty}</span>
   </button>

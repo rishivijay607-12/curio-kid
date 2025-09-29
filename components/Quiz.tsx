@@ -123,7 +123,7 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
 
   const getButtonClass = (option: string) => {
     if (!isAnswered) {
-      return 'bg-slate-700 hover:bg-slate-600 border-slate-600';
+      return 'bg-slate-800 hover:bg-slate-700 border-slate-700';
     }
     if (option === currentQuestion?.answer) {
       return 'bg-green-700 border-green-500';
@@ -131,13 +131,13 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
     if (option === selectedAnswer) {
       return 'bg-red-700 border-red-500';
     }
-    return 'bg-slate-700 border-slate-600 opacity-60';
+    return 'bg-slate-800 border-slate-700 opacity-60';
   };
 
   if (isLoading) {
     const progressPercentage = generationProgress.total > 0 ? (generationProgress.current / generationProgress.total) * 100 : 0;
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 min-h-[400px]">
+      <div className="flex flex-col items-center justify-center p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 min-h-[400px]">
         <LoadingSpinner />
         <p className="text-slate-300 mt-4 text-lg">Generating your personalized quiz...</p>
         <div className="w-full max-w-sm mt-4">
@@ -145,7 +145,7 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
                 <span>Progress</span>
                 <span>{generationProgress.current} / {generationProgress.total}</span>
             </div>
-            <div className="w-full bg-slate-700 rounded-full h-2.5">
+            <div className="w-full bg-slate-800 rounded-full h-2.5">
                 <div className="bg-cyan-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
             </div>
         </div>
@@ -155,7 +155,7 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-slate-800 rounded-xl shadow-2xl border border-red-500">
+      <div className="flex flex-col items-center justify-center p-8 bg-slate-900 rounded-xl shadow-2xl border border-red-500">
         <p className="text-red-400 text-lg font-semibold">Oops! Something went wrong.</p>
         <p className="text-slate-300 mt-2 text-center">{error}</p>
         <button
@@ -171,18 +171,18 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   if (!currentQuestion) return null;
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 md:p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+    <div className="w-full max-w-3xl mx-auto p-6 md:p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800">
       <div className="mb-6">
         <div className="flex justify-between items-center text-slate-400 mb-2">
           <span>Question {questionNumber}/{questions.length}</span>
           {timerDuration > 0 && <span className="font-mono text-lg">Time: {timeLeft}s</span>}
           <span>Score: {score} &bull; Skips: {skipsRemaining}</span>
         </div>
-        <div className="w-full h-2 rounded-full bg-slate-600">
+        <div className="w-full h-2 rounded-full bg-slate-700">
             <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${(questionNumber / questions.length) * 100}%` }}></div>
         </div>
         {timerDuration > 0 && !isAnswered && (
-             <div className="w-full h-1.5 mt-2 bg-slate-600 rounded-full">
+             <div className="w-full h-1.5 mt-2 bg-slate-700 rounded-full">
                 <div className={`h-1.5 rounded-full ${timeLeft <= 10 ? 'bg-red-500' : 'bg-yellow-400'}`} style={{ width: `${(timeLeft / timerDuration) * 100}%`, transition: 'width 1s linear' }}></div>
             </div>
         )}
@@ -204,7 +204,7 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
       </div>
 
       {isAnswered && currentQuestion.explanation && (
-        <div className="mt-6 p-4 bg-slate-900/50 border border-slate-700 rounded-lg">
+        <div className="mt-6 p-4 bg-slate-950/50 border border-slate-800 rounded-lg">
           <h3 className="font-semibold text-lg text-cyan-400 mb-2">Explanation</h3>
           <p className="text-slate-300 leading-relaxed">{currentQuestion.explanation}</p>
         </div>
@@ -214,7 +214,7 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
         {!isAnswered && skipsRemaining > 0 && (
           <button
             onClick={handleSkipQuestion}
-            className="px-6 py-2 bg-slate-600 text-white font-bold rounded-lg shadow-lg hover:bg-slate-500 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-opacity-75"
+            className="px-6 py-2 bg-slate-700 text-white font-bold rounded-lg shadow-lg hover:bg-slate-600 transition-all focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-opacity-75"
           >
             Skip Question
           </button>

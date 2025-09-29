@@ -53,21 +53,21 @@ const DiagramIdeaSelector: React.FC<DiagramIdeaSelectorProps> = ({ ideas, onGene
             </div>
 
             <div className="mb-6 flex justify-center gap-4">
-                 <button onClick={handleSelectAll} className="px-4 py-2 bg-slate-700 text-slate-200 font-semibold rounded-md hover:bg-slate-600 transition-colors">Select All</button>
-                 <button onClick={handleClearAll} className="px-4 py-2 bg-slate-700 text-slate-200 font-semibold rounded-md hover:bg-slate-600 transition-colors">Clear Selection</button>
+                 <button onClick={handleSelectAll} className="px-4 py-2 bg-slate-800 text-slate-200 font-semibold rounded-md hover:bg-slate-700 transition-colors">Select All</button>
+                 <button onClick={handleClearAll} className="px-4 py-2 bg-slate-800 text-slate-200 font-semibold rounded-md hover:bg-slate-700 transition-colors">Clear Selection</button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 {ideas.map(idea => (
                      <label 
                         key={idea.id}
-                        className={`p-4 bg-slate-800 border-2 rounded-lg shadow-md transition-all duration-200 cursor-pointer flex items-center gap-4 ${selectedIds.has(idea.id) ? 'border-cyan-500' : 'border-slate-700 hover:border-slate-600'}`}
+                        className={`p-4 bg-slate-900 border-2 rounded-lg shadow-md transition-all duration-200 cursor-pointer flex items-center gap-4 ${selectedIds.has(idea.id) ? 'border-cyan-500' : 'border-slate-800 hover:border-slate-700'}`}
                     >
                         <input
                             type="checkbox"
                             checked={selectedIds.has(idea.id)}
                             onChange={() => handleToggle(idea.id)}
-                            className="h-5 w-5 rounded bg-slate-700 border-slate-500 text-cyan-600 focus:ring-cyan-500"
+                            className="h-5 w-5 rounded bg-slate-800 border-slate-600 text-cyan-600 focus:ring-cyan-500"
                         />
                         <span className="font-medium text-slate-200">{idea.description}</span>
                     </label>
@@ -78,7 +78,7 @@ const DiagramIdeaSelector: React.FC<DiagramIdeaSelectorProps> = ({ ideas, onGene
                  <button
                     onClick={handleGenerateClick}
                     disabled={selectedIds.size === 0}
-                    className="px-8 py-4 bg-cyan-600 text-white font-bold text-xl rounded-lg shadow-lg hover:bg-cyan-500 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 disabled:bg-slate-600 disabled:cursor-not-allowed disabled:transform-none"
+                    className="px-8 py-4 bg-cyan-600 text-white font-bold text-xl rounded-lg shadow-lg hover:bg-cyan-500 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 disabled:bg-slate-700 disabled:cursor-not-allowed disabled:transform-none"
                 >
                     Generate {selectedIds.size > 0 ? `${selectedIds.size} Diagram(s)` : 'Diagrams'}
                 </button>

@@ -29,11 +29,23 @@ const VoiceTutor = React.lazy(() => import('./components/VoiceTutor'));
 const HomeButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     onClick={onClick}
-    className="absolute top-4 left-4 z-10 p-3 bg-slate-700/50 text-slate-300 rounded-full shadow-lg hover:bg-slate-600 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 no-print"
+    className="absolute top-4 left-4 z-10 p-3 bg-slate-800/50 text-slate-300 rounded-full shadow-lg hover:bg-slate-700 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 no-print"
     aria-label="Go to Home"
   >
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+    </svg>
+  </button>
+);
+
+const LogoutButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    className="absolute top-4 right-4 z-10 p-3 bg-slate-800/50 text-slate-300 rounded-full shadow-lg hover:bg-slate-700 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 no-print"
+    aria-label="Logout"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
     </svg>
   </button>
 );
@@ -515,14 +527,14 @@ const App: React.FC = () => {
             onStartStoryWeaver={() => startFeature('story_weaver')}
             onStartScienceFairBuddy={() => handleStartGenerativeFeature('science_fair_buddy')}
             onStartWhatIf={() => handleStartGenerativeFeature('what_if')}
-            onLogout={handleRestart}
          />;
     }
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white font-sans relative">
-      {gameState !== GameState.HOME_SCREEN && gameState !== GameState.LOGIN_SCREEN && <HomeButton onClick={handleGoHome} />}
+    <main className="min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white font-sans relative">
+      {gameState !== GameState.LOGIN_SCREEN && <HomeButton onClick={handleGoHome} />}
+      {gameState === GameState.HOME_SCREEN && <LogoutButton onClick={handleRestart} />}
       <div className="w-full">
         <Suspense fallback={<SuspenseLoader />}>
           {renderContent()}

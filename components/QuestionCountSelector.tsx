@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface QuestionCountSelectorProps {
@@ -15,7 +14,7 @@ const AtomIcon: React.FC = () => (
 const CountButton: React.FC<{ count: number; onClick: (count: number) => void }> = ({ count, onClick }) => (
   <button
     onClick={() => onClick(count)}
-    className="w-full text-center px-6 py-5 bg-slate-800 border-2 border-slate-700 rounded-xl shadow-lg hover:bg-slate-700 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
+    className="w-full text-center px-6 py-5 bg-slate-900 border-2 border-slate-800 rounded-xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75"
   >
     <span className="text-2xl font-bold text-slate-100">{count}</span>
     <span className="text-lg text-slate-300"> Questions</span>

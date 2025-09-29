@@ -16,7 +16,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
         if (!isSubmitted) {
             return userAnswer === option
                 ? 'bg-cyan-800 border-cyan-500' // Selected
-                : 'bg-slate-700 hover:bg-slate-600 border-slate-600'; // Default
+                : 'bg-slate-800 hover:bg-slate-700 border-slate-700'; // Default
         }
     
         const isCorrect = option === q.answer;
@@ -28,7 +28,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
         if (isSelected) {
           return 'bg-red-700 border-red-500'; // User's wrong answer
         }
-        return 'bg-slate-700 border-slate-600 opacity-60'; // Other wrong options
+        return 'bg-slate-800 border-slate-700 opacity-60'; // Other wrong options
     };
 
     return (
@@ -55,7 +55,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
                         disabled={isSubmitted}
                         placeholder="Type your answer here..."
                         rows={3}
-                        className={`w-full p-2 bg-slate-700 text-slate-100 rounded-md border-2 focus:outline-none transition-colors ${isSubmitted ? (userAnswer?.toLowerCase().trim() === q.answer.toLowerCase().trim() ? 'border-green-500' : 'border-red-500') : 'border-slate-600 focus:border-cyan-500'}`}
+                        className={`w-full p-2 bg-slate-800 text-slate-100 rounded-md border-2 focus:outline-none transition-colors ${isSubmitted ? (userAnswer?.toLowerCase().trim() === q.answer.toLowerCase().trim() ? 'border-green-500' : 'border-red-500') : 'border-slate-700 focus:border-cyan-500'}`}
                     />
                 </div>
             ) : (
@@ -74,7 +74,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
             )}
 
             {isSubmitted && (
-                <div className="mt-4 p-3 bg-slate-900/50 border-l-4 border-cyan-500 rounded-r-md">
+                <div className="mt-4 p-3 bg-slate-950/50 border-l-4 border-cyan-500 rounded-r-md">
                     <p className="font-semibold text-green-400">
                         Correct Answer: <span className="font-normal">{q.answer}</span>
                     </p>
@@ -135,7 +135,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
     let questionCounter = 0;
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-6 md:p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 printable-worksheet">
+        <div className="w-full max-w-4xl mx-auto p-6 md:p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 printable-worksheet">
             {/* Header and Controls */}
             <div className="mb-8 print:mb-4 no-print">
                  <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
@@ -146,7 +146,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
                 </p>
 
                 {isSubmitted && (
-                     <div className="mt-6 p-4 bg-slate-900/70 rounded-lg border border-slate-700 text-center">
+                     <div className="mt-6 p-4 bg-slate-950/70 rounded-lg border border-slate-800 text-center">
                         <p className="text-lg text-slate-300">Your Score</p>
                         <p className="text-5xl font-bold text-white my-2">{score} / {questions.length}</p>
                         <p className="text-2xl text-cyan-400 font-semibold">{questions.length > 0 ? Math.round((score / questions.length) * 100) : 0}%</p>
@@ -170,7 +170,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
                     </button>
                     <button
                         onClick={onRestart}
-                        className="px-6 py-2 bg-slate-700 text-white font-bold rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+                        className="px-6 py-2 bg-slate-800 text-white font-bold rounded-lg shadow-lg hover:bg-slate-700 transition-colors"
                     >
                         Start Over
                     </button>
@@ -178,7 +178,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
             </div>
 
              {/* Printable Header */}
-            <div className="text-center mb-8 border-b border-slate-600 pb-4">
+            <div className="text-center mb-8 border-b border-slate-700 pb-4">
                 <h2 className="text-2xl font-bold text-slate-100">Science Worksheet</h2>
                 <div className="flex justify-center gap-6 text-slate-300 mt-2">
                     <span><strong>Grade:</strong> {grade}</span>
@@ -194,7 +194,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
             <div className="space-y-12">
                 {mcqQuestions.length > 0 && (
                     <section>
-                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-600 pb-2 mb-6">I. Multiple Choice Questions</h2>
+                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-700 pb-2 mb-6">I. Multiple Choice Questions</h2>
                         <div className="space-y-8">
                             {mcqQuestions.map((q) => {
                                 questionCounter++;
@@ -215,7 +215,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
 
                 {tfQuestions.length > 0 && (
                      <section>
-                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-600 pb-2 mb-6">II. True or False</h2>
+                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-700 pb-2 mb-6">II. True or False</h2>
                         <div className="space-y-8">
                             {tfQuestions.map((q) => {
                                 questionCounter++;
@@ -236,7 +236,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
 
                 {arQuestions.length > 0 && (
                      <section>
-                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-600 pb-2 mb-6">III. Assertion & Reason</h2>
+                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-700 pb-2 mb-6">III. Assertion & Reason</h2>
                         <div className="space-y-8">
                              {arQuestions.map((q) => {
                                 questionCounter++;
@@ -257,7 +257,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
 
                 {qaQuestions.length > 0 && (
                      <section>
-                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-600 pb-2 mb-6">IV. Question & Answer</h2>
+                        <h2 className="text-2xl font-bold text-cyan-400 border-b-2 border-slate-700 pb-2 mb-6">IV. Question & Answer</h2>
                         <div className="space-y-8">
                              {qaQuestions.map((q) => {
                                 questionCounter++;
@@ -278,7 +278,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
             </div>
             
             {/* Footer Controls */}
-            <div className="mt-12 pt-8 border-t border-slate-700 flex justify-center no-print">
+            <div className="mt-12 pt-8 border-t border-slate-800 flex justify-center no-print">
                 {!isSubmitted ? (
                     <button
                         onClick={handleSubmit}
@@ -289,7 +289,7 @@ const Worksheet: React.FC<WorksheetProps> = ({ questions, onRestart, grade, topi
                 ) : (
                     <button
                         onClick={onRestart}
-                        className="px-10 py-4 bg-slate-700 text-white font-bold text-xl rounded-lg shadow-lg hover:bg-slate-600 transition-colors"
+                        className="px-10 py-4 bg-slate-800 text-white font-bold text-xl rounded-lg shadow-lg hover:bg-slate-700 transition-colors"
                     >
                         Start Over
                     </button>
