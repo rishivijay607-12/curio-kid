@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
 
@@ -97,8 +98,7 @@ const App: React.FC = () => {
     }, []);
 
     // --- State Resets ---
-    const resetToHome = useCallback(() => {
-        setGameState('home');
+    const resetAllState = useCallback(() => {
         setAppMode('home');
         setGrade(null);
         setTopic(null);
@@ -120,8 +120,13 @@ const App: React.FC = () => {
         setSelectedScienceFairIdea(null);
         setScienceFairPlan([]);
         setSelectedScientist(null);
-        setUserProfile(null); // Clear profile data
+        setUserProfile(null);
     }, []);
+
+    const resetToHome = useCallback(() => {
+        setGameState('home');
+        resetAllState();
+    }, [resetAllState]);
 
     // --- Handlers ---
 
@@ -143,8 +148,8 @@ const App: React.FC = () => {
     const handleLogout = () => {
         logout();
         setCurrentUser(null);
+        resetAllState();
         setGameState('login');
-        resetToHome();
     };
 
     // Navigation
@@ -233,7 +238,6 @@ const App: React.FC = () => {
         setError(null);
         try {
             const greeting = await generateGreeting(grade, selectedLanguage, selectedTopic);
-            // FIX: Explicitly type the new chat message object to conform to ChatMessage type.
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
             setGameState('DOUBT_SOLVER_SESSION');
@@ -246,14 +250,13 @@ const App: React.FC = () => {
     
     const handleSendMessage = async (message: string) => {
         if (!grade || !topic || !language) return;
-        // FIX: Explicitly type the new history array to prevent type widening.
-        const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', parts: [{ text: message }] }];
+        const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
+        const newHistory: ChatMessage[] = [...chatHistory, userMessage];
         setChatHistory(newHistory);
         setIsLoading(true);
         setError(null);
         try {
             const response = await getChatResponse(grade, newHistory, language, topic);
-            // FIX: Explicitly create a ChatMessage object before adding it to state to prevent type widening.
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
         } catch (err) {
@@ -269,7 +272,6 @@ const App: React.FC = () => {
         setIsLoading(true);
         try {
             const greeting = await generateScientistGreeting(scientist);
-            // FIX: Explicitly type the new chat message object to conform to ChatMessage type.
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
         } catch (err) {
@@ -281,13 +283,13 @@ const App: React.FC = () => {
 
     const handleSendHistoricalMessage = async (message: string) => {
         if (!selectedScientist) return;
-        const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', parts: [{ text: message }] }];
+        const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
+        const newHistory: ChatMessage[] = [...chatHistory, userMessage];
         setChatHistory(newHistory);
         setIsLoading(true);
         setError(null);
         try {
             const response = await getHistoricalChatResponse(selectedScientist, newHistory);
-            // FIX: Explicitly create a ChatMessage object before adding it to state.
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
         } catch (err) {
@@ -426,7 +428,6 @@ const App: React.FC = () => {
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
             case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
 
-            // FIX: Add missing required props: isSolverSetup, isLoading, and error.
             case 'GRADE_SELECTION': return <GradeSelector 
                 onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
                 appMode={appMode} 
@@ -441,7 +442,7 @@ const App: React.FC = () => {
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
                 else setGameState('DIFFICULTY_SELECTION');
-            }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} />;
+            }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} isSolverSetup={['doubt_solver', 'voice_tutor'].includes(appMode)} />;
             
             case 'DIFFICULTY_SELECTION': return <DifficultySelector onDifficultySelect={d => { setDifficulty(d); setGameState('COUNT_SELECTION'); }} />;
             

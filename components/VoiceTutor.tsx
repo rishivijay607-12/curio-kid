@@ -137,6 +137,9 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
                         responseModalities: [Modality.AUDIO],
+                        speechConfig: {
+                            voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Zephyr'}},
+                        },
                         systemInstruction,
                     },
                     callbacks: {
