@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { LiveServerMessage, Blob } from '@google/genai';
 import type { Grade, Language } from '../types';
@@ -95,8 +96,6 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     throw new Error('Your browser does not support the MediaDevices API.');
                 }
-                
-                const { Modality } = await import('@google/genai');
 
                 streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
                 if (isCancelled) return;
@@ -130,7 +129,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
-                        responseModalities: [Modality.AUDIO],
+                        responseModalities: ['AUDIO'],
                         speechConfig: {
                             voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Zephyr'}},
                         },
@@ -138,64 +137,82 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                     },
                     callbacks: {
                         onopen: () => {
-                            if (isCancelled || !inputAudioContextRef.current || !streamRef.current) return;
-                             const inputAudioContext = inputAudioContextRef.current;
-                             setStatus('listening');
+                            try {
+                                if (isCancelled || !inputAudioContextRef.current || !streamRef.current) return;
+                                 const inputAudioContext = inputAudioContextRef.current;
+                                 setStatus('listening');
 
-                             const source = inputAudioContext.createMediaStreamSource(streamRef.current);
-                             scriptProcessorRef.current = inputAudioContext.createScriptProcessor(4096, 1, 1);
-                             const gainNode = inputAudioContext.createGain();
-                             gainNode.gain.value = 0; // Mute the node to prevent echo
+                                 const source = inputAudioContext.createMediaStreamSource(streamRef.current);
+                                 scriptProcessorRef.current = inputAudioContext.createScriptProcessor(4096, 1, 1);
+                                 const gainNode = inputAudioContext.createGain();
+                                 gainNode.gain.value = 0; // Mute the node to prevent echo
 
-                             scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
-                                const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
-                                const pcmBlob = createBlob(inputData);
-                                sessionPromiseRef.current.then((session: any) => {
-                                  session.sendRealtimeInput({ media: pcmBlob });
-                                });
-                             };
-                             
-                             source.connect(scriptProcessorRef.current);
-                             scriptProcessorRef.current.connect(gainNode);
-                             gainNode.connect(inputAudioContext.destination);
-                        },
-                        onmessage: async (message: LiveServerMessage) => {
-                             if (isCancelled || !outputAudioContextRef.current) return;
-                             
-                             const interrupted = message.serverContent?.interrupted;
-                             if (interrupted) {
-                                 for (const source of audioQueueRef.current) {
-                                     source.stop();
-                                 }
-                                 audioQueueRef.current = [];
-                                 nextStartTimeRef.current = 0;
-                                 if (!isCancelled) {
-                                     setStatus('listening');
-                                 }
-                                 return;
-                             }
-
-                             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
-                             if (base64Audio) {
-                                 setStatus('speaking');
-                                 const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContextRef.current, 24000, 1);
-                                 const source = outputAudioContextRef.current.createBufferSource();
-                                 source.buffer = audioBuffer;
-                                 source.connect(outputNode);
-
-                                 const currentTime = outputAudioContextRef.current.currentTime;
-                                 const startTime = Math.max(currentTime, nextStartTimeRef.current);
-                                 source.start(startTime);
-                                 nextStartTimeRef.current = startTime + audioBuffer.duration;
-                                 
-                                 audioQueueRef.current.push(source);
-                                 source.onended = () => {
-                                     audioQueueRef.current = audioQueueRef.current.filter(s => s !== source);
-                                     if (audioQueueRef.current.length === 0 && !isCancelled) {
-                                         setStatus('listening');
+                                 scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
+                                     try {
+                                        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                                        const pcmBlob = createBlob(inputData);
+                                        sessionPromiseRef.current.then((session: any) => {
+                                          session.sendRealtimeInput({ media: pcmBlob });
+                                        });
+                                     } catch (e) {
+                                         console.error("Error during audio processing:", e);
                                      }
                                  };
-                             }
+                                 
+                                 source.connect(scriptProcessorRef.current);
+                                 scriptProcessorRef.current.connect(gainNode);
+                                 gainNode.connect(inputAudioContext.destination);
+                            } catch (e) {
+                                if (isCancelled) return;
+                                console.error("Error setting up audio source:", e);
+                                setError("Failed to connect to your microphone.");
+                                setStatus('error');
+                            }
+                        },
+                        onmessage: async (message: LiveServerMessage) => {
+                            try {
+                                 if (isCancelled || !outputAudioContextRef.current) return;
+                                 
+                                 const interrupted = message.serverContent?.interrupted;
+                                 if (interrupted) {
+                                     for (const source of audioQueueRef.current) {
+                                         source.stop();
+                                     }
+                                     audioQueueRef.current = [];
+                                     nextStartTimeRef.current = 0;
+                                     if (!isCancelled) {
+                                         setStatus('listening');
+                                     }
+                                     return;
+                                 }
+
+                                 const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+                                 if (base64Audio) {
+                                     setStatus('speaking');
+                                     const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContextRef.current, 24000, 1);
+                                     const source = outputAudioContextRef.current.createBufferSource();
+                                     source.buffer = audioBuffer;
+                                     source.connect(outputNode);
+
+                                     const currentTime = outputAudioContextRef.current.currentTime;
+                                     const startTime = Math.max(currentTime, nextStartTimeRef.current);
+                                     source.start(startTime);
+                                     nextStartTimeRef.current = startTime + audioBuffer.duration;
+                                     
+                                     audioQueueRef.current.push(source);
+                                     source.onended = () => {
+                                         audioQueueRef.current = audioQueueRef.current.filter(s => s !== source);
+                                         if (audioQueueRef.current.length === 0 && !isCancelled) {
+                                             setStatus('listening');
+                                         }
+                                     };
+                                 }
+                            } catch (e) {
+                                if (isCancelled) return;
+                                console.error("Error processing incoming message:", e);
+                                setError("An error occurred processing the AI's response.");
+                                setStatus('error');
+                            }
                         },
                         onerror: (e: ErrorEvent) => {
                             console.error('Session error:', e);
@@ -228,7 +245,15 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
         return () => {
             isCancelled = true;
             if (sessionPromiseRef.current) {
-                sessionPromiseRef.current.then((session: any) => session?.close());
+                sessionPromiseRef.current
+                    .then((session: any) => {
+                        if (session?.close) {
+                            session.close();
+                        }
+                    })
+                    .catch((err: any) => {
+                        console.debug("Ignoring error during session cleanup:", err);
+                    });
             }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
