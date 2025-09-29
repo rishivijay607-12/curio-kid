@@ -47,6 +47,7 @@ const RegistrationScreen = React.lazy(() => import('./components/RegistrationScr
 const Leaderboard = React.lazy(() => import('./components/Leaderboard'));
 const ProfileScreen = React.lazy(() => import('./components/ProfileScreen'));
 const HomeScreen = React.lazy(() => import('./components/HomeScreen'));
+const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 import LoadingSpinner from './components/LoadingSpinner';
 
 
@@ -160,6 +161,8 @@ const App: React.FC = () => {
     };
     
     const handleShowLeaderboard = () => setGameState('LEADERBOARD');
+    const handleGoToAdminPanel = () => setGameState('ADMIN_PANEL');
+    
     const handleShowProfile = async () => {
         if (!currentUser) return;
         setIsLoading(true);
@@ -418,9 +421,10 @@ const App: React.FC = () => {
         switch (gameState) {
             case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
             case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
-            case 'home': return <HomeScreen onStartFeature={handleStartFeature} username={currentUser?.username ?? null} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} />;
+            case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} onGoToAdminPanel={handleGoToAdminPanel} />;
             case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
+            case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
 
             // FIX: Add missing required props: isSolverSetup, isLoading, and error.
             case 'GRADE_SELECTION': return <GradeSelector 

@@ -1,11 +1,12 @@
 import React from 'react';
-import type { AppMode } from '../types';
+import type { AppMode, User } from '../types';
 
 interface HomeScreenProps {
   onStartFeature: (mode: AppMode) => void;
-  username: string | null;
+  user: User | null;
   onShowProfile: () => void;
   onShowLeaderboard: () => void;
+  onGoToAdminPanel: () => void;
 }
 
 // --- SVG Icons (as functional components) ---
@@ -27,6 +28,7 @@ const IconScienceFair: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" 
 const IconWhatIf: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const IconProfile: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const IconLeaderboard: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const IconAdmin: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
 // --- Feature Definitions ---
 const features = [
@@ -59,17 +61,17 @@ const FeatureCard: React.FC<{ title: string; description: string; mode: AppMode;
 );
 
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onStartFeature, username, onShowProfile, onShowLeaderboard }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onStartFeature, user, onShowProfile, onShowLeaderboard, onGoToAdminPanel }) => {
   return (
     <div className="w-full max-w-screen-2xl mx-auto p-4 md:p-8">
       <header className="text-center mb-10">
         <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
-          Welcome, {username || 'Curious Mind'}!
+          Welcome, {user?.username || 'Curious Mind'}!
         </h1>
         <p className="text-slate-300 mt-3 text-lg">
           What would you like to explore today?
         </p>
-         <div className="mt-6 flex justify-center items-center gap-4">
+         <div className="mt-6 flex justify-center items-center gap-4 flex-wrap">
              <button onClick={onShowProfile} className="flex items-center px-5 py-2.5 bg-slate-800 text-slate-200 font-semibold rounded-full hover:bg-slate-700 transition-colors shadow">
                 <IconProfile />
                 Profile
@@ -78,6 +80,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onStartFeature, username, onSho
                 <IconLeaderboard />
                 Leaderboard
              </button>
+             {user?.isAdmin && (
+                <button onClick={onGoToAdminPanel} className="flex items-center px-5 py-2.5 bg-teal-600 text-white font-semibold rounded-full hover:bg-teal-500 transition-colors shadow">
+                    <IconAdmin />
+                    Admin Panel
+                </button>
+             )}
         </div>
       </header>
 

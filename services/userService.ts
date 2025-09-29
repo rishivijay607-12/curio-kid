@@ -52,8 +52,23 @@ export const updateProfile = async (username: string, updatedProfile: UserProfil
     return updatedProfile;
 }
 
+// --- Admin Account Initialization ---
+const initializeAdmin = () => {
+    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+    if (!users['Rishi']) {
+        users['Rishi'] = '134679'; // In a real app, hash the password!
+        saveToStorage(USERS_KEY, users);
+        createProfile('Rishi');
+    }
+};
+initializeAdmin();
+
+
 // --- Auth Management ---
 export const register = async (username: string, password: string): Promise<User> => {
+  if (username.toLowerCase() === 'rishi') {
+    throw new Error("This username is reserved.");
+  }
   const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
   if (users[username]) {
     throw new Error("Username already exists.");
@@ -61,7 +76,7 @@ export const register = async (username: string, password: string): Promise<User
   users[username] = password; // In a real app, hash the password!
   saveToStorage(USERS_KEY, users);
   await createProfile(username);
-  return { username };
+  return { username, isAdmin: false };
 };
 
 export const login = async (username: string, password: string): Promise<User> => {
@@ -69,8 +84,10 @@ export const login = async (username: string, password: string): Promise<User> =
   if (!users[username] || users[username] !== password) {
     throw new Error("Invalid username or password.");
   }
-  saveToStorage(CURRENT_USER_KEY, { username });
-  return { username };
+  const isAdmin = username === 'Rishi' && password === '134679';
+  const user = { username, isAdmin };
+  saveToStorage(CURRENT_USER_KEY, user);
+  return user;
 };
 
 export const logout = (): void => {
@@ -146,4 +163,54 @@ export const getLeaderboard = async (): Promise<QuizScore[]> => {
       return b.score - a.score;
     });
     return scores.slice(0, 20); // Return top 20
+};
+
+
+// --- Admin Functions ---
+export const getAllUsers = async (): Promise<{username: string}[]> => {
+    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+    return Object.keys(users).map(username => ({ username }));
+};
+
+export const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
+    return getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+};
+
+export const getAllScores = async (): Promise<QuizScore[]> => {
+    return getFromStorage<QuizScore[]>(SCORES_KEY, []);
+};
+
+export const deleteUser = async (usernameToDelete: string): Promise<void> => {
+    if (usernameToDelete === 'Rishi') {
+        throw new Error("Cannot delete the admin account.");
+    }
+
+    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+    delete users[usernameToDelete];
+    saveToStorage(USERS_KEY, users);
+
+    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+    delete profiles[usernameToDelete];
+    saveToStorage(PROFILES_KEY, profiles);
+
+    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
+    const updatedScores = scores.filter(score => score.username !== usernameToDelete);
+    saveToStorage(SCORES_KEY, updatedScores);
+};
+
+export const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
+    if (username === 'Rishi') {
+        throw new Error("Cannot change the admin password from the panel.");
+    }
+    if (newPassword && newPassword.length >= 6) {
+        const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
+        if(users[username]) {
+            users[username] = newPassword;
+            saveToStorage(USERS_KEY, users);
+        } else {
+            throw new Error("User not found.");
+        }
+    } else {
+        throw new Error("Password must be at least 6 characters long.");
+    }
 };
