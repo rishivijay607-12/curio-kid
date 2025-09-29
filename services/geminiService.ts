@@ -1,9 +1,22 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
+// This placeholder value is meant to be replaced by a CI/CD pipeline (like GitHub Actions) during deployment.
+// In your GitHub repository settings, create a secret (e.g., `GEMINI_API_KEY`).
+// Your deployment workflow should then use a script to find and replace "__API_KEY_PLACEHOLDER__" with the value of your secret.
+const apiKey = "__API_KEY_PLACEHOLDER__";
+
+const getApiKey = (): string => {
+    if (apiKey === "__API_KEY_PLACEHOLDER__" || !apiKey) {
+        console.warn("Gemini API key not provided. AI features will not work. Please configure your deployment pipeline.");
+        return 'MISSING_API_KEY'; // Return a non-functional key to avoid crashing the app.
+    }
+    return apiKey;
+};
+
+
 // --- Singleton AI Instance ---
-// FIX: Corrected API key access to use `process.env.API_KEY` as per guidelines. This resolves the TypeScript error with `import.meta.env`.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 
 // --- Safety Settings (now synchronous) ---
