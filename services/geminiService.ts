@@ -1,20 +1,27 @@
-import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import type { GoogleGenAI } from "@google/genai";
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
-let ai: GoogleGenAI;
+let aiPromise: Promise<GoogleGenAI> | null = null;
 
-function getAiInstance(): GoogleGenAI {
-    if (!ai) {
-        // Browser-safe check for the API key
-        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+function getAiInstance(): Promise<GoogleGenAI> {
+    if (!aiPromise) {
+        aiPromise = (async () => {
+            // Dynamically import the module ONLY when first needed.
+            // This prevents any top-level code in @google/genai from running on app startup.
+            const { GoogleGenAI } = await import('@google/genai');
+            
+            // Browser-safe check for the API key
+            const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
 
-        if (!apiKey) {
-            // This error will now be caught by the functions calling this.
-            throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
-        }
-        ai = new GoogleGenAI({ apiKey: apiKey });
+            if (!apiKey) {
+                // This error will now be caught by the functions calling this.
+                throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
+            }
+            return new GoogleGenAI({ apiKey });
+        })();
     }
-    return ai;
+    return aiPromise;
 }
 
 
@@ -97,6 +104,7 @@ export const generateQuizQuestions = async (
     count: number,
     onProgress: (progress: { current: number; total: number }) => void
 ): Promise<QuizQuestion[]> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     const questions: QuizQuestion[] = [];
     const BATCH_SIZE = 5; // Generate questions in batches for speed
@@ -130,7 +138,7 @@ For each question:
 - The correct answer must be one of the provided options.
 - Provide a brief, easy-to-understand explanation for why the correct answer is correct.`;
 
-                const response = await getAiInstance().models.generateContent({
+                const response = await ai.models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: prompt,
                     config: {
@@ -193,6 +201,7 @@ export const generateWorksheet = async (
     count: number,
     onProgress: (progress: { current: number, total: number }) => void
 ): Promise<QuizQuestion[]> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     onProgress({ current: 0, total: count });
     
@@ -264,7 +273,7 @@ ${instructions}
 
 For every question, you must provide a brief, easy-to-understand explanation for the correct answer.`;
 
-                const response = await getAiInstance().models.generateContent({
+                const response = await ai.models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: prompt,
                     config: {
@@ -314,6 +323,7 @@ For every question, you must provide a brief, easy-to-understand explanation for
 };
 
 export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSection[]> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -329,7 +339,7 @@ Under each title, provide 3-5 key bullet points that summarize the most importan
 The language used should be clear, simple, and easy for a Grade ${grade} student to understand and review quickly.
 `;
 
-            const response = await getAiInstance().models.generateContent({
+            const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
                 config: {
@@ -377,6 +387,7 @@ The language used should be clear, simple, and easy for a Grade ${grade} student
 };
 
 export const generateGreeting = async (grade: Grade, language: Language, topic: string): Promise<string> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -409,7 +420,7 @@ The message should be **${langInstruction}**
 Keep it to one or two sentences. For example: "Hello! I'm Curio, your science tutor. Ask me anything about the chapter '${topic}'!"
 `;
 
-            const response = await getAiInstance().models.generateContent({
+            const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
             });
@@ -439,6 +450,7 @@ Keep it to one or two sentences. For example: "Hello! I'm Curio, your science tu
 };
 
 export const getChatResponse = async (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -482,7 +494,7 @@ ${langInstruction}
             
             const contents = history;
 
-            const response = await getAiInstance().models.generateContent({
+            const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: contents,
                 config: {
@@ -555,6 +567,7 @@ const diagramIdeasSchema = {
 };
 
 export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -568,7 +581,7 @@ For each of the 8 diagrams, provide two things:
 
 Generate exactly 8 diagram ideas.`;
 
-            const response = await getAiInstance().models.generateContent({
+            const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
                 config: {
@@ -615,12 +628,13 @@ Generate exactly 8 diagram ideas.`;
 };
 
 export const generateDiagramImage = async (prompt: string): Promise<string> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await getAiInstance().models.generateImages({
+            const response = await ai.models.generateImages({
                 model: 'imagen-4.0-generate-001',
                 prompt: prompt,
                 config: {
@@ -667,6 +681,7 @@ export const generateTextForMode = async (
     grade?: Grade,
     topic?: string
 ): Promise<GenerativeTextResult> => {
+    const ai = await getAiInstance();
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = false;
@@ -696,7 +711,7 @@ export const generateTextForMode = async (
     }
 
     try {
-        const response = await getAiInstance().models.generateContent({
+        const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: contents,
             config: {
@@ -718,6 +733,7 @@ export const generateTextForMode = async (
 };
 
 export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
+    const ai = await getAiInstance();
     try {
         const imagePart = {
             inlineData: {
@@ -727,7 +743,7 @@ export const explainImageWithText = async (base64Image: string, mimeType: string
         };
         const textPart = { text: prompt };
 
-        const response = await getAiInstance().models.generateContent({
+        const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: { parts: [imagePart, textPart] },
         });
@@ -759,12 +775,13 @@ const scienceFairIdeasSchema = {
 };
 
 export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
+    const ai = await getAiInstance();
     const prompt = `You are a helpful and creative science fair assistant. The student is interested in the following topics: "${userInput}".
 Brainstorm 3 unique and engaging science fair project ideas based on their interests.
 For each idea, provide a unique, catchy 'title' and a detailed 'description' (3-4 sentences) explaining the project, what the student will investigate, and why it's a good project.`;
     
     try {
-        const response = await getAiInstance().models.generateContent({
+        const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -809,6 +826,7 @@ export const generateScienceFairPlan = async (
     projectDescription: string,
     onProgress: (progress: { current: number; total: number; message: string }) => void
 ): Promise<ScienceFairPlanStep[]> => {
+    const ai = await getAiInstance();
     onProgress({ current: 0, total: 5, message: "Generating project plan text..." });
 
     // 1. Generate the text for all 5 steps first
@@ -819,7 +837,7 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
 
     let textSteps: { stepTitle: string; instructions: string }[] = [];
     try {
-        const textResponse = await getAiInstance().models.generateContent({
+        const textResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: textPlanPrompt,
             config: {
@@ -864,12 +882,13 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
 
 
 const chatWithRetry = async (config: any): Promise<string> => {
+    const ai = await getAiInstance();
     const maxRetries = 3;
     let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await getAiInstance().models.generateContent(config);
+            const response = await ai.models.generateContent(config);
             return response.text;
         } catch (error) {
             lastError = error;
@@ -903,7 +922,6 @@ Provide a short, welcoming opening message to start a chat session with a studen
         model: "gemini-2.5-flash",
         contents: prompt,
     });
-    // FIX: chatWithRetry now returns the text directly.
     return response;
 };
 
@@ -918,10 +936,12 @@ Maintain the persona throughout the conversation. Keep your responses concise an
         contents: history,
         config: { systemInstruction, safetySettings },
     });
-    // FIX: chatWithRetry now returns the text directly.
     return response;
 };
 
 export const live = {
-    connect: (options: any) => getAiInstance().live.connect(options),
+    connect: async (options: any) => {
+        const ai = await getAiInstance();
+        return ai.live.connect(options);
+    },
 };

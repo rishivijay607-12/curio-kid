@@ -125,7 +125,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
 
                 let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
                 
-                sessionPromiseRef.current = live.connect({
+                sessionPromiseRef.current = await live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
                         responseModalities: [Modality.AUDIO],
