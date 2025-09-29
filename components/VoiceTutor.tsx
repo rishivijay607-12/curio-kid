@@ -4,13 +4,6 @@ import type { Grade, Language } from '../types';
 import { live } from '../services/geminiService'; // Import the centralized service
 import LoadingSpinner from './LoadingSpinner';
 
-// --- Local Enum Definition to Avoid Top-Level Imports ---
-// This is the key fix to prevent the app from crashing on startup.
-const Modality = {
-    AUDIO: 'AUDIO',
-} as const;
-
-
 // Fix: Add webkitAudioContext to Window interface for browser compatibility
 declare global {
     interface Window {
@@ -102,6 +95,8 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     throw new Error('Your browser does not support the MediaDevices API.');
                 }
+                
+                const { Modality } = await import('@google/genai');
 
                 streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
                 if (isCancelled) return;
@@ -132,7 +127,6 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
 
                 let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
                 
-                // The `live.connect` is now asynchronous because of the dynamic import
                 sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
@@ -145,9 +139,13 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                     callbacks: {
                         onopen: () => {
                             if (isCancelled || !inputAudioContextRef.current || !streamRef.current) return;
+                             const inputAudioContext = inputAudioContextRef.current;
                              setStatus('listening');
-                             const source = inputAudioContextRef.current.createMediaStreamSource(streamRef.current);
-                             scriptProcessorRef.current = inputAudioContextRef.current.createScriptProcessor(4096, 1, 1);
+
+                             const source = inputAudioContext.createMediaStreamSource(streamRef.current);
+                             scriptProcessorRef.current = inputAudioContext.createScriptProcessor(4096, 1, 1);
+                             const gainNode = inputAudioContext.createGain();
+                             gainNode.gain.value = 0; // Mute the node to prevent echo
 
                              scriptProcessorRef.current.onaudioprocess = (audioProcessingEvent) => {
                                 const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
@@ -156,8 +154,10 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                                   session.sendRealtimeInput({ media: pcmBlob });
                                 });
                              };
+                             
                              source.connect(scriptProcessorRef.current);
-                             scriptProcessorRef.current.connect(inputAudioContextRef.current.destination);
+                             scriptProcessorRef.current.connect(gainNode);
+                             gainNode.connect(inputAudioContext.destination);
                         },
                         onmessage: async (message: LiveServerMessage) => {
                              if (isCancelled || !outputAudioContextRef.current) return;
