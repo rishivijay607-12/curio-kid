@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Grade, AppMode } from '../types';
 import LoadingSpinner from './LoadingSpinner';
@@ -5,11 +6,24 @@ import LoadingSpinner from './LoadingSpinner';
 interface GradeSelectorProps {
   onGradeSelect: (grade: Grade) => void;
   appMode: AppMode;
-  setAppMode: (mode: AppMode) => void;
   isSolverSetup: boolean;
   isLoading: boolean;
   error: string | null;
 }
+
+const featureTitles: { [key in AppMode]?: string } = {
+    'quiz': 'Interactive Quiz',
+    'worksheet': 'Printable Worksheet',
+    'notes': 'Quick Study Notes',
+    'diagram': 'Diagram Generator',
+    'concept_deep_dive': 'Concept Deep Dive',
+    'virtual_lab': 'Virtual Lab',
+    'real_world_links': 'Real World Links',
+    'chat_with_history': 'Chat with History',
+    'story_weaver': 'AI Story Weaver',
+    'science_fair_buddy': 'Science Fair Buddy',
+    'what_if': "'What If?' Scenarios",
+};
 
 const AtomIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -28,32 +42,15 @@ const GradeButton: React.FC<{ grade: Grade; onClick: (grade: Grade) => void, dis
   </button>
 );
 
-const ModeButton: React.FC<{
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}> = ({ label, isActive, onClick }) => {
-  const baseClasses = "px-6 py-2 rounded-lg font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75";
-  const activeClasses = "bg-cyan-600 text-white shadow-md";
-  const inactiveClasses = "bg-slate-700 text-slate-300 hover:bg-slate-600";
-  return (
-    <button onClick={onClick} className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}>
-      {label}
-    </button>
-  );
-};
-
-
-const GradeSelector: React.FC<GradeSelectorProps> = ({ onGradeSelect, appMode, setAppMode, isSolverSetup, isLoading, error }) => {
+const GradeSelector: React.FC<GradeSelectorProps> = ({ onGradeSelect, appMode, isSolverSetup, isLoading, error }) => {
   const grades: Grade[] = [6, 7, 8, 9, 10];
 
   const headerText = () => {
     if (isSolverSetup) return 'AI Doubt Solver';
-    if (appMode === 'diagram') return 'Diagram Generator';
-    return 'The App of Curiosity';
+    return featureTitles[appMode] || 'The Book of Curiosity';
   };
 
-  const mainText = isSolverSetup || appMode === 'diagram' ? 'Which grade are you studying in?' : 'Select your grade to start!';
+  const mainText = 'Which grade are you studying in?';
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 md:p-8">
@@ -64,13 +61,6 @@ const GradeSelector: React.FC<GradeSelectorProps> = ({ onGradeSelect, appMode, s
             {headerText()}
           </h1>
         </div>
-        {!isSolverSetup && appMode !== 'diagram' && (
-            <div className="mt-6 p-1 bg-slate-800 rounded-lg inline-flex flex-wrap justify-center space-x-1">
-                <ModeButton label="Quiz" isActive={appMode === 'quiz'} onClick={() => setAppMode('quiz')} />
-                <ModeButton label="Worksheets" isActive={appMode === 'worksheet'} onClick={() => setAppMode('worksheet')} />
-                <ModeButton label="Notes" isActive={appMode === 'notes'} onClick={() => setAppMode('notes')} />
-            </div>
-        )}
         <p className="text-slate-300 mt-6 text-xl">
           {mainText}
         </p>

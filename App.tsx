@@ -1,10 +1,9 @@
-
 import React, { useState, useRef, Suspense } from 'react';
 import { GameState } from './types';
-import type { Grade, Difficulty, AppMode, QuizQuestion, ChatMessage, Language, NoteSection, Diagram, DiagramIdea } from './types';
+import type { Grade, Difficulty, AppMode, QuizQuestion, ChatMessage, Language, NoteSection, Diagram, DiagramIdea, GenerativeTextResult } from './types';
 import HomeScreen from './components/HomeScreen';
 import LoadingSpinner from './components/LoadingSpinner';
-import { generateWorksheet, generateNotes, getChatResponse, generateGreeting, generateDiagramIdeas, generateDiagramImage } from './services/geminiService';
+import { generateWorksheet, generateNotes, getChatResponse, generateGreeting, generateDiagramIdeas, generateDiagramImage, generateTextForMode, explainImageWithText } from './services/geminiService';
 
 // Lazy-loaded components for code-splitting
 const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
@@ -22,6 +21,9 @@ const WorksheetCountSelector = React.lazy(() => import('./components/WorksheetCo
 const DoubtSolver = React.lazy(() => import('./components/DoubtSolver'));
 const DiagramIdeaSelector = React.lazy(() => import('./components/DiagramIdeaSelector'));
 const DiagramGenerator = React.lazy(() => import('./components/DiagramGenerator'));
+const GenerativeText = React.lazy(() => import('./components/GenerativeText'));
+const ScienceLens = React.lazy(() => import('./components/ScienceLens'));
+const VoiceTutor = React.lazy(() => import('./components/VoiceTutor'));
 
 
 const HomeButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
@@ -45,6 +47,7 @@ const SuspenseLoader: React.FC = () => (
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.LOGIN_SCREEN);
+  const [username, setUsername] = useState<string>('');
   const [appMode, setAppMode] = useState<AppMode>('quiz');
   const [selectedGrade, setSelectedGrade] = useState<Grade | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<string>('');
@@ -60,28 +63,52 @@ const App: React.FC = () => {
   const [generatedDiagrams, setGeneratedDiagrams] = useState<Diagram[]>([]);
   const [regeneratingDiagramId, setRegeneratingDiagramId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [generativeTextResult, setGenerativeTextResult] = useState<GenerativeTextResult | null>(null);
+  const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generationCancelledRef = useRef(false);
   const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
 
-  const handleStartLearningHub = () => {
-    setAppMode('quiz');
-    setGameState(GameState.GRADE_SELECTION);
+  // --- Navigation and Mode Setting ---
+  const startFeature = (mode: AppMode) => {
+      setAppMode(mode);
+      setGameState(GameState.GRADE_SELECTION);
   };
   
   const handleStartDoubtSolver = () => {
     setGameState(GameState.LANGUAGE_SELECTION);
   };
-
-  const handleStartDiagramGenerator = () => {
-    setAppMode('diagram');
+  
+  const handleStartVoiceTutor = () => {
+    setAppMode('voice_tutor');
     setGameState(GameState.GRADE_SELECTION);
   };
-  
+
+  const handleStartScienceLens = () => {
+      setAppMode('science_lens');
+      setScienceLensResult(null);
+      setError(null);
+      setGameState(GameState.SCIENCE_LENS_INPUT);
+  };
+
+  const handleStartGenerativeFeature = (mode: AppMode) => {
+    setAppMode(mode);
+    setSelectedGrade(null);
+    setSelectedTopic('');
+    setGenerativeTextResult(null);
+    setError(null);
+    setGameState(GameState.GENERATIVE_TEXT_INPUT);
+  };
+
   const handleLanguageSelect = (language: Language) => {
     setSelectedLanguage(language);
     setGameState(GameState.GRADE_SELECTION);
+  };
+  
+  const handleVoiceTutorLanguageSelect = (language: Language) => {
+    setSelectedLanguage(language);
+    setGameState(GameState.VOICE_TUTOR_SESSION);
   };
 
   const handleGradeSelect = (grade: Grade) => {
@@ -90,65 +117,93 @@ const App: React.FC = () => {
     setSelectedTopic('');
     setGameState(GameState.TOPIC_SELECTION);
   };
+  
+  const handleGoHome = () => {
+    setGameState(GameState.HOME_SCREEN);
+    setAppMode('quiz');
+    setSelectedLanguage(null);
+  };
+
+  const handleRestart = () => {
+    setGameState(GameState.LOGIN_SCREEN);
+    setUsername('');
+    setAppMode('quiz');
+    setSelectedGrade(null);
+    setSelectedTopic('');
+    setSelectedDifficulty(null);
+    setSelectedLanguage(null);
+    setFinalScore(0);
+    setFinalQuizLength(0);
+    setQuizLength(5);
+    setTimerDuration(0);
+    setWorksheetQuestions(null);
+    setGeneratedNotes(null);
+    setDiagramIdeas([]);
+    setGeneratedDiagrams([]);
+    setRegeneratingDiagramId(null);
+    setChatHistory([]);
+    setGenerativeTextResult(null);
+    setScienceLensResult(null);
+    setError(null);
+    setIsGenerating(false);
+  };
+
+  // --- Main Logic Handlers ---
 
   const handleTopicSelect = async (topic: string) => {
     setSelectedTopic(topic);
     setError(null);
+    setIsGenerating(true);
 
-    // Diagram Generator Flow
-    if (appMode === 'diagram') {
+    try {
         if (!selectedGrade) return;
-        setIsGenerating(true);
-        setDiagramIdeas([]);
-        
-        try {
-            const ideas = await generateDiagramIdeas(topic, selectedGrade);
-            const ideasWithIds = ideas.map(idea => ({
-                ...idea,
-                id: crypto.randomUUID(),
-            }));
-            setDiagramIdeas(ideasWithIds);
-            setGameState(GameState.DIAGRAM_IDEAS_SELECTION);
-        } catch(err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-            setGameState(GameState.TOPIC_SELECTION); // Go back if ideas fail
-        } finally {
-            setIsGenerating(false);
-        }
-        return;
-    }
 
-    // Doubt Solver Flow
-    if (selectedLanguage) {
-        setIsGenerating(true);
-        try {
-            if (!selectedGrade) return;
-            const greeting = await generateGreeting(selectedGrade, selectedLanguage, topic);
-            const initialMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
-            setChatHistory([initialMessage]);
-            setGameState(GameState.DOUBT_SOLVER);
-        } catch(err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-            setGameState(GameState.TOPIC_SELECTION); // Stay on topic selection if greeting fails
-        } finally {
-            setIsGenerating(false);
+        switch (appMode) {
+            case 'diagram':
+                const ideas = await generateDiagramIdeas(topic, selectedGrade);
+                const ideasWithIds = ideas.map(idea => ({ ...idea, id: crypto.randomUUID() }));
+                setDiagramIdeas(ideasWithIds);
+                setGameState(GameState.DIAGRAM_IDEAS_SELECTION);
+                break;
+            case 'notes':
+                const notes = await generateNotes(topic, selectedGrade);
+                setGeneratedNotes(notes);
+                setGameState(GameState.NOTES_GENERATED);
+                break;
+            case 'quiz':
+            case 'worksheet':
+                setGameState(GameState.DIFFICULTY_SELECTION);
+                break;
+            case 'voice_tutor':
+                setGameState(GameState.VOICE_TUTOR_LANGUAGE_SELECTION);
+                break;
+            case 'concept_deep_dive':
+            case 'virtual_lab':
+            case 'real_world_links':
+            case 'chat_with_history':
+            case 'story_weaver':
+            case 'science_fair_buddy':
+            case 'what_if':
+                setGenerativeTextResult(null);
+                setGameState(GameState.GENERATIVE_TEXT_INPUT);
+                break;
+            // Handle doubt solver topic selection
+            default:
+                 if (selectedLanguage) {
+                    const greeting = await generateGreeting(selectedGrade, selectedLanguage, topic);
+                    const initialMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
+                    setChatHistory([initialMessage]);
+                    setGameState(GameState.DOUBT_SOLVER);
+                } else {
+                    setGameState(GameState.DIFFICULTY_SELECTION);
+                }
+                break;
         }
-    } 
-    // Learning Hub Flow
-    else if (appMode === 'notes') {
-        setIsGenerating(true);
-        try {
-            if (!selectedGrade) return;
-            const notes = await generateNotes(topic, selectedGrade);
-            setGeneratedNotes(notes);
-            setGameState(GameState.NOTES_GENERATED);
-        } catch(err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-        } finally {
-            setIsGenerating(false);
-        }
-    } else {
-        setGameState(GameState.DIFFICULTY_SELECTION);
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+        setGameState(GameState.TOPIC_SELECTION); // Go back if something fails
+    } finally {
+        setIsGenerating(false);
     }
   };
   
@@ -233,7 +288,6 @@ const App: React.FC = () => {
         setGameState(GameState.WORKSHEET_GENERATED);
     } catch(err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-        // Fix: Corrected typo in GameState enum member name.
         setGameState(GameState.WORKSHEET_COUNT_SELECTION); 
     } finally {
         setIsGenerating(false);
@@ -281,42 +335,43 @@ const App: React.FC = () => {
     }
   };
   
+  const handleGenerativeText = async (userInput: string) => {
+      setIsGenerating(true);
+      setError(null);
+      setGenerativeTextResult(null);
+      try {
+          const result = await generateTextForMode(appMode, userInput, selectedGrade ?? undefined, selectedTopic || undefined);
+          setGenerativeTextResult(result);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      } finally {
+          setIsGenerating(false);
+      }
+  };
+  
+  const handleScienceLens = async (base64Image: string, mimeType: string, prompt: string) => {
+      setIsGenerating(true);
+      setError(null);
+      setScienceLensResult(null);
+      try {
+          const result = await explainImageWithText(base64Image, mimeType, prompt);
+          setScienceLensResult(result);
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred.');
+      } finally {
+          setIsGenerating(false);
+      }
+  };
+
   const handleCancelGeneration = () => {
     generationCancelledRef.current = true;
-    setIsGenerating(false);
-  };
-
-  const handleGoHome = () => {
-    setGameState(GameState.HOME_SCREEN);
-    setAppMode('quiz');
-    setSelectedLanguage(null);
-  };
-
-  const handleRestart = () => {
-    setGameState(GameState.LOGIN_SCREEN);
-    setAppMode('quiz');
-    setSelectedGrade(null);
-    setSelectedTopic('');
-    setSelectedDifficulty(null);
-    setSelectedLanguage(null);
-    setFinalScore(0);
-    setFinalQuizLength(0);
-    setQuizLength(5);
-    setTimerDuration(0);
-    setWorksheetQuestions(null);
-    setGeneratedNotes(null);
-    setDiagramIdeas([]);
-    setGeneratedDiagrams([]);
-    setRegeneratingDiagramId(null);
-    setChatHistory([]);
-    setError(null);
     setIsGenerating(false);
   };
 
   const renderContent = () => {
     switch (gameState) {
       case GameState.LOGIN_SCREEN:
-        return <LoginScreen onLoginSuccess={() => setGameState(GameState.HOME_SCREEN)} />;
+        return <LoginScreen onLoginSuccess={(name) => { setUsername(name); setGameState(GameState.HOME_SCREEN); }} />;
       case GameState.PLAYING:
         if (!selectedGrade || !selectedTopic || !selectedDifficulty) {
             handleRestart();
@@ -369,6 +424,23 @@ const App: React.FC = () => {
             error={error}
             onCancelGeneration={handleCancelGeneration}
         />
+      case GameState.GENERATIVE_TEXT_INPUT:
+        return <GenerativeText
+            appMode={appMode}
+            grade={selectedGrade}
+            topic={selectedTopic}
+            onGenerate={handleGenerativeText}
+            isLoading={isGenerating}
+            result={generativeTextResult}
+            error={error}
+        />;
+      case GameState.SCIENCE_LENS_INPUT:
+        return <ScienceLens
+            onGenerate={handleScienceLens}
+            isLoading={isGenerating}
+            result={scienceLensResult}
+            error={error}
+        />;
       case GameState.TIMER_SELECTION:
         return <TimerSelector onTimerSelect={handleTimerSelect} />;
       case GameState.QUESTION_NUMBER_SELECTION:
@@ -397,22 +469,54 @@ const App: React.FC = () => {
                     isGenerating={isGenerating}
                     error={error}
                     appMode={appMode}
-                    isSolverSetup={!!selectedLanguage}
+                    isSolverSetup={!!selectedLanguage && appMode !== 'voice_tutor'}
                 />;
        case GameState.LANGUAGE_SELECTION:
-        return <LanguageSelector onLanguageSelect={handleLanguageSelect} />;
+        return <LanguageSelector onLanguageSelect={handleLanguageSelect} title="AI Doubt Solver"/>;
+       case GameState.VOICE_TUTOR_LANGUAGE_SELECTION:
+        if (!selectedGrade || !selectedTopic) { handleRestart(); return null; }
+        return <LanguageSelector
+            onLanguageSelect={handleVoiceTutorLanguageSelect}
+            title="Select Conversation Language"
+            grade={selectedGrade}
+            topic={selectedTopic}
+        />;
+      case GameState.VOICE_TUTOR_SESSION:
+        if (!selectedGrade || !selectedTopic || !selectedLanguage) { handleRestart(); return null; }
+        return <VoiceTutor
+            grade={selectedGrade}
+            topic={selectedTopic}
+            language={selectedLanguage}
+            onEndSession={handleGoHome}
+        />
       case GameState.GRADE_SELECTION:
          return <GradeSelector 
                     onGradeSelect={handleGradeSelect} 
                     appMode={appMode} 
-                    setAppMode={setAppMode}
-                    isSolverSetup={!!selectedLanguage}
-                    isLoading={false}
-                    error={null}
+                    isSolverSetup={!!selectedLanguage && appMode !== 'voice_tutor'}
+                    isLoading={isGenerating}
+                    error={error}
                 />;
       case GameState.HOME_SCREEN:
       default:
-        return <HomeScreen onStartLearningHub={handleStartLearningHub} onStartDoubtSolver={handleStartDoubtSolver} onStartDiagramGenerator={handleStartDiagramGenerator} />;
+        return <HomeScreen 
+            username={username}
+            onStartQuiz={() => startFeature('quiz')}
+            onStartWorksheet={() => startFeature('worksheet')}
+            onStartNotes={() => startFeature('notes')}
+            onStartDiagramGenerator={() => startFeature('diagram')}
+            onStartDoubtSolver={handleStartDoubtSolver}
+            onStartVoiceTutor={handleStartVoiceTutor}
+            onStartScienceLens={handleStartScienceLens}
+            onStartConceptDeepDive={() => handleStartGenerativeFeature('concept_deep_dive')}
+            onStartVirtualLab={() => startFeature('virtual_lab')}
+            onStartRealWorldLinks={() => startFeature('real_world_links')}
+            onStartChatWithHistory={() => handleStartGenerativeFeature('chat_with_history')}
+            onStartStoryWeaver={() => startFeature('story_weaver')}
+            onStartScienceFairBuddy={() => handleStartGenerativeFeature('science_fair_buddy')}
+            onStartWhatIf={() => handleStartGenerativeFeature('what_if')}
+            onLogout={handleRestart}
+         />;
     }
   };
 

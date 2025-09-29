@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { CHAPTERS_BY_GRADE } from '../constants';
 import type { Grade, AppMode } from '../types';
@@ -11,6 +12,20 @@ interface TopicSelectorProps {
   appMode: AppMode;
   isSolverSetup?: boolean;
 }
+
+const featureTitles: { [key in AppMode]?: string } = {
+    'quiz': 'Interactive Quiz',
+    'worksheet': 'Printable Worksheet',
+    'notes': 'Quick Study Notes',
+    'diagram': 'Diagram Generator',
+    'concept_deep_dive': 'Concept Deep Dive',
+    'virtual_lab': 'Virtual Lab',
+    'real_world_links': 'Real World Links',
+    'chat_with_history': 'Chat with History',
+    'story_weaver': 'AI Story Weaver',
+    'science_fair_buddy': 'Science Fair Buddy',
+    'what_if': "'What If?' Scenarios",
+};
 
 const AtomIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -32,8 +47,7 @@ const TopicSelector: React.FC<TopicSelectorProps> = ({ onTopicSelect, grade, isG
 
     const headerText = () => {
         if (isSolverSetup) return 'AI Doubt Solver';
-        if (appMode === 'diagram') return 'Diagram Generator';
-        return 'The App of Curiosity';
+        return featureTitles[appMode] || 'The Book of Curiosity';
     };
 
     const subHeaderText = isSolverSetup ? 'Select a chapter to ask questions about!' : 'Select a chapter to begin!';

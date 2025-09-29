@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection } from '../types';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -641,4 +641,90 @@ export const generateDiagramImage = async (prompt: string): Promise<string> => {
     // This code is unreachable if the loop always throws or returns, but it's good practice for type safety.
     console.error("Failed to generate diagram image after retries:", lastError);
     throw new Error("Failed to generate diagram image. Please try again.");
+};
+
+
+export const generateTextForMode = async (
+    mode: AppMode,
+    userInput: string,
+    grade?: Grade,
+    topic?: string
+): Promise<GenerativeTextResult> => {
+    let systemInstruction = "You are a helpful and engaging AI science expert.";
+    let contents = `My question: "${userInput}"`;
+    let useSearch = false;
+
+    if (grade && topic) {
+        systemInstruction = `You are a helpful and engaging AI science expert for a Grade ${grade} student in India. The student is currently studying the chapter "${topic}".`;
+        contents = `Chapter: "${topic}"\nGrade: ${grade}\nMy question: "${userInput}"`;
+    }
+
+    switch (mode) {
+        case 'concept_deep_dive':
+            systemInstruction += "\nYour task is to provide a detailed, in-depth explanation of the concept the student asks about. Use simple language, analogies, and break down complex ideas into easy-to-understand steps. Use lists and bold text to structure your answer clearly.";
+            break;
+        case 'virtual_lab':
+            systemInstruction += "\nYour task is to act as a virtual lab assistant. The student will name an experiment. You must provide clear, step-by-step instructions on how to perform this experiment virtually. List the materials needed (virtual), the procedure, and what observations the student should expect. Start with a safety warning.";
+            break;
+        case 'real_world_links':
+            systemInstruction += "\nYour task is to connect science concepts from the student's question to the real world. Provide 2-3 clear and interesting examples of how the concept applies in everyday life or technology. Use Google Search to find relevant and up-to-date examples and information.";
+            useSearch = true;
+            break;
+        case 'chat_with_history':
+            systemInstruction = `You are a role-playing AI. You will act as a famous historical scientist. Based on the user's question, you must determine the most relevant famous scientist (e.g., Einstein for relativity, Darwin for evolution, Marie Curie for radioactivity). Embody that scientist's persona, speak in the first person ("I"), and explain the concept from their historical perspective. Start your first response by introducing yourself as that scientist.`;
+            contents = `The user's question is: "${userInput}". Your task is to determine the most relevant historical scientist and role-play as them to answer the question.`;
+            break;
+        case 'story_weaver':
+            systemInstruction += `\nYou are a creative storyteller. Your task is to weave a short, fun, and educational story based on the science concept the student provides. The story should be engaging${grade ? ` for a Grade ${grade} student` : ''} and accurately explain the science concept within the narrative.`;
+            break;
+        case 'science_fair_buddy':
+            systemInstruction += "\nYou are a helpful and creative science fair assistant. The student needs help with a project idea. Brainstorm 3 unique and creative science fair project ideas based on their query. For each idea, provide a project title, a brief description, and a list of materials needed.";
+            break;
+        case 'what_if':
+            systemInstruction += "\nYou are a creative and scientific thinker. Your task is to answer the student's hypothetical 'What if...?' questions. Provide a scientifically plausible, yet imaginative and engaging explanation.";
+            break;
+    }
+
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: contents,
+            config: {
+                systemInstruction: systemInstruction,
+                tools: useSearch ? [{ googleSearch: {} }] : undefined,
+            },
+        });
+
+        const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+
+        return {
+            text: response.text,
+            sources: sources as GroundingChunk[] | undefined,
+        };
+    } catch (error) {
+        console.error(`Error in generateTextForMode (mode: ${mode})`, error);
+        throw new Error("Failed to get a response from the AI. Please try again.");
+    }
+};
+
+export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
+    try {
+        const imagePart = {
+            inlineData: {
+                mimeType: mimeType,
+                data: base64Image,
+            },
+        };
+        const textPart = { text: prompt };
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: { parts: [imagePart, textPart] },
+        });
+
+        return response.text;
+    } catch (error) {
+        console.error("Error in explainImageWithText:", error);
+        throw new Error("Failed to analyze the image. Please try another image or prompt.");
+    }
 };

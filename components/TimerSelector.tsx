@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface TimerSelectorProps {
@@ -35,7 +36,7 @@ const TimerSelector: React.FC<TimerSelectorProps> = ({ onTimerSelect }) => {
         <div className="flex justify-center items-center gap-4">
           <AtomIcon />
           <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
-            The App of Curiosity
+            The Book of Curiosity
           </h1>
         </div>
         <p className="text-slate-300 mt-6 text-xl">

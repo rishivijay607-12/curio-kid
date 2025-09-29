@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (username: string) => void;
 }
 
 const CuriosityLogo: React.FC = () => (
@@ -23,7 +23,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     // In a real app, you'd have validation and an API call here.
     // For this demo, we'll just check if fields are not empty.
     if (username.trim() && password.trim()) {
-      onLoginSuccess();
+      onLoginSuccess(username.trim());
     }
   };
 

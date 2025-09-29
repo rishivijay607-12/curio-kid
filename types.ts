@@ -32,6 +32,19 @@ export interface Diagram {
   description: string;
 }
 
+export interface GroundingChunk {
+  web: {
+    uri: string;
+    title: string;
+  }
+}
+
+export interface GenerativeTextResult {
+    text: string;
+    sources?: GroundingChunk[];
+}
+
+
 export enum GameState {
   LOGIN_SCREEN,
   HOME_SCREEN,
@@ -49,9 +62,27 @@ export enum GameState {
   DIAGRAM_IDEAS_SELECTION,
   DIAGRAM_GENERATOR,
   DOUBT_SOLVER,
+  GENERATIVE_TEXT_INPUT,
+  SCIENCE_LENS_INPUT,
+  VOICE_TUTOR_LANGUAGE_SELECTION,
+  VOICE_TUTOR_SESSION,
 }
 
-export type AppMode = 'quiz' | 'worksheet' | 'notes' | 'diagram';
+export type AppMode = 
+  | 'quiz' 
+  | 'worksheet' 
+  | 'notes' 
+  | 'diagram'
+  | 'science_lens'
+  | 'concept_deep_dive'
+  | 'virtual_lab'
+  | 'real_world_links'
+  | 'chat_with_history'
+  | 'story_weaver'
+  | 'science_fair_buddy'
+  | 'what_if'
+  | 'voice_tutor';
+
 export type Grade = 6 | 7 | 8 | 9 | 10;
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 export type Language = 'English' | 'English+Tamil' | 'English+Malayalam' | 'English+Hindi' | 'English+Telugu' | 'English+Kannada';
