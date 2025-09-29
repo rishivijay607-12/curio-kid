@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
+import { LiveServerMessage, Modality, Blob } from '@google/genai';
 import type { Grade, Language } from '../types';
+import { live } from '../services/geminiService'; // Import the centralized service
 import LoadingSpinner from './LoadingSpinner';
-
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
-}
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // Fix: Add webkitAudioContext to Window interface for browser compatibility
 declare global {
@@ -129,7 +125,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
 
                 let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
                 
-                sessionPromiseRef.current = ai.live.connect({
+                sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
                         responseModalities: [Modality.AUDIO],
@@ -210,7 +206,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 if (message.includes('Permission denied')) {
                     setError('Microphone permission denied. Please allow microphone access in your browser settings.');
                 } else {
-                    setError('Could not start the voice session.');
+                    setError(`Could not start the voice session. ${message}`);
                 }
                 setStatus('error');
             }

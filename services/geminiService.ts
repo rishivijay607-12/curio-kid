@@ -1,11 +1,19 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
-if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set");
+let ai: GoogleGenAI;
+
+function getAiInstance(): GoogleGenAI {
+    if (!ai) {
+        if (!process.env.API_KEY) {
+            // This error will now be caught by the functions calling this.
+            throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
+        }
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return ai;
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const safetySettings = [
   {
@@ -119,7 +127,7 @@ For each question:
 - The correct answer must be one of the provided options.
 - Provide a brief, easy-to-understand explanation for why the correct answer is correct.`;
 
-                const response = await ai.models.generateContent({
+                const response = await getAiInstance().models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: prompt,
                     config: {
@@ -253,7 +261,7 @@ ${instructions}
 
 For every question, you must provide a brief, easy-to-understand explanation for the correct answer.`;
 
-                const response = await ai.models.generateContent({
+                const response = await getAiInstance().models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: prompt,
                     config: {
@@ -318,7 +326,7 @@ Under each title, provide 3-5 key bullet points that summarize the most importan
 The language used should be clear, simple, and easy for a Grade ${grade} student to understand and review quickly.
 `;
 
-            const response = await ai.models.generateContent({
+            const response = await getAiInstance().models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
                 config: {
@@ -398,7 +406,7 @@ The message should be **${langInstruction}**
 Keep it to one or two sentences. For example: "Hello! I'm Curio, your science tutor. Ask me anything about the chapter '${topic}'!"
 `;
 
-            const response = await ai.models.generateContent({
+            const response = await getAiInstance().models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
             });
@@ -471,7 +479,7 @@ ${langInstruction}
             
             const contents = history;
 
-            const response = await ai.models.generateContent({
+            const response = await getAiInstance().models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: contents,
                 config: {
@@ -557,7 +565,7 @@ For each of the 8 diagrams, provide two things:
 
 Generate exactly 8 diagram ideas.`;
 
-            const response = await ai.models.generateContent({
+            const response = await getAiInstance().models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: prompt,
                 config: {
@@ -609,7 +617,7 @@ export const generateDiagramImage = async (prompt: string): Promise<string> => {
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await ai.models.generateImages({
+            const response = await getAiInstance().models.generateImages({
                 model: 'imagen-4.0-generate-001',
                 prompt: prompt,
                 config: {
@@ -685,7 +693,7 @@ export const generateTextForMode = async (
     }
 
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAiInstance().models.generateContent({
             model: "gemini-2.5-flash",
             contents: contents,
             config: {
@@ -716,7 +724,7 @@ export const explainImageWithText = async (base64Image: string, mimeType: string
         };
         const textPart = { text: prompt };
 
-        const response = await ai.models.generateContent({
+        const response = await getAiInstance().models.generateContent({
             model: "gemini-2.5-flash",
             contents: { parts: [imagePart, textPart] },
         });
@@ -753,7 +761,7 @@ Brainstorm 3 unique and engaging science fair project ideas based on their inter
 For each idea, provide a unique, catchy 'title' and a detailed 'description' (3-4 sentences) explaining the project, what the student will investigate, and why it's a good project.`;
     
     try {
-        const response = await ai.models.generateContent({
+        const response = await getAiInstance().models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -808,7 +816,7 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
 
     let textSteps: { stepTitle: string; instructions: string }[] = [];
     try {
-        const textResponse = await ai.models.generateContent({
+        const textResponse = await getAiInstance().models.generateContent({
             model: "gemini-2.5-flash",
             contents: textPlanPrompt,
             config: {
@@ -858,7 +866,7 @@ const chatWithRetry = async (config: any): Promise<string> => {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const response = await ai.models.generateContent(config);
+            const response = await getAiInstance().models.generateContent(config);
             return response.text;
         } catch (error) {
             lastError = error;
@@ -909,4 +917,8 @@ Maintain the persona throughout the conversation. Keep your responses concise an
     });
     // FIX: chatWithRetry now returns the text directly.
     return response;
+};
+
+export const live = {
+    connect: (options: any) => getAiInstance().live.connect(options),
 };
