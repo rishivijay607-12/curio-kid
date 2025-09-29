@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
+
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
 // --- Local Enum Definitions to Avoid Top-Level Imports ---
@@ -13,9 +13,9 @@ const Type = {
     BOOLEAN: 'BOOLEAN',
 } as const;
 
-let aiPromise: Promise<GoogleGenAI> | null = null;
+let aiPromise: Promise<any> | null = null;
 
-function getAiInstance(): Promise<GoogleGenAI> {
+function getAiInstance(): Promise<any> {
     if (!aiPromise) {
         aiPromise = (async () => {
             const { GoogleGenAI } = await import('@google/genai');
