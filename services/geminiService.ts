@@ -6,17 +6,19 @@ import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSectio
 // Your deployment workflow should then use a script to find and replace "__API_KEY_PLACEHOLDER__" with the value of your secret.
 const apiKey = "__API_KEY_PLACEHOLDER__";
 
-const getApiKey = (): string => {
+let aiInstance: GoogleGenAI | null = null;
+
+// Lazily initialize the AI instance to prevent app crash on load if API key is missing.
+// This function will be called by every service function before making an API call.
+const getAi = (): GoogleGenAI => {
     if (apiKey === "__API_KEY_PLACEHOLDER__" || !apiKey) {
-        console.warn("Gemini API key not provided. AI features will not work. Please configure your deployment pipeline.");
-        return 'MISSING_API_KEY'; // Return a non-functional key to avoid crashing the app.
+        throw new Error("API key not configured. The application cannot connect to the AI service.");
     }
-    return apiKey;
+    if (!aiInstance) {
+        aiInstance = new GoogleGenAI({ apiKey: apiKey });
+    }
+    return aiInstance;
 };
-
-
-// --- Singleton AI Instance ---
-const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 
 // --- Safety Settings (now synchronous) ---
@@ -100,6 +102,7 @@ export const generateQuizQuestions = async (
     count: number,
     onProgress: (progress: { current: number; total: number }) => void
 ): Promise<QuizQuestion[]> => {
+    const ai = getAi();
     const maxRetries = 3;
     const questions: QuizQuestion[] = [];
     const BATCH_SIZE = 5; // Generate questions in batches for speed
@@ -196,6 +199,7 @@ export const generateWorksheet = async (
     count: number,
     onProgress: (progress: { current: number, total: number }) => void
 ): Promise<QuizQuestion[]> => {
+    const ai = getAi();
     const maxRetries = 3;
     onProgress({ current: 0, total: count });
     
@@ -317,6 +321,7 @@ For every question, you must provide a brief, easy-to-understand explanation for
 };
 
 export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSection[]> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -380,6 +385,7 @@ The language used should be clear, simple, and easy for a Grade ${grade} student
 };
 
 export const generateGreeting = async (grade: Grade, language: Language, topic: string): Promise<string> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -442,6 +448,7 @@ Keep it to one or two sentences. For example: "Hello! I'm Curio, your science tu
 };
 
 export const getChatResponse = async (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -559,6 +566,7 @@ const diagramIdeasSchema = {
 };
 
 export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -619,6 +627,7 @@ Generate exactly 8 diagram ideas.`;
 };
 
 export const generateDiagramImage = async (prompt: string): Promise<string> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
     
@@ -671,6 +680,7 @@ export const generateTextForMode = async (
     grade?: Grade,
     topic?: string
 ): Promise<GenerativeTextResult> => {
+    const ai = getAi();
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = false;
@@ -722,6 +732,7 @@ export const generateTextForMode = async (
 };
 
 export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
+    const ai = getAi();
     try {
         const imagePart = {
             inlineData: {
@@ -763,6 +774,7 @@ const scienceFairIdeasSchema = {
 };
 
 export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
+    const ai = getAi();
     const prompt = `You are a helpful and creative science fair assistant. The student is interested in the following topics: "${userInput}".
 Brainstorm 3 unique and engaging science fair project ideas based on their interests.
 For each idea, provide a unique, catchy 'title' and a detailed 'description' (3-4 sentences) explaining the project, what the student will investigate, and why it's a good project.`;
@@ -813,6 +825,7 @@ export const generateScienceFairPlan = async (
     projectDescription: string,
     onProgress: (progress: { current: number; total: number; message: string }) => void
 ): Promise<ScienceFairPlanStep[]> => {
+    const ai = getAi();
     onProgress({ current: 0, total: 5, message: "Generating project plan text..." });
 
     // 1. Generate the text for all 5 steps first
@@ -868,6 +881,7 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
 
 
 const chatWithRetry = async (config: any): Promise<string> => {
+    const ai = getAi();
     const maxRetries = 3;
     let lastError: unknown;
 
@@ -928,6 +942,7 @@ Maintain the persona throughout the conversation. Keep your responses concise an
 
 export const live = {
     connect: (options: any) => {
+        const ai = getAi();
         return ai.live.connect(options);
     },
 };
