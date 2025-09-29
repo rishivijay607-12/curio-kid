@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
@@ -18,7 +19,7 @@ let ai: any;
 
 function getAiInstance() {
     if (!ai) {
-        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+        const apiKey = process.env.API_KEY;
         if (!apiKey) {
             throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
         }
