@@ -5,11 +5,14 @@ let ai: GoogleGenAI;
 
 function getAiInstance(): GoogleGenAI {
     if (!ai) {
-        if (!process.env.API_KEY) {
+        // Browser-safe check for the API key
+        const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+
+        if (!apiKey) {
             // This error will now be caught by the functions calling this.
             throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
         }
-        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        ai = new GoogleGenAI({ apiKey: apiKey });
     }
     return ai;
 }
