@@ -1,21 +1,27 @@
-import { Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import type { GoogleGenAI } from "@google/genai";
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
+
+// --- Local Enum Definitions to Avoid Top-Level Imports ---
+// This is the key fix to prevent the app from crashing on startup.
+
+const Type = {
+    OBJECT: 'OBJECT',
+    ARRAY: 'ARRAY',
+    STRING: 'STRING',
+    NUMBER: 'NUMBER',
+    INTEGER: 'INTEGER',
+    BOOLEAN: 'BOOLEAN',
+} as const;
 
 let aiPromise: Promise<GoogleGenAI> | null = null;
 
 function getAiInstance(): Promise<GoogleGenAI> {
     if (!aiPromise) {
         aiPromise = (async () => {
-            // Dynamically import the module ONLY when first needed.
-            // This prevents any top-level code in @google/genai from running on app startup.
             const { GoogleGenAI } = await import('@google/genai');
-            
-            // Browser-safe check for the API key
             const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
 
             if (!apiKey) {
-                // This error will now be caught by the functions calling this.
                 throw new Error("API_KEY environment variable not set. Please configure it in your deployment environment.");
             }
             return new GoogleGenAI({ apiKey });
@@ -24,17 +30,21 @@ function getAiInstance(): Promise<GoogleGenAI> {
     return aiPromise;
 }
 
+// Fix: Asynchronously load enums and create safety settings to avoid top-level imports and type errors.
+async function getSafetySettings() {
+    const { HarmCategory, HarmBlockThreshold } = await import("@google/genai");
+    return [
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+      },
+    ];
+}
 
-const safetySettings = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-  },
-];
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -493,6 +503,7 @@ ${langInstruction}
 8.  **Stay on Topic:** Stick to science topics related to the chapter "${topic}". If asked something else, gently guide them back.`;
             
             const contents = history;
+            const safetySettings = await getSafetySettings();
 
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
@@ -930,6 +941,8 @@ export const getHistoricalChatResponse = async (scientist: Scientist, history: C
 You must consistently act and speak as this person, in the first person ("I").
 Answer the user's questions from their historical perspective, knowledge, and personality.
 Maintain the persona throughout the conversation. Keep your responses concise and engaging for a student.`;
+
+    const safetySettings = await getSafetySettings();
 
     const response = await chatWithRetry({
         model: "gemini-2.5-flash",

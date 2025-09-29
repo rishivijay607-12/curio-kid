@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LiveServerMessage, Modality, Blob } from '@google/genai';
+import type { LiveServerMessage, Blob } from '@google/genai';
 import type { Grade, Language } from '../types';
 import { live } from '../services/geminiService'; // Import the centralized service
 import LoadingSpinner from './LoadingSpinner';
+
+// --- Local Enum Definition to Avoid Top-Level Imports ---
+// This is the key fix to prevent the app from crashing on startup.
+const Modality = {
+    AUDIO: 'AUDIO',
+} as const;
+
 
 // Fix: Add webkitAudioContext to Window interface for browser compatibility
 declare global {
@@ -125,7 +132,8 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
 
                 let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
                 
-                sessionPromiseRef.current = await live.connect({
+                // The `live.connect` is now asynchronous because of the dynamic import
+                sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
                         responseModalities: [Modality.AUDIO],
@@ -217,7 +225,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
         return () => {
             isCancelled = true;
             if (sessionPromiseRef.current) {
-                sessionPromiseRef.current.then((session: any) => session.close());
+                sessionPromiseRef.current.then((session: any) => session?.close());
             }
             if (streamRef.current) {
                 streamRef.current.getTracks().forEach(track => track.stop());
