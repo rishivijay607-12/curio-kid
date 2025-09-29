@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 
-interface LoginScreenProps {
-  onLogin: (username: string, password: string) => Promise<boolean>;
-  onNavigateToRegister: () => void;
+interface RegistrationScreenProps {
+  onRegister: (username: string, password: string) => Promise<boolean>;
+  onNavigateToLogin: () => void;
 }
 
 const CuriosityLogo: React.FC = () => (
@@ -14,26 +14,36 @@ const CuriosityLogo: React.FC = () => (
     </svg>
 );
 
-
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister }) => {
+const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onRegister, onNavigateToLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (!username.trim() || !password.trim()) {
       setError("Username and password are required.");
       return;
     }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
     setIsLoading(true);
-    setError(null);
     try {
-      await onLogin(username.trim(), password.trim());
+      await onRegister(username.trim(), password);
       // On success, the App component will change the view.
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      setError(err instanceof Error ? err.message : "An unknown error occurred during registration.");
     } finally {
       setIsLoading(false);
     }
@@ -46,8 +56,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
           <CuriosityLogo />
         </div>
 
-        <h1 className="text-4xl font-bold text-slate-100">The Book of Curiosity</h1>
-        <p className="text-slate-400 mt-2 mb-8">Welcome back, curious mind!</p>
+        <h1 className="text-4xl font-bold text-slate-100">Create Account</h1>
+        <p className="text-slate-400 mt-2 mb-8">Join the community of curious minds!</p>
         
         {error && (
             <div className="mb-4 p-3 bg-red-900/50 border border-red-500 rounded-lg text-red-400 text-sm">
@@ -55,7 +65,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
             </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-6 text-left">
+        <form onSubmit={handleRegister} className="space-y-6 text-left">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
               Username
@@ -68,7 +78,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="e.g., MarieCurieFan"
+              placeholder="Choose a username"
               className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
               disabled={isLoading}
             />
@@ -82,11 +92,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="****************"
+              placeholder="6+ characters"
+              className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
+              disabled={isLoading}
+            />
+          </div>
+
+           <div>
+            <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-300 mb-2">
+              Confirm Password
+            </label>
+            <input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
               className="w-full bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
               disabled={isLoading}
             />
@@ -98,14 +126,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
               disabled={isLoading}
               className="px-8 py-3 bg-teal-500 text-white font-bold rounded-lg shadow-lg hover:bg-teal-400 transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-300 focus:ring-opacity-75 disabled:bg-slate-700 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Creating Account...' : 'Sign Up'}
             </button>
             <button 
               type="button" 
-              onClick={onNavigateToRegister}
+              onClick={onNavigateToLogin}
               className="text-cyan-400 font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-md p-1"
             >
-              Create an account
+              Already have an account?
             </button>
           </div>
         </form>
@@ -114,4 +142,4 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
   );
 };
 
-export default LoginScreen;
+export default RegistrationScreen;

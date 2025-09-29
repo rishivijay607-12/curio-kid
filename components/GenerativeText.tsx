@@ -31,12 +31,6 @@ const featureDetails: { [key in AppMode]?: { title: string; description: string,
         placeholder: 'e.g., How does refraction work in eyeglasses?',
         resultTitle: 'Real World Connections'
     },
-    'chat_with_history': {
-        title: 'Chat with History',
-        description: "Talk to a simulation of one of science's greatest minds.",
-        placeholder: 'e.g., Ask Marie Curie about radioactivity.',
-        resultTitle: 'A Message from the Past'
-    },
     'story_weaver': {
         title: 'AI Story Weaver',
         description: 'Turn any science concept into a fun, educational story.',

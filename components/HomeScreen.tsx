@@ -1,126 +1,93 @@
 import React from 'react';
+import type { AppMode } from '../types';
 
 interface HomeScreenProps {
-    username: string;
-    onStartQuiz: () => void;
-    onStartWorksheet: () => void;
-    onStartNotes: () => void;
-    onStartDiagramGenerator: () => void;
-    onStartDoubtSolver: () => void;
-    onStartVoiceTutor: () => void;
-    onStartScienceLens: () => void;
-    onStartConceptDeepDive: () => void;
-    onStartVirtualLab: () => void;
-    onStartRealWorldLinks: () => void;
-    onStartChatWithHistory: () => void;
-    onStartStoryWeaver: () => void;
-    onStartScienceFairBuddy: () => void;
-    onStartWhatIf: () => void;
+  onSelectMode: (mode: AppMode) => void;
+  username: string | null;
+  onNavigateToProfile: () => void;
+  onNavigateToLeaderboard: () => void;
 }
 
-const FeatureCard: React.FC<{ title: string; description: string; onClick: () => void; icon: React.ReactNode, disabled?: boolean }> = ({ title, description, onClick, icon, disabled }) => (
+const FeatureCard: React.FC<{ title: string, description: string, mode: AppMode, onSelect: (mode: AppMode) => void, icon: JSX.Element }> = ({ title, description, mode, onSelect, icon }) => (
     <button
-        onClick={onClick}
-        disabled={disabled}
-        className="text-left py-12 px-6 bg-slate-900 border border-slate-800 rounded-2xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 flex flex-col h-full disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        onClick={() => onSelect(mode)}
+        className="text-left w-full h-full p-6 bg-slate-900 border-2 border-slate-800 rounded-xl shadow-lg hover:bg-slate-800 hover:border-cyan-500 transition-all duration-200 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-opacity-75 flex flex-col"
     >
-        <div className="flex-shrink-0 text-cyan-400 mb-6">
-             {icon}
+        <div className="flex items-center gap-4 mb-3">
+            <div className="text-cyan-400">{icon}</div>
+            <h3 className="text-xl font-bold text-slate-100">{title}</h3>
         </div>
-        <h3 className="font-bold text-xl text-slate-100">{title}</h3>
-        <p className="text-slate-400 text-sm mt-2 flex-grow">{description}</p>
-        {disabled && <span className="text-xs text-yellow-400 mt-2 font-semibold">Coming Soon</span>}
+        <p className="text-slate-400 text-sm flex-grow">{description}</p>
     </button>
 );
 
-const icons = {
-    quiz: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    doubtSolver: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
-    voiceTutor: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>,
-    diagram: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-    scienceLens: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
-    worksheet: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>,
-    notes: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>,
-    deepDive: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>,
-    virtualLab: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M14.5 3.5C14.5 5.433 12.933 7 11 7s-3.5-1.567-3.5-3.5S9.067 0 11 0s3.5 1.567 3.5 3.5zM11 24c-1.933 0-3.5-1.567-3.5-3.5S9.067 17 11 17s3.5 1.567 3.5 3.5S12.933 24 11 24zM3.5 14.5C1.567 14.5 0 12.933 0 11s1.567-3.5 3.5-3.5S7 9.067 7 11s-1.567 3.5-3.5 3.5zM18.5 14.5C16.567 14.5 15 12.933 15 11s1.567-3.5 3.5-3.5S22 9.067 22 11s-1.567 3.5-3.5 3.5z" /><path strokeLinecap="round" strokeLinejoin="round" d="M11 21a10 10 0 100-20 10 10 0 000 20z" /></svg>,
-    realWorld: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    history: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>,
-    story: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>,
-    scienceFair: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>,
-    whatIf: <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM18 13.5a3.375 3.375 0 00-3.375-3.375L13.5 9.75l-1.125.375a3.375 3.375 0 00-2.456 2.456L9 13.5l.375 1.125a3.375 3.375 0 002.456 2.456L13.5 18l1.125-.375a3.375 3.375 0 002.456-2.456L18 13.5z" /></svg>,
+const ICONS = {
+    quiz: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    worksheet: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>,
+    notes: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+    diagram: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4H7z" /></svg>,
+    doubt_solver: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>,
+    chat_with_history: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>,
+    science_lens: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>,
+    science_fair_buddy: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
+    voice_tutor: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>,
 };
 
+const EXPLORE_FEATURES = [
+    { mode: 'concept_deep_dive' as AppMode, title: 'Concept Deep Dive', description: 'Go beyond the textbook. Ask about a concept for an in-depth explanation.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg> },
+    { mode: 'virtual_lab' as AppMode, title: 'Virtual Lab', description: 'Get step-by-step instructions for a science experiment without the mess.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg> },
+    { mode: 'real_world_links' as AppMode, title: 'Real World Links', description: 'See how concepts like friction or electricity apply to your daily life.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h10a2 2 0 002-2v-1a2 2 0 012-2h1.945M7.704 4.343a9.003 9.003 0 0110.592 0m-10.592 0c-3.404 3.403-3.404 8.919 0 12.322m10.592-12.322c3.404 3.403 3.404 8.919 0 12.322m-10.592 0l10.592 0" /></svg> },
+    { mode: 'story_weaver' as AppMode, title: 'AI Story Weaver', description: 'Turn any science topic into a fun, educational story.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 4v12l-4-2-4 2V4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> },
+    { mode: 'what_if' as AppMode, title: "'What If?' Scenarios", description: 'Explore hypothetical questions with creative, scientific answers.', icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg> },
+];
 
-const HomeScreen: React.FC<HomeScreenProps> = ({
-    username,
-    onStartQuiz,
-    onStartWorksheet,
-    onStartNotes,
-    onStartDiagramGenerator,
-    onStartDoubtSolver,
-    onStartVoiceTutor,
-    onStartScienceLens,
-    onStartConceptDeepDive,
-    onStartVirtualLab,
-    onStartRealWorldLinks,
-    onStartChatWithHistory,
-    onStartStoryWeaver,
-    onStartScienceFairBuddy,
-    onStartWhatIf,
-}) => {
-    
-    const featureCards = [
-        { title: "Interactive Quiz", description: "Test your knowledge with an endless supply of AI-generated questions.", icon: icons.quiz, onClick: onStartQuiz },
-        { title: "AI Doubt Solver", description: "Stuck on a concept? Ask our AI tutor for a simple explanation.", icon: icons.doubtSolver, onClick: onStartDoubtSolver },
-        { title: "AI Voice Tutor", description: "Practice concepts by having a spoken conversation with an AI tutor.", icon: icons.voiceTutor, onClick: onStartVoiceTutor },
-        { title: "Diagram Generator", description: "Visualize complex topics with custom AI-generated diagrams.", icon: icons.diagram, onClick: onStartDiagramGenerator },
-        { title: "Science Lens", description: "Upload an image and ask the AI to explain the science behind it.", icon: icons.scienceLens, onClick: onStartScienceLens },
-        { title: "Printable Worksheet", description: "Generate practice worksheets to solve offline.", icon: icons.worksheet, onClick: onStartWorksheet },
-        { title: "Quick Study Notes", description: "Get concise, easy-to-read notes on any chapter.", icon: icons.notes, onClick: onStartNotes },
-        { title: "Concept Deep Dive", description: "Go beyond the textbook with in-depth explanations.", icon: icons.deepDive, onClick: onStartConceptDeepDive },
-        { title: "Virtual Lab", description: "Simulate experiments with step-by-step visual guidance.", icon: icons.virtualLab, onClick: onStartVirtualLab },
-        { title: "Real World Links", description: "See how science applies to everyday life around you.", icon: icons.realWorld, onClick: onStartRealWorldLinks },
-        { title: "Chat with History", description: "Talk to simulations of science's greatest minds.", icon: icons.history, onClick: onStartChatWithHistory },
-        { title: "AI Story Weaver", description: "Turn any science concept into a fun, educational story.", icon: icons.story, onClick: onStartStoryWeaver },
-        { title: "Science Fair Buddy", description: "Brainstorm project ideas and plan your experiment.", icon: icons.scienceFair, onClick: onStartScienceFairBuddy },
-        { title: "'What If?' Scenarios", description: "Explore wild hypothetical questions with creative, scientific answers.", icon: icons.whatIf, onClick: onStartWhatIf },
-    ];
-    
-    return (
-        <div className="w-full max-w-screen-2xl mx-auto p-4 md:p-8">
-            <header className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
-                    Welcome, {username}!
-                </h1>
-                <p className="text-slate-400 mt-2 text-lg md:text-xl">What would you like to explore today?</p>
-                <div className="mt-6 flex justify-center gap-4">
-                    <button className="px-5 py-2 bg-slate-900 border border-slate-800 text-slate-300 font-semibold rounded-lg shadow-md hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
-                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                        Profile
-                    </button>
-                    <button className="px-5 py-2 bg-slate-900 border border-slate-800 text-slate-300 font-semibold rounded-lg shadow-md hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>
-                        Leaderboard
-                    </button>
-                </div>
-            </header>
-            
-            <main>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-                    {featureCards.map((card, index) => (
-                        <FeatureCard 
-                            key={index} 
-                            title={card.title} 
-                            description={card.description} 
-                            icon={card.icon}
-                            onClick={card.onClick}
-                            disabled={(card as any).disabled}
-                        />
-                    ))}
-                </div>
-            </main>
+const MAIN_FEATURES = [
+    { mode: 'quiz' as AppMode, title: 'Interactive Quiz', description: 'Test your knowledge with an AI-generated quiz on any chapter.', icon: ICONS.quiz },
+    { mode: 'worksheet' as AppMode, title: 'Printable Worksheet', description: 'Create a worksheet with various question types for offline practice.', icon: ICONS.worksheet },
+    { mode: 'notes' as AppMode, title: 'Quick Study Notes', description: 'Generate concise, easy-to-review bullet-point notes for any topic.', icon: ICONS.notes },
+    { mode: 'diagram' as AppMode, title: 'Diagram Generator', description: 'Visualize complex concepts with custom-generated scientific diagrams.', icon: ICONS.diagram },
+    { mode: 'doubt_solver' as AppMode, title: 'AI Doubt Solver', description: 'Chat with an AI tutor to get your specific questions answered step-by-step.', icon: ICONS.doubt_solver },
+    { mode: 'voice_tutor' as AppMode, title: 'Live Voice Tutor', description: 'Talk with an AI tutor in a real-time voice conversation.', icon: ICONS.voice_tutor },
+    { mode: 'science_lens' as AppMode, title: 'Science Lens', description: 'Upload a picture and ask the AI to explain the science behind it.', icon: ICONS.science_lens },
+    { mode: 'chat_with_history' as AppMode, title: 'Chat with History', description: 'Have a conversation with a famous scientist from the past.', icon: ICONS.chat_with_history },
+    { mode: 'science_fair_buddy' as AppMode, title: 'Science Fair Buddy', description: 'Brainstorm ideas and create a step-by-step plan for your next project.', icon: ICONS.science_fair_buddy },
+];
+
+
+const HomeScreen: React.FC<HomeScreenProps> = ({ onSelectMode, username, onNavigateToProfile, onNavigateToLeaderboard }) => {
+  return (
+    <div className="w-full max-w-7xl mx-auto p-4 md:p-8">
+      <header className="flex flex-col sm:flex-row justify-between items-center mb-8">
+        <div>
+            <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
+            The Book of Curiosity
+            </h1>
+            <p className="text-slate-300 mt-2 text-xl">
+            Welcome, {username || 'curious mind'}! What would you like to do today?
+            </p>
         </div>
-    );
+        <div className="flex items-center gap-4 mt-4 sm:mt-0">
+             <button onClick={onNavigateToLeaderboard} className="px-4 py-2 bg-slate-800 text-slate-200 font-semibold rounded-md hover:bg-slate-700 transition-colors">Leaderboard</button>
+             <button onClick={onNavigateToProfile} className="px-4 py-2 bg-cyan-600 text-white font-semibold rounded-md hover:bg-cyan-500 transition-colors">My Profile</button>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {MAIN_FEATURES.map(feature => (
+            <FeatureCard key={feature.mode} {...feature} onSelect={onSelectMode} />
+        ))}
+      </div>
+
+      <div className="mt-12">
+        <h2 className="text-3xl font-bold text-slate-200 mb-6 text-center">Explore More</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {EXPLORE_FEATURES.map(feature => (
+                <FeatureCard key={feature.mode} {...feature} onSelect={onSelectMode} />
+            ))}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default HomeScreen;

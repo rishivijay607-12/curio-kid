@@ -19,7 +19,8 @@ const DiagramCard: React.FC<{ diagram: Diagram; onRegenerate: (id: string) => vo
         <div className="relative w-full aspect-square">
             <img 
                 src={diagram.image} 
-                alt={diagram.description} 
+                // FIX: Changed diagram.description to diagram.idea.description
+                alt={diagram.idea.description} 
                 className={`w-full h-full object-contain rounded-md bg-white transition-opacity duration-300 ${isRegenerating ? 'opacity-20' : 'opacity-100'}`} 
             />
             {isRegenerating && (
@@ -28,7 +29,8 @@ const DiagramCard: React.FC<{ diagram: Diagram; onRegenerate: (id: string) => vo
                 </div>
             )}
         </div>
-        <p className="text-slate-300 mt-3 text-sm leading-relaxed flex-grow">{diagram.description}</p>
+        {/* FIX: Changed diagram.description to diagram.idea.description */}
+        <p className="text-slate-300 mt-3 text-sm leading-relaxed flex-grow">{diagram.idea.description}</p>
         <button
             onClick={() => onRegenerate(diagram.id)}
             disabled={isRegenerating}

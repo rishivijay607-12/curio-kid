@@ -1,3 +1,5 @@
+import { Scientist } from './types';
+
 export const CHAPTERS_BY_GRADE = {
   6: [
     "The Wonderful World of Science",
@@ -72,3 +74,12 @@ export const CHAPTERS_BY_GRADE = {
     "Our Environment",
   ],
 };
+
+export const SCIENTISTS: Scientist[] = [
+  { name: 'Albert Einstein', field: 'Theoretical Physicist', description: 'Developed the theory of relativity, one of the two pillars of modern physics.' },
+  { name: 'Marie Curie', field: 'Physicist and Chemist', description: 'Conducted pioneering research on radioactivity and was the first woman to win a Nobel Prize.' },
+  { name: 'Isaac Newton', field: 'Mathematician & Physicist', description: 'Formulated the laws of motion and universal gravitation, which dominated scientists\' view of the physical universe for three centuries.' },
+  { name: 'Charles Darwin', field: 'Naturalist & Biologist', description: 'Best known for his contributions to the science of evolution and the theory of natural selection.' },
+  { name: 'Galileo Galilei', field: 'Astronomer & Physicist', description: 'The "father of observational astronomy," he made major improvements to the telescope and supported Copernicanism.' },
+  { name: 'C. V. Raman', field: 'Physicist', description: 'Won the Nobel Prize for his work on light scattering and for the discovery of the effect named after him.' },
+];

@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep } from '../types';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -513,7 +513,7 @@ ${langInstruction}
     throw new Error("Failed to get a response from the AI tutor. Please try again.");
 };
 
-interface DiagramIdea {
+interface DiagramIdeaResponse {
     prompt: string;
     description: string;
 }
@@ -573,7 +573,13 @@ Generate exactly 8 diagram ideas.`;
                  throw new Error("Received malformed diagram ideas from API. Expected 8 diagrams.");
             }
 
-            return parsedResponse.diagrams as DiagramIdea[];
+            // Add a unique ID to each idea for client-side state management.
+            const ideasWithIds: DiagramIdea[] = parsedResponse.diagrams.map((idea: DiagramIdeaResponse) => ({
+                ...idea,
+                id: self.crypto.randomUUID(),
+            }));
+
+            return ideasWithIds;
 
         } catch (error) {
             lastError = error;
@@ -669,10 +675,6 @@ export const generateTextForMode = async (
         case 'real_world_links':
             systemInstruction += "\nYour task is to connect science concepts from the student's question to the real world. Provide 2-3 clear and interesting examples of how the concept applies in everyday life or technology. Use Google Search to find relevant and up-to-date examples and information.";
             useSearch = true;
-            break;
-        case 'chat_with_history':
-            systemInstruction = `You are a role-playing AI. You will act as a famous historical scientist. Based on the user's question, you must determine the most relevant famous scientist (e.g., Einstein for relativity, Darwin for evolution, Marie Curie for radioactivity). Embody that scientist's persona, speak in the first person ("I"), and explain the concept from their historical perspective. Start your first response by introducing yourself as that scientist.`;
-            contents = `The user's question is: "${userInput}". Your task is to determine the most relevant historical scientist and role-play as them to answer the question.`;
             break;
         case 'story_weaver':
             systemInstruction += `\nYou are a creative storyteller. Your task is to weave a short, fun, and educational story based on the science concept the student provides. The story should be engaging${grade ? ` for a Grade ${grade} student` : ''} and accurately explain the science concept within the narrative.`;
@@ -847,4 +849,64 @@ Create a detailed, 5-step plan to guide the student through this project. For ea
     
     onProgress({ current: 5, total: 5, message: "Plan generated successfully!" });
     return finalPlan;
+};
+
+
+const chatWithRetry = async (config: any): Promise<string> => {
+    const maxRetries = 3;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const response = await ai.models.generateContent(config);
+            return response.text;
+        } catch (error) {
+            lastError = error;
+            const errorString = JSON.stringify(error).toLowerCase();
+            console.error(`Error in chat (attempt ${attempt}/${maxRetries}):`, error);
+
+            if (errorString.includes('blocked')) {
+                throw new Error("The response was blocked due to safety settings. Please rephrase your question.");
+            }
+            if (errorString.includes('429') || errorString.includes('resource_exhausted')) {
+                if (attempt < maxRetries) {
+                    const waitTime = Math.pow(2, attempt) * 1000;
+                    console.log(`Rate limit exceeded. Retrying in ${waitTime.toFixed(0)}ms...`);
+                    await delay(waitTime);
+                    continue;
+                }
+            }
+            break; 
+        }
+    }
+    console.error("Failed chat request after retries:", lastError);
+    throw new Error("Failed to get a response from the AI. Please try again.");
+};
+
+
+export const generateScientistGreeting = async (scientist: Scientist): Promise<string> => {
+    const prompt = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Here is a brief bio: "${scientist.description}".
+Provide a short, welcoming opening message to start a chat session with a student. Speak in the first person ("I"). Keep it to one or two charismatic sentences.`;
+    
+    const response = await chatWithRetry({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+    // FIX: chatWithRetry now returns the text directly.
+    return response;
+};
+
+export const getHistoricalChatResponse = async (scientist: Scientist, history: ChatMessage[]): Promise<string> => {
+    const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Here is a brief bio: "${scientist.description}".
+You must consistently act and speak as this person, in the first person ("I").
+Answer the user's questions from their historical perspective, knowledge, and personality.
+Maintain the persona throughout the conversation. Keep your responses concise and engaging for a student.`;
+
+    const response = await chatWithRetry({
+        model: "gemini-2.5-flash",
+        contents: history,
+        config: { systemInstruction, safetySettings },
+    });
+    // FIX: chatWithRetry now returns the text directly.
+    return response;
 };
