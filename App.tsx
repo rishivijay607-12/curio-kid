@@ -203,6 +203,12 @@ const App: React.FC = () => {
         }
     };
 
+    // Generic error handler to reduce repetition
+    const CATCH_BLOCK = (err: unknown) => {
+        setError(err instanceof Error ? err.message : "An unknown error occurred.");
+        setIsLoading(false);
+    };
+
     // Quiz Flow
     const handleQuizEnd = async (finalScore: number, totalQuestions: number) => {
         setLastScore(finalScore);
@@ -226,7 +232,7 @@ const App: React.FC = () => {
             const questions = await generateWorksheet(topic, grade, difficulty, count);
             setWorksheetQuestions(questions);
             setGameState('WORKSHEET_DISPLAY');
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
     // Notes Flow
@@ -239,7 +245,7 @@ const App: React.FC = () => {
             const notesData = await generateNotes(selectedTopic, grade);
             setNotes(notesData);
             setGameState('NOTES_DISPLAY');
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
     
     // Chat & Tutor Flows
@@ -254,7 +260,7 @@ const App: React.FC = () => {
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
             setGameState('DOUBT_SOLVER_SESSION');
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
     
     const handleSendMessage = async (message: string) => {
@@ -268,7 +274,7 @@ const App: React.FC = () => {
             const response = await getChatResponse(grade, newHistory, language, topic);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
     
     const handleScientistSelect = async (scientist: Scientist) => {
@@ -297,7 +303,7 @@ const App: React.FC = () => {
             const response = await getHistoricalChatResponse(selectedScientist, newHistory);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
 
@@ -311,7 +317,7 @@ const App: React.FC = () => {
             const ideas = await generateDiagramIdeas(selectedTopic, grade);
             setDiagramIdeas(ideas);
             setGameState('DIAGRAM_IDEA_SELECTION');
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
     const handleGenerateDiagrams = async (selectedIdeas: DiagramIdea[]) => {
@@ -363,7 +369,7 @@ const App: React.FC = () => {
         try {
             const result = await generateTextForMode(appMode, userInput, grade ?? undefined, topic ?? undefined);
             setGenerativeTextResult(result);
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
     const handleScienceLensGenerate = async (base64Image: string, mimeType: string, prompt: string) => {
@@ -373,7 +379,7 @@ const App: React.FC = () => {
         try {
             const result = await explainImageWithText(base64Image, mimeType, prompt);
             setScienceLensResult(result);
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
     
     const handleScienceFairIdeasGenerate = async (userInput: string) => {
@@ -384,7 +390,7 @@ const App: React.FC = () => {
             const ideas = await generateScienceFairIdeas(userInput);
             setScienceFairIdeas(ideas);
             setGameState('SCIENCE_FAIR_IDEAS');
-        } catch (err) CATCH_BLOCK
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
     const handleSelectScienceFairIdea = async (idea: ScienceFairIdea) => {
@@ -404,13 +410,7 @@ const App: React.FC = () => {
             }
             setScienceFairPlan(planWithImages);
 
-        } catch (err) CATCH_BLOCK
-    };
-
-    // Generic error handler to reduce repetition
-    const CATCH_BLOCK = (err: unknown) => {
-        setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        setIsLoading(false);
+        } catch (err) { CATCH_BLOCK(err); }
     };
 
     // --- Render Logic ---
