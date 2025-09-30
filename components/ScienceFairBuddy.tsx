@@ -38,7 +38,7 @@ const ScienceFairBuddy: React.FC<ScienceFairBuddyProps> = ({ onGenerate, isLoadi
                 <button
                     type="submit"
                     disabled={isLoading || !userInput.trim()}
-                    className="mt-6 w-full px-8 py-4 bg-slate-800 text-white font-bold text-lg rounded-lg shadow-lg hover:bg-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 disabled:bg-slate-700 disabled:cursor-not-allowed"
+                    className="mt-6 w-full px-8 py-4 bg-cyan-600 text-white font-bold text-lg rounded-lg shadow-lg hover:bg-cyan-500 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-75 disabled:bg-slate-700 disabled:cursor-not-allowed flex justify-center items-center h-[60px]"
                 >
                     {isLoading ? <LoadingSpinner /> : 'Get Project Ideas'}
                 </button>

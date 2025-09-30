@@ -94,10 +94,11 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
                     Admin Panel
                 </h1>
-                <p className="text-slate-400 mt-2">User Management & Activity</p>
             </div>
-            
+
+            {/* User Management */}
             <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl shadow-2xl p-6">
+                 <h2 className="text-2xl font-bold text-slate-100 mb-4">User Management</h2>
                 {isLoading ? (
                     <div className="flex justify-center items-center py-12"><LoadingSpinner /></div>
                 ) : error ? (

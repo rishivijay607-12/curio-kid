@@ -101,7 +101,7 @@ const GenerativeText: React.FC<GenerativeTextProps> = ({ appMode, grade, topic, 
                         <p className="text-slate-300 text-sm mt-1">{error}</p>
                     </div>
                 )}
-                {result && (
+                {result && !isLoading && (
                     <div className="p-4 bg-slate-950/50 border border-slate-800 rounded-lg animate-fade-in">
                         <h3 className="font-semibold text-lg text-cyan-400 mb-2">{details.resultTitle}</h3>
                         <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{result.text}</p>

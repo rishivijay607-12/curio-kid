@@ -10,25 +10,7 @@ interface ScienceFairPlanProps {
 }
 
 const ScienceFairPlan: React.FC<ScienceFairPlanProps> = ({ idea, plan, isLoading, error }) => {
-    if (isLoading) {
-        return (
-            <div className="w-full max-w-2xl mx-auto p-8 flex flex-col items-center justify-center text-center bg-slate-900 rounded-xl shadow-2xl border border-slate-800 min-h-[400px]">
-                <LoadingSpinner />
-                <p className="text-slate-300 mt-4 text-lg">Generating your project plan...</p>
-                <p className="text-slate-400 mt-2 text-sm">This involves creating text and images, so it may take a few moments.</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-             <div className="w-full max-w-2xl mx-auto p-8 flex flex-col items-center justify-center text-center bg-slate-900 rounded-xl shadow-2xl border border-red-500 min-h-[400px]">
-                <h2 className="text-2xl font-bold text-red-400">Generation Failed</h2>
-                <p className="text-slate-300 mt-2">{error}</p>
-            </div>
-        );
-    }
-
+    
     return (
         <div className="w-full max-w-4xl mx-auto p-6 md:p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800">
             <header className="text-center border-b border-slate-800 pb-6 mb-8">
@@ -39,9 +21,22 @@ const ScienceFairPlan: React.FC<ScienceFairPlanProps> = ({ idea, plan, isLoading
             </header>
 
             <main className="space-y-10">
-                {plan.length > 0 ? plan.map((step, index) => (
+                {isLoading && (
+                     <div className="flex flex-col items-center justify-center p-8 text-center">
+                        <LoadingSpinner />
+                        <p className="text-slate-300 mt-4 text-lg">Generating your project plan...</p>
+                        <p className="text-slate-400 mt-2 text-sm">This involves creating text and images, so it may take a few moments.</p>
+                    </div>
+                )}
+                {error && (
+                     <div className="p-4 text-center bg-red-900/50 border border-red-500 rounded-lg">
+                        <p className="font-semibold text-red-400">Generation Failed</p>
+                        <p className="text-slate-300 text-sm mt-1">{error}</p>
+                    </div>
+                )}
+                {!isLoading && !error && plan.length > 0 && plan.map((step, index) => (
                     <div key={index} className="p-6 bg-slate-950/50 border border-slate-800 rounded-lg">
-                        <h2 className="text-2xl font-bold text-cyan-400 mb-4">{step.stepTitle}</h2>
+                        <h2 className="text-2xl font-bold text-cyan-400 mb-4">{`Step ${index + 1}: ${step.stepTitle}`}</h2>
                         {step.image ? (
                              <img 
                                 src={step.image} 
@@ -56,7 +51,8 @@ const ScienceFairPlan: React.FC<ScienceFairPlanProps> = ({ idea, plan, isLoading
                        
                         <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">{step.instructions}</p>
                     </div>
-                )) : (
+                ))}
+                 {!isLoading && !error && plan.length === 0 && (
                     <div className="text-center text-slate-400 py-8">
                         <p>No plan steps were generated. This might be due to an error or content restrictions.</p>
                     </div>

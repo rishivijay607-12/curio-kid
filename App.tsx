@@ -19,7 +19,6 @@ import {
     live, // Import the live service directly
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
-import { getApiKey, saveApiKey } from './services/apiKeyService.ts';
 
 // Component Imports (switched from lazy to static)
 import GradeSelector from './components/GradeSelector.tsx';
@@ -50,7 +49,6 @@ import Leaderboard from './components/Leaderboard.tsx';
 import ProfileScreen from './components/ProfileScreen.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
-import ApiKeyScreen from './components/ApiKeyScreen.tsx';
 import FeatureNotConfiguredScreen from './components/FeatureNotConfiguredScreen.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 
@@ -61,8 +59,6 @@ const App: React.FC = () => {
     const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [apiKeyExists, setApiKeyExists] = useState(false);
-    const [unconfiguredFeatureName, setUnconfiguredFeatureName] = useState('');
 
 
     // Config State
@@ -98,38 +94,18 @@ const App: React.FC = () => {
     useEffect(() => {
         try {
             const user = getCurrentUser();
-            const key = getApiKey(); // Checks for client-side key for admin's Voice Tutor
-            setApiKeyExists(!!key);
-
             if (user) {
-                handleUserLoggedIn(user, !!key);
+                setCurrentUser(user);
+                setGameState('home');
             } else {
                 setGameState('login');
             }
         } catch (e) {
             console.error("Failed to initialize app from local storage:", e);
             setError("Could not access browser storage. Please ensure it's enabled. The app may not work correctly in private/incognito mode.");
-            // Fallback to a state that can render, ensuring the app doesn't crash
-            setGameState('login');
+            setGameState('login'); // Fallback
         }
     }, []);
-
-    const handleUserLoggedIn = (user: User, keyExists: boolean) => {
-        setCurrentUser(user);
-        // If the user is an admin and hasn't set their client-side key for the Voice Tutor, prompt them.
-        if (user.isAdmin && !keyExists) {
-            setGameState('API_KEY_SETUP');
-        } else {
-            setGameState('home');
-        }
-    };
-    
-    const handleKeySaved = (key: string) => {
-        saveApiKey(key);
-        setApiKeyExists(true);
-        setError(null);
-        setGameState('home');
-    };
 
     // --- State Resets ---
     const resetAllState = useCallback(() => {
@@ -155,7 +131,6 @@ const App: React.FC = () => {
         setScienceFairPlan([]);
         setSelectedScientist(null);
         setUserProfile(null);
-        setUnconfiguredFeatureName('');
     }, []);
 
     const resetToHome = useCallback(() => {
@@ -166,24 +141,26 @@ const App: React.FC = () => {
     // --- Handlers ---
 
     // Auth & Setup
+    const handleUserLoggedIn = (user: User) => {
+        setCurrentUser(user);
+        setGameState('home');
+    };
+
     const handleLogin = async (username: string, password: string) => {
         const user = await login(username, password);
-        const keyExists = !!getApiKey();
-        handleUserLoggedIn(user, keyExists);
+        handleUserLoggedIn(user);
         return true;
     };
     
     const handleRegister = async (username: string, password: string) => {
         const user = await register(username, password);
-        const keyExists = !!getApiKey();
-        handleUserLoggedIn(user, keyExists);
+        handleUserLoggedIn(user);
         return true;
     };
     
     const handleLogout = () => {
         logout();
         setCurrentUser(null);
-        setApiKeyExists(false);
         resetAllState();
         setGameState('login');
     };
@@ -191,18 +168,7 @@ const App: React.FC = () => {
     // Navigation
     const handleStartFeature = (mode: AppMode) => {
         setAppMode(mode);
-
-        if (mode === 'voice_tutor') {
-            if (apiKeyExists) {
-                setGameState('GRADE_SELECTION');
-            } else {
-                setUnconfiguredFeatureName('AI Voice Tutor');
-                setGameState('FEATURE_NOT_CONFIGURED');
-            }
-            return;
-        }
-
-        // Direct to feature for those that don't need grade/topic
+        
         if (['science_lens', 'science_fair_buddy', 'what_if', 'concept_deep_dive', 'virtual_lab', 'story_weaver'].includes(mode)) {
             setGameState('generative_text_input');
         } else if (mode === 'chat_with_history') {
@@ -231,7 +197,8 @@ const App: React.FC = () => {
 
     // Generic error handler to reduce repetition
     const CATCH_BLOCK = (err: unknown) => {
-        setError(err instanceof Error ? err.message : "An unknown error occurred.");
+        const message = err instanceof Error ? err.message : "An unknown error occurred.";
+        setError(message);
         setIsLoading(false);
     };
 
@@ -300,7 +267,7 @@ const App: React.FC = () => {
             const response = await getChatResponse(grade, newHistory, language, topic);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
     
     const handleScientistSelect = async (scientist: Scientist) => {
@@ -329,7 +296,7 @@ const App: React.FC = () => {
             const response = await getHistoricalChatResponse(selectedScientist, newHistory);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
 
@@ -395,7 +362,7 @@ const App: React.FC = () => {
         try {
             const result = await generateTextForMode(appMode, userInput, grade ?? undefined, topic ?? undefined);
             setGenerativeTextResult(result);
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
     const handleScienceLensGenerate = async (base64Image: string, mimeType: string, prompt: string) => {
@@ -405,7 +372,7 @@ const App: React.FC = () => {
         try {
             const result = await explainImageWithText(base64Image, mimeType, prompt);
             setScienceLensResult(result);
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
     
     const handleScienceFairIdeasGenerate = async (userInput: string) => {
@@ -416,7 +383,7 @@ const App: React.FC = () => {
             const ideas = await generateScienceFairIdeas(userInput);
             setScienceFairIdeas(ideas);
             setGameState('SCIENCE_FAIR_IDEAS');
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
     const handleSelectScienceFairIdea = async (idea: ScienceFairIdea) => {
@@ -436,7 +403,7 @@ const App: React.FC = () => {
             }
             setScienceFairPlan(planWithImages);
 
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
     // --- Render Logic ---
@@ -453,13 +420,10 @@ const App: React.FC = () => {
             case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
             case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
             
-            case 'API_KEY_SETUP': return <ApiKeyScreen onKeySaved={handleKeySaved} error={error} />;
-
             case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} onGoToAdminPanel={handleGoToAdminPanel} />;
             case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
             case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
-            case 'FEATURE_NOT_CONFIGURED': return <FeatureNotConfiguredScreen featureName={unconfiguredFeatureName} onBack={resetToHome} />;
 
             case 'GRADE_SELECTION': return <GradeSelector 
                 onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
@@ -519,7 +483,7 @@ const App: React.FC = () => {
         }
     };
     
-    const showHeader = !['login', 'register', 'initializing', 'API_KEY_SETUP'].includes(gameState);
+    const showHeader = !['login', 'register', 'initializing'].includes(gameState);
 
     return (
         <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">

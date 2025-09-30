@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 
-// --- Type Definitions copied from ../types.ts to make the function self-contained for Vercel build ---
+// --- Type Definitions ---
 type Grade = 6 | 7 | 8 | 9 | 10;
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 type AppMode =
@@ -72,12 +72,8 @@ interface ScienceFairIdea {
     title: string;
     description: string;
 }
-interface ScienceFairPlanStep {
-    stepTitle: string;
-    instructions: string;
-    image: string; // base64 data URL
-}
-// --- End of copied Type Definitions ---
+
+// --- End of Type Definitions ---
 
 const getAi = () => {
     const apiKey = process.env.API_KEY;
@@ -94,7 +90,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const { action, payload } = req.body;
-        const ai = getAi(); // Initialize AI with the environment variable
+        const ai = getAi();
 
         let result: any;
 
@@ -105,7 +101,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ];
             return ai.models.generateContent({ ...config, config: { ...config.config, safetySettings } });
         };
-
 
         switch (action) {
             case 'generateQuizQuestions': {
@@ -212,8 +207,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
                  const { mode, userInput, grade, topic } = payload;
                  let systemInstruction = "You are a helpful and engaging AI science expert.";
                  let contents = `My question: "${userInput}"`;
-                 let useSearch = false;
-                 if (mode === 'real_world_links') useSearch = true;
+                 let useSearch = mode === 'real_world_links';
                 const response = await generateContent({
                     model: "gemini-2.5-flash", contents, config: { systemInstruction, tools: useSearch ? [{ googleSearch: {} }] : undefined }
                 });
