@@ -49,7 +49,6 @@ import Leaderboard from './components/Leaderboard.tsx';
 import ProfileScreen from './components/ProfileScreen.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
-import FeatureNotConfiguredScreen from './components/FeatureNotConfiguredScreen.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 

@@ -1,13 +1,16 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
-import { getApiKey } from './apiKeyService.ts';
+
+// The API key is sourced from an environment variable.
+// This is a secure, standard practice for web deployments.
+// Your hosting environment must have the API_KEY variable set for the app to function.
+const API_KEY = process.env.API_KEY;
 
 const getAi = () => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error("API key not configured. Please ask the administrator to set it up in the Admin Panel.");
+    if (!API_KEY) {
+        throw new Error("API key not configured. The application administrator needs to set it up in the deployment environment.");
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: API_KEY });
 };
 
 const safetySettings = [
@@ -165,7 +168,7 @@ export const getHistoricalChatResponse = async (scientist: Scientist, history: C
 
 export const live = {
     connect: (options: any) => {
-        const ai = getAi(); // This is now synchronous
+        const ai = getAi(); // This is synchronous and will throw if key is missing
         return ai.live.connect(options);
     },
 };
