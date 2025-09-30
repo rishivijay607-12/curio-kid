@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAllUsers, getAllProfiles, getAllScores, deleteUser, editUserPassword } from '../services/userService';
+import { saveApiKey, getApiKey, clearApiKey } from '../services/apiKeyService';
 import type { UserProfile, QuizScore } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -15,6 +16,13 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const [error, setError] = useState<string | null>(null);
     const [editingUser, setEditingUser] = useState<string | null>(null);
     const [newPassword, setNewPassword] = useState('');
+    
+    const [apiKeyInput, setApiKeyInput] = useState('');
+    const [isKeySet, setIsKeySet] = useState(false);
+
+    const checkApiKeyStatus = useCallback(() => {
+        setIsKeySet(!!getApiKey());
+    }, []);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -55,7 +63,8 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
 
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+        checkApiKeyStatus();
+    }, [fetchData, checkApiKeyStatus]);
 
     const handleDeleteUser = async (username: string) => {
         if (window.confirm(`Are you sure you want to delete the user "${username}"? This action cannot be undone.`)) {
@@ -88,12 +97,55 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         }
     };
 
+    const handleSaveKey = () => {
+        saveApiKey(apiKeyInput);
+        checkApiKeyStatus();
+        setApiKeyInput('');
+        alert('API Key saved successfully!');
+    };
+
+    const handleClearKey = () => {
+        if (window.confirm('Are you sure you want to clear the API key? AI features will stop working.')) {
+            clearApiKey();
+            checkApiKeyStatus();
+            alert('API Key cleared.');
+        }
+    };
+
+
     return (
         <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
             <div className="text-center mb-8">
                 <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
                     Admin Panel
                 </h1>
+            </div>
+
+            {/* API Key Management */}
+            <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl shadow-2xl p-6 mb-8">
+                 <h2 className="text-2xl font-bold text-slate-100 mb-2">API Key Configuration</h2>
+                 <p className="text-slate-400 mb-4">
+                    {isKeySet 
+                        ? 'A Gemini API key is configured. AI features are enabled.' 
+                        : 'No Gemini API key is configured. AI features will not work.'}
+                 </p>
+                 <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                    <input 
+                        type="password"
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder="Enter new Gemini API Key"
+                        className="flex-grow bg-slate-950/50 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-colors"
+                    />
+                    <button onClick={handleSaveKey} disabled={!apiKeyInput.trim()} className="px-4 py-2 bg-teal-500 text-white font-semibold rounded-lg hover:bg-teal-400 disabled:bg-slate-700 disabled:cursor-not-allowed">
+                        Save Key
+                    </button>
+                    {isKeySet && (
+                        <button onClick={handleClearKey} className="px-4 py-2 bg-red-700 text-white font-semibold rounded-lg hover:bg-red-600">
+                            Clear Key
+                        </button>
+                    )}
+                 </div>
             </div>
 
             {/* User Management */}
