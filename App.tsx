@@ -57,7 +57,8 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 // --- Main App Component ---
 const App: React.FC = () => {
     // Check for API Key first. If it's the placeholder, render instructions and stop.
-    if (API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
+    // FIX: Cast API_KEY to string to avoid TypeScript literal type comparison error when checking for the placeholder key.
+    if ((API_KEY as string) === 'PASTE_YOUR_API_KEY_HERE') {
         return <ApiKeyInstructions />;
     }
     

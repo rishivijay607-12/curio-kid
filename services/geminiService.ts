@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
 import { API_KEY } from '../config.ts';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
@@ -164,7 +165,8 @@ export const getHistoricalChatResponse = async (scientist: Scientist, history: C
 
 export const live = {
     connect: (options: any) => {
-        if (API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
+        // FIX: Cast API_KEY to string to avoid TypeScript literal type comparison error when checking for the placeholder key.
+        if ((API_KEY as string) === 'PASTE_YOUR_API_KEY_HERE') {
             // This error will be caught by the calling component (VoiceTutor)
             // and will prevent the session from starting, showing the user an error.
             throw new Error("API key is not configured. Please add it to config.ts.");
