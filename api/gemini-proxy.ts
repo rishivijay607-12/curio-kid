@@ -1,3 +1,4 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 
 // --- Type Definitions copied from ../types.ts to make the function self-contained for Vercel build ---
@@ -78,24 +79,10 @@ interface ScienceFairPlanStep {
 }
 // --- End of copied Type Definitions ---
 
-
-// Define minimal types for Vercel's request and response objects
-// as we can't import from '@vercel/node'.
-interface VercelRequest {
-    method?: string;
-    body: any;
-}
-
-interface VercelResponse {
-    status: (code: number) => {
-        json: (data: any) => void;
-    };
-}
-
-
-const getAi = (apiKey: string) => {
+const getAi = () => {
+    const apiKey = process.env.API_KEY;
     if (!apiKey) {
-        throw new Error("API key was not provided in the request from the client application.");
+        throw new Error("API key is not configured on the server. The administrator needs to set it up.");
     }
     return new GoogleGenAI({ apiKey });
 };
@@ -106,8 +93,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { action, payload, apiKey } = req.body;
-        const ai = getAi(apiKey); // Initialize AI with the key from the client
+        const { action, payload } = req.body;
+        const ai = getAi(); // Initialize AI with the environment variable
 
         let result: any;
 

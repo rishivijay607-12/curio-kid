@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Dependencies for Curio Kid serverless functions",
   "dependencies": {
-    "@google/genai": "^1.19.0"
+    "@google/genai": "^1.19.0",
+    "@types/node": "^20.11.24",
+    "@vercel/node": "^3.0.25",
+    "typescript": "^5.3.3"
   }
 }

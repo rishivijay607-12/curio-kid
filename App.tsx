@@ -21,9 +21,7 @@ import {
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService';
 import { getApiKey, saveApiKey } from './services/apiKeyService';
 
-
 // Component Imports
-const ApiKeyScreen = lazy(() => import('./components/ApiKeyScreen'));
 const GradeSelector = lazy(() => import('./components/GradeSelector'));
 const TopicSelector = lazy(() => import('./components/TopicSelector'));
 const DifficultySelector = lazy(() => import('./components/DifficultySelector'));
@@ -52,6 +50,8 @@ const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const ProfileScreen = lazy(() => import('./components/ProfileScreen'));
 const HomeScreen = lazy(() => import('./components/HomeScreen'));
 const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const ApiKeyScreen = lazy(() => import('./components/ApiKeyScreen'));
+const FeatureNotConfiguredScreen = lazy(() => import('./components/FeatureNotConfiguredScreen'));
 import LoadingSpinner from './components/LoadingSpinner';
 
 
@@ -61,7 +61,9 @@ const App: React.FC = () => {
     const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-    const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
+    const [apiKeyExists, setApiKeyExists] = useState(false);
+    const [unconfiguredFeatureName, setUnconfiguredFeatureName] = useState('');
+
 
     // Config State
     const [appMode, setAppMode] = useState<AppMode>('home');
@@ -94,24 +96,32 @@ const App: React.FC = () => {
     
     // --- Effects ---
     useEffect(() => {
-        setApiKeyExists(!!getApiKey());
         const user = getCurrentUser();
+        const key = getApiKey(); // Checks for client-side key for admin's Voice Tutor
+        setApiKeyExists(!!key);
+
         if (user) {
-            handleUserLoggedIn(user);
+            handleUserLoggedIn(user, !!key);
         } else {
             setGameState('login');
         }
     }, []);
 
-    const handleUserLoggedIn = (user: User) => {
+    const handleUserLoggedIn = (user: User, keyExists: boolean) => {
         setCurrentUser(user);
-        const keyExists = !!getApiKey();
-        setApiKeyExists(keyExists);
+        // If the user is an admin and hasn't set their client-side key for the Voice Tutor, prompt them.
         if (user.isAdmin && !keyExists) {
-            setGameState('api_key_setup');
+            setGameState('API_KEY_SETUP');
         } else {
             setGameState('home');
         }
+    };
+    
+    const handleKeySaved = (key: string) => {
+        saveApiKey(key);
+        setApiKeyExists(true);
+        setError(null);
+        setGameState('home');
     };
 
     // --- State Resets ---
@@ -138,6 +148,7 @@ const App: React.FC = () => {
         setScienceFairPlan([]);
         setSelectedScientist(null);
         setUserProfile(null);
+        setUnconfiguredFeatureName('');
     }, []);
 
     const resetToHome = useCallback(() => {
@@ -148,27 +159,24 @@ const App: React.FC = () => {
     // --- Handlers ---
 
     // Auth & Setup
-     const handleSaveApiKey = (key: string) => {
-        saveApiKey(key);
-        setApiKeyExists(true);
-        setGameState('home');
-    };
-
     const handleLogin = async (username: string, password: string) => {
         const user = await login(username, password);
-        handleUserLoggedIn(user);
+        const keyExists = !!getApiKey();
+        handleUserLoggedIn(user, keyExists);
         return true;
     };
     
     const handleRegister = async (username: string, password: string) => {
         const user = await register(username, password);
-        handleUserLoggedIn(user);
+        const keyExists = !!getApiKey();
+        handleUserLoggedIn(user, keyExists);
         return true;
     };
     
     const handleLogout = () => {
         logout();
         setCurrentUser(null);
+        setApiKeyExists(false);
         resetAllState();
         setGameState('login');
     };
@@ -176,6 +184,17 @@ const App: React.FC = () => {
     // Navigation
     const handleStartFeature = (mode: AppMode) => {
         setAppMode(mode);
+
+        if (mode === 'voice_tutor') {
+            if (apiKeyExists) {
+                setGameState('GRADE_SELECTION');
+            } else {
+                setUnconfiguredFeatureName('AI Voice Tutor');
+                setGameState('FEATURE_NOT_CONFIGURED');
+            }
+            return;
+        }
+
         // Direct to feature for those that don't need grade/topic
         if (['science_lens', 'science_fair_buddy', 'what_if', 'concept_deep_dive', 'virtual_lab', 'story_weaver'].includes(mode)) {
             setGameState('generative_text_input');
@@ -423,26 +442,17 @@ const App: React.FC = () => {
             );
         }
         
-        if (!apiKeyExists && currentUser && !currentUser.isAdmin) {
-            return (
-                <div className="text-center p-8 bg-slate-900 rounded-xl shadow-2xl border border-yellow-500">
-                    <h2 className="text-2xl font-bold text-yellow-400">Application Not Configured</h2>
-                    <p className="text-slate-300 mt-2">
-                        The administrator has not yet configured the AI service. Please check back later.
-                    </p>
-                </div>
-            );
-        }
-
         switch (gameState) {
             case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
             case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
-            case 'api_key_setup': return <ApiKeyScreen onKeySaved={handleSaveApiKey} error={null} />;
+            
+            case 'API_KEY_SETUP': return <ApiKeyScreen onKeySaved={handleKeySaved} error={error} />;
 
             case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} onGoToAdminPanel={handleGoToAdminPanel} />;
             case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
             case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
+            case 'FEATURE_NOT_CONFIGURED': return <FeatureNotConfiguredScreen featureName={unconfiguredFeatureName} onBack={resetToHome} />;
 
             case 'GRADE_SELECTION': return <GradeSelector 
                 onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
@@ -502,7 +512,7 @@ const App: React.FC = () => {
         }
     };
     
-    const showHeader = !['login', 'register', 'initializing', 'api_key_setup'].includes(gameState);
+    const showHeader = !['login', 'register', 'initializing', 'API_KEY_SETUP'].includes(gameState);
 
     return (
         <React.Suspense fallback={

@@ -1,22 +1,17 @@
 import { GoogleGenAI } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 import { getApiKey } from './apiKeyService';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
 // Helper to communicate with our serverless proxy
 const proxyFetch = async (action: string, payload: object) => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error("API key is not configured. The administrator needs to set it up.");
-    }
-
     try {
         const response = await fetch('/api/gemini-proxy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            // Include the API key in the payload for the serverless function
-            body: JSON.stringify({ action, payload, apiKey }),
+            // The API key is now handled by the serverless function using environment variables.
+            body: JSON.stringify({ action, payload }),
         });
 
         if (!response.ok) {
@@ -91,20 +86,20 @@ export const getHistoricalChatResponse = (scientist: Scientist, history: ChatMes
 
 
 // --- Special Handling for Live/Voice API ---
-// This part is special because it cannot be proxied easily.
-// It fetches the key once from local storage and then uses it on the client.
-const getLiveApiKey = (): string => {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        throw new Error("API key not configured. The application cannot connect to the AI service.");
-    }
-    return apiKey;
-};
-
+// This feature requires a client-side API key and is enabled for admin users.
 export const live = {
     connect: (options: any) => {
-        const apiKey = getLiveApiKey();
-        const ai = new GoogleGenAI({ apiKey });
-        return ai.live.connect(options);
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            return Promise.reject(new Error("The Voice Tutor feature requires a client-side API key, which is only available for admin users. Please log in as an admin and provide the key."));
+        }
+        // Initialize a separate client-side instance for the live API
+        try {
+            const ai = new GoogleGenAI({ apiKey });
+            return ai.live.connect(options);
+        } catch (e) {
+            console.error("Failed to initialize GoogleGenAI for live connection:", e);
+            return Promise.reject(e);
+        }
     },
 };
