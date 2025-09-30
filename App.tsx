@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
 
 // Service Imports
@@ -21,37 +21,37 @@ import {
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService';
 import { getApiKey, saveApiKey } from './services/apiKeyService';
 
-// Component Imports
-const GradeSelector = lazy(() => import('./components/GradeSelector'));
-const TopicSelector = lazy(() => import('./components/TopicSelector'));
-const DifficultySelector = lazy(() => import('./components/DifficultySelector'));
-const QuestionCountSelector = lazy(() => import('./components/QuestionCountSelector'));
-const TimerSelector = lazy(() => import('./components/TimerSelector'));
-const Quiz = lazy(() => import('./components/Quiz'));
-const ScoreScreen = lazy(() => import('./components/ScoreScreen'));
-const WorksheetCountSelector = lazy(() => import('./components/WorksheetCountSelector'));
-const Worksheet = lazy(() => import('./components/Worksheet'));
-const Notes = lazy(() => import('./components/Notes'));
-const LanguageSelector = lazy(() => import('./components/LanguageSelector'));
-const DoubtSolver = lazy(() => import('./components/DoubtSolver'));
-const DiagramIdeaSelector = lazy(() => import('./components/DiagramIdeaSelector'));
-const DiagramGenerator = lazy(() => import('./components/DiagramGenerator'));
-const GenerativeText = lazy(() => import('./components/GenerativeText'));
-const ScienceLens = lazy(() => import('./components/ScienceLens'));
-const ScienceFairBuddy = lazy(() => import('./components/ScienceFairBuddy'));
-const ScienceFairIdeas = lazy(() => import('./components/ScienceFairIdeas'));
-const ScienceFairPlan = lazy(() => import('./components/ScienceFairPlan'));
-const VoiceTutor = lazy(() => import('./components/VoiceTutor'));
-const ScientistSelector = lazy(() => import('./components/ScientistSelector'));
-const HistoricalChat = lazy(() => import('./components/HistoricalChat'));
-const LoginScreen = lazy(() => import('./components/LoginScreen'));
-const RegistrationScreen = lazy(() => import('./components/RegistrationScreen'));
-const Leaderboard = lazy(() => import('./components/Leaderboard'));
-const ProfileScreen = lazy(() => import('./components/ProfileScreen'));
-const HomeScreen = lazy(() => import('./components/HomeScreen'));
-const AdminPanel = lazy(() => import('./components/AdminPanel'));
-const ApiKeyScreen = lazy(() => import('./components/ApiKeyScreen'));
-const FeatureNotConfiguredScreen = lazy(() => import('./components/FeatureNotConfiguredScreen'));
+// Component Imports (switched from lazy to static)
+import GradeSelector from './components/GradeSelector';
+import TopicSelector from './components/TopicSelector';
+import DifficultySelector from './components/DifficultySelector';
+import QuestionCountSelector from './components/QuestionCountSelector';
+import TimerSelector from './components/TimerSelector';
+import Quiz from './components/Quiz';
+import ScoreScreen from './components/ScoreScreen';
+import WorksheetCountSelector from './components/WorksheetCountSelector';
+import Worksheet from './components/Worksheet';
+import Notes from './components/Notes';
+import LanguageSelector from './components/LanguageSelector';
+import DoubtSolver from './components/DoubtSolver';
+import DiagramIdeaSelector from './components/DiagramIdeaSelector';
+import DiagramGenerator from './components/DiagramGenerator';
+import GenerativeText from './components/GenerativeText';
+import ScienceLens from './components/ScienceLens';
+import ScienceFairBuddy from './components/ScienceFairBuddy';
+import ScienceFairIdeas from './components/ScienceFairIdeas';
+import ScienceFairPlan from './components/ScienceFairPlan';
+import VoiceTutor from './components/VoiceTutor';
+import ScientistSelector from './components/ScientistSelector';
+import HistoricalChat from './components/HistoricalChat';
+import LoginScreen from './components/LoginScreen';
+import RegistrationScreen from './components/RegistrationScreen';
+import Leaderboard from './components/Leaderboard';
+import ProfileScreen from './components/ProfileScreen';
+import HomeScreen from './components/HomeScreen';
+import AdminPanel from './components/AdminPanel';
+import ApiKeyScreen from './components/ApiKeyScreen';
+import FeatureNotConfiguredScreen from './components/FeatureNotConfiguredScreen';
 import LoadingSpinner from './components/LoadingSpinner';
 
 
@@ -515,31 +515,24 @@ const App: React.FC = () => {
     const showHeader = !['login', 'register', 'initializing', 'API_KEY_SETUP'].includes(gameState);
 
     return (
-        <React.Suspense fallback={
-            <div className="w-full h-screen flex flex-col items-center justify-center">
-                <LoadingSpinner />
-                <p className="mt-4 text-slate-300">Loading App...</p>
-            </div>
-        }>
-            <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">
-                <div className="absolute inset-0 bg-grid-slate-800/[0.2] [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
-                
-                {showHeader && (
-                    <header className="w-full max-w-screen-2xl mx-auto flex justify-between items-center p-4 sticky top-0 z-50">
-                        <button onClick={resetToHome} aria-label="Home" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                        </button>
-                         <button onClick={handleLogout} aria-label="Logout" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                        </button>
-                    </header>
-                )}
+        <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">
+            <div className="absolute inset-0 bg-grid-slate-800/[0.2] [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
+            
+            {showHeader && (
+                <header className="w-full max-w-screen-2xl mx-auto flex justify-between items-center p-4 sticky top-0 z-50">
+                    <button onClick={resetToHome} aria-label="Home" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                    </button>
+                     <button onClick={handleLogout} aria-label="Logout" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </button>
+                </header>
+            )}
 
-                <div className="relative z-10 w-full flex-grow flex items-center justify-center">
-                    {renderContent()}
-                </div>
-            </main>
-        </React.Suspense>
+            <div className="relative z-10 w-full flex-grow flex items-center justify-center">
+                {renderContent()}
+            </div>
+        </main>
     );
 };
 
