@@ -1,15 +1,19 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
-// No longer importing from config.ts
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
 
-interface NetlifyEvent {
-    path: string;
-    httpMethod: string;
-    headers: Record<string, string>;
-    queryStringParameters: Record<string, string>;
-    body: string;
-    isBase64Encoded: boolean;
+// Define minimal types for Vercel's request and response objects
+// as we can't import from '@vercel/node'.
+interface VercelRequest {
+    method?: string;
+    body: any;
 }
+
+interface VercelResponse {
+    status: (code: number) => {
+        json: (data: any) => void;
+    };
+}
+
 
 const getAi = (apiKey: string) => {
     if (!apiKey) {
@@ -18,13 +22,13 @@ const getAi = (apiKey: string) => {
     return new GoogleGenAI({ apiKey });
 };
 
-const handler = async (event: NetlifyEvent) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
     try {
-        const { action, payload, apiKey } = JSON.parse(event.body);
+        const { action, payload, apiKey } = req.body;
         const ai = getAi(apiKey); // Initialize AI with the key from the client
 
         let result: any;
@@ -210,20 +214,10 @@ For every question, provide a brief, easy-to-understand explanation for the corr
                 throw new Error(`Unknown action: ${action}`);
         }
 
-        return {
-            statusCode: 200,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(result),
-        };
+        return res.status(200).json(result);
 
     } catch (error) {
         console.error('Error in gemini-proxy:', error);
-        return {
-            statusCode: 500,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: error instanceof Error ? error.message : "An internal server error occurred." }),
-        };
+        return res.status(500).json({ message: error instanceof Error ? error.message : "An internal server error occurred." });
     }
-};
-
-export { handler };
+}
