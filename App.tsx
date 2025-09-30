@@ -96,13 +96,20 @@ const App: React.FC = () => {
     
     // --- Effects ---
     useEffect(() => {
-        const user = getCurrentUser();
-        const key = getApiKey(); // Checks for client-side key for admin's Voice Tutor
-        setApiKeyExists(!!key);
+        try {
+            const user = getCurrentUser();
+            const key = getApiKey(); // Checks for client-side key for admin's Voice Tutor
+            setApiKeyExists(!!key);
 
-        if (user) {
-            handleUserLoggedIn(user, !!key);
-        } else {
+            if (user) {
+                handleUserLoggedIn(user, !!key);
+            } else {
+                setGameState('login');
+            }
+        } catch (e) {
+            console.error("Failed to initialize app from local storage:", e);
+            setError("Could not access browser storage. Please ensure it's enabled. The app may not work correctly in private/incognito mode.");
+            // Fallback to a state that can render, ensuring the app doesn't crash
             setGameState('login');
         }
     }, []);
