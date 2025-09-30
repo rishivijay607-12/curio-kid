@@ -1,5 +1,83 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
+
+// --- Type Definitions copied from ../types.ts to make the function self-contained for Vercel build ---
+type Grade = 6 | 7 | 8 | 9 | 10;
+type Difficulty = 'Easy' | 'Medium' | 'Hard';
+type AppMode =
+  | 'home'
+  | 'quiz'
+  | 'worksheet'
+  | 'notes'
+  | 'diagram'
+  | 'video'
+  | 'doubt_solver'
+  | 'chat_with_history'
+  | 'concept_deep_dive'
+  | 'virtual_lab'
+  | 'real_world_links'
+  | 'story_weaver'
+  | 'what_if'
+  | 'science_lens'
+  | 'science_fair_buddy'
+  | 'voice_tutor'
+  | 'leaderboard'
+  | 'profile';
+type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
+interface QuizQuestion {
+  type: QuestionType;
+  question: string;
+  reason?: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+interface NoteSection {
+  title: string;
+  points: string[];
+}
+interface ChatMessage {
+  role: 'user' | 'model';
+  parts: [{ text: string }];
+}
+type Language =
+  | 'English'
+  | 'English+Tamil'
+  | 'English+Malayalam'
+  | 'English+Hindi'
+  | 'English+Telugu'
+  | 'English+Kannada';
+interface Scientist {
+  name: string;
+  field: string;
+  description: string;
+}
+interface GroundingChunk {
+  web: {
+    uri: string;
+    title: string;
+  };
+}
+interface GenerativeTextResult {
+  text: string;
+  sources?: GroundingChunk[];
+}
+interface DiagramIdea {
+  id: string;
+  prompt: string;
+  description: string;
+}
+interface ScienceFairIdea {
+    id?: string;
+    title: string;
+    description: string;
+}
+interface ScienceFairPlanStep {
+    stepTitle: string;
+    instructions: string;
+    image: string; // base64 data URL
+}
+// --- End of copied Type Definitions ---
+
 
 // Define minimal types for Vercel's request and response objects
 // as we can't import from '@vercel/node'.
