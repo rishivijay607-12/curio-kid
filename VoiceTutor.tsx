@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { LiveServerMessage, Blob } from '@google/genai';
 import type { Grade, Language } from '../types.ts';
@@ -177,8 +178,11 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                                      try {
                                         const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
                                         const pcmBlob = createBlob(inputData);
-                                        // Directly send input without waiting for a promise
-                                        session.sendRealtimeInput({ media: pcmBlob });
+                                        // FIX: The 'session' object is a Promise. We must wait for it to resolve
+                                        // before calling methods on the session object, like sendRealtimeInput.
+                                        session.then((resolvedSession: any) => {
+                                            resolvedSession.sendRealtimeInput({ media: pcmBlob });
+                                        });
                                      } catch (e) {
                                          console.error("Error during audio processing:", e);
                                      }

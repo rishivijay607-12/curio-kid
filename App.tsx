@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { API_KEY } from './config.ts';
+import ApiKeyInstructions from './components/ApiKeyInstructions.tsx';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 
 // Service Imports
@@ -54,6 +56,11 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 // --- Main App Component ---
 const App: React.FC = () => {
+    // Check for API Key first. If it's the placeholder, render instructions and stop.
+    if (API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
+        return <ApiKeyInstructions />;
+    }
+    
     // Game State
     const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);

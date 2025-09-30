@@ -1,15 +1,11 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
+import { API_KEY } from '../config.ts';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
-// The API key is sourced from an environment variable.
-// This is a secure, standard practice for web deployments.
-// Your hosting environment must have the API_KEY variable set for the app to function.
-const API_KEY = process.env.API_KEY;
-
 const getAi = () => {
-    if (!API_KEY) {
-        throw new Error("API key not configured. The application administrator needs to set it up in the deployment environment.");
-    }
+    // The main App.tsx component now handles the API key check at startup,
+    // so we can safely initialize the client here.
     return new GoogleGenAI({ apiKey: API_KEY });
 };
 
@@ -31,7 +27,7 @@ Generate a set of ${count} unique, multiple-choice science quiz questions based 
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', properties: { type: { type: 'STRING' }, question: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } }, answer: { type: 'STRING' }, explanation: { type: 'STRING' } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
+            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
     });
     return JSON.parse(response.text.trim());
@@ -48,7 +44,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
         contents: prompt,
          config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'ARRAY', items: { type: 'OBJECT', properties: { type: { type: 'STRING' }, question: { type: 'STRING' }, reason: { type: 'STRING' }, options: { type: 'ARRAY', items: { type: 'STRING' } }, answer: { type: 'STRING' }, explanation: { type: 'STRING' } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
+            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
     });
     return JSON.parse(response.text.trim());
@@ -61,7 +57,7 @@ export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSe
         contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'OBJECT', properties: { notes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, points: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['title', 'points'] } } }, required: ['notes'] },
+            responseSchema: { type: Type.OBJECT, properties: { notes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, points: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['title', 'points'] } } }, required: ['notes'] },
         },
     });
     return JSON.parse(response.text.trim()).notes;
@@ -91,7 +87,7 @@ export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'OBJECT', properties: { diagrams: { type: 'ARRAY', items: { type: 'OBJECT', properties: { prompt: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['prompt', 'description'] } } }, required: ['diagrams'] },
+            responseSchema: { type: Type.OBJECT, properties: { diagrams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['prompt', 'description'] } } }, required: ['diagrams'] },
         }
     });
     // Add client-side UUIDs
@@ -136,7 +132,7 @@ export const generateScienceFairIdeas = async (userInput: string): Promise<Scien
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'OBJECT', properties: { ideas: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['title', 'description'] } } }, required: ['ideas'] },
+            responseSchema: { type: Type.OBJECT, properties: { ideas: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } } }, required: ['ideas'] },
         }
     });
     return JSON.parse(response.text.trim()).ideas;
@@ -148,7 +144,7 @@ export const generateScienceFairPlan = async (projectTitle: string, projectDescr
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
-            responseSchema: { type: 'OBJECT', properties: { plan: { type: 'ARRAY', items: { type: 'OBJECT', properties: { stepTitle: { type: 'STRING' }, instructions: { type: 'STRING' } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
+            responseSchema: { type: Type.OBJECT, properties: { plan: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stepTitle: { type: Type.STRING }, instructions: { type: Type.STRING } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
         }
     });
     return JSON.parse(response.text.trim()).plan;
@@ -168,7 +164,13 @@ export const getHistoricalChatResponse = async (scientist: Scientist, history: C
 
 export const live = {
     connect: (options: any) => {
-        const ai = getAi(); // This is synchronous and will throw if key is missing
+        if (API_KEY === 'PASTE_YOUR_API_KEY_HERE') {
+            // This error will be caught by the calling component (VoiceTutor)
+            // and will prevent the session from starting, showing the user an error.
+            throw new Error("API key is not configured. Please add it to config.ts.");
+        }
+        const ai = getAi();
+        // The connect method from the SDK returns a promise that resolves with the session object.
         return ai.live.connect(options);
-    },
+    }
 };

@@ -1,7 +1,6 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
-import type { LiveServerMessage, Blob } from '@google/genai';
+import { type LiveServerMessage, type Blob, Modality } from '@google/genai';
 import type { Grade, Language } from '../types.ts';
 import { live } from '../services/geminiService.ts'; // Import the centralized service
 import LoadingSpinner from './LoadingSpinner.tsx';
@@ -154,7 +153,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                     config: {
-                        responseModalities: ['AUDIO'],
+                        responseModalities: [Modality.AUDIO],
                         speechConfig: {
                             voiceConfig: {prebuiltVoiceConfig: {voiceName: 'Zephyr'}},
                         },
