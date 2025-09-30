@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
-import { getApiKey } from './apiKeyService';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types';
+import { getApiKey } from './apiKeyService.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GroundingChunk, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, DiagramIdea } from '../types.ts';
 
 // Helper to communicate with our serverless proxy
 const proxyFetch = async (action: string, payload: object) => {

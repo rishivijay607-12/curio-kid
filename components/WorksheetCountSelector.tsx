@@ -1,5 +1,5 @@
 import React from 'react';
-import LoadingSpinner from './LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface WorksheetCountSelectorProps {
   onCountSelect: (count: number) => void;

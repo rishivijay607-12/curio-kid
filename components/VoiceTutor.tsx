@@ -1,9 +1,10 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { LiveServerMessage, Blob } from '@google/genai';
-import type { Grade, Language } from '../types';
-import { live } from '../services/geminiService'; // Import the centralized service
-import LoadingSpinner from './LoadingSpinner';
+import type { Grade, Language } from '../types.ts';
+import { live } from '../services/geminiService.ts'; // Import the centralized service
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 // Fix: Add webkitAudioContext to Window interface for browser compatibility
 declare global {

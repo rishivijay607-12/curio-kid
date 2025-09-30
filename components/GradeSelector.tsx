@@ -1,6 +1,6 @@
 import React from 'react';
-import type { Grade, AppMode } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import type { Grade, AppMode } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface GradeSelectorProps {
   onGradeSelect: (grade: Grade) => void;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { AppMode, Grade, GenerativeTextResult } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import type { AppMode, Grade, GenerativeTextResult } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface GenerativeTextProps {
     appMode: AppMode;

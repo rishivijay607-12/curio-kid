@@ -1,4 +1,4 @@
-import { Scientist } from './types';
+import { Scientist } from './types.ts';
 
 export const CHAPTERS_BY_GRADE = {
   6: [

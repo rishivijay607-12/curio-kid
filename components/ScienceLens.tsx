@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import LoadingSpinner from './LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface ScienceLensProps {
     onGenerate: (base64Image: string, mimeType: string, prompt: string) => void;

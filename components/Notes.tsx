@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Grade, NoteSection } from '../types';
+import type { Grade, NoteSection } from '../types.ts';
 
 interface NotesProps {
     notes: NoteSection[];

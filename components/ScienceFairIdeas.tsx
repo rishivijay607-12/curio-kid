@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ScienceFairIdea } from '../types';
+import type { ScienceFairIdea } from '../types.ts';
 
 interface ScienceFairIdeasProps {
     ideas: ScienceFairIdea[];

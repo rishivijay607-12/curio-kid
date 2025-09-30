@@ -1,6 +1,6 @@
 import React from 'react';
-import type { Scientist } from '../types';
-import { SCIENTISTS } from '../constants';
+import type { Scientist } from '../types.ts';
+import { SCIENTISTS } from '../constants.ts';
 
 interface ScientistSelectorProps {
   onScientistSelect: (scientist: Scientist) => void;

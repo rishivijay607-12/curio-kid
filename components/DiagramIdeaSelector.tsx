@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { DiagramIdea } from '../types';
+import type { DiagramIdea } from '../types.ts';
 
 interface DiagramIdeaSelectorProps {
   ideas: DiagramIdea[];

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import LoadingSpinner from './LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface ScienceFairBuddyProps {
     onGenerate: (userInput: string) => void;

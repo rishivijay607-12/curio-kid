@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Grade, ChatMessage } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import type { Grade, ChatMessage } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 // Fix: Add type definitions for Web Speech API to fix 'Cannot find name 'SpeechRecognition'' error.
 // These types are necessary because they might not be included in the default TypeScript DOM library settings.

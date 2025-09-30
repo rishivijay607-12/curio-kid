@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 
 // Service Imports
 import {
@@ -17,42 +17,42 @@ import {
     generateScientistGreeting,
     getHistoricalChatResponse,
     live, // Import the live service directly
-} from './services/geminiService';
-import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService';
-import { getApiKey, saveApiKey } from './services/apiKeyService';
+} from './services/geminiService.ts';
+import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
+import { getApiKey, saveApiKey } from './services/apiKeyService.ts';
 
 // Component Imports (switched from lazy to static)
-import GradeSelector from './components/GradeSelector';
-import TopicSelector from './components/TopicSelector';
-import DifficultySelector from './components/DifficultySelector';
-import QuestionCountSelector from './components/QuestionCountSelector';
-import TimerSelector from './components/TimerSelector';
-import Quiz from './components/Quiz';
-import ScoreScreen from './components/ScoreScreen';
-import WorksheetCountSelector from './components/WorksheetCountSelector';
-import Worksheet from './components/Worksheet';
-import Notes from './components/Notes';
-import LanguageSelector from './components/LanguageSelector';
-import DoubtSolver from './components/DoubtSolver';
-import DiagramIdeaSelector from './components/DiagramIdeaSelector';
-import DiagramGenerator from './components/DiagramGenerator';
-import GenerativeText from './components/GenerativeText';
-import ScienceLens from './components/ScienceLens';
-import ScienceFairBuddy from './components/ScienceFairBuddy';
-import ScienceFairIdeas from './components/ScienceFairIdeas';
-import ScienceFairPlan from './components/ScienceFairPlan';
-import VoiceTutor from './components/VoiceTutor';
-import ScientistSelector from './components/ScientistSelector';
-import HistoricalChat from './components/HistoricalChat';
-import LoginScreen from './components/LoginScreen';
-import RegistrationScreen from './components/RegistrationScreen';
-import Leaderboard from './components/Leaderboard';
-import ProfileScreen from './components/ProfileScreen';
-import HomeScreen from './components/HomeScreen';
-import AdminPanel from './components/AdminPanel';
-import ApiKeyScreen from './components/ApiKeyScreen';
-import FeatureNotConfiguredScreen from './components/FeatureNotConfiguredScreen';
-import LoadingSpinner from './components/LoadingSpinner';
+import GradeSelector from './components/GradeSelector.tsx';
+import TopicSelector from './components/TopicSelector.tsx';
+import DifficultySelector from './components/DifficultySelector.tsx';
+import QuestionCountSelector from './components/QuestionCountSelector.tsx';
+import TimerSelector from './components/TimerSelector.tsx';
+import Quiz from './components/Quiz.tsx';
+import ScoreScreen from './components/ScoreScreen.tsx';
+import WorksheetCountSelector from './components/WorksheetCountSelector.tsx';
+import Worksheet from './components/Worksheet.tsx';
+import Notes from './components/Notes.tsx';
+import LanguageSelector from './components/LanguageSelector.tsx';
+import DoubtSolver from './components/DoubtSolver.tsx';
+import DiagramIdeaSelector from './components/DiagramIdeaSelector.tsx';
+import DiagramGenerator from './components/DiagramGenerator.tsx';
+import GenerativeText from './components/GenerativeText.tsx';
+import ScienceLens from './components/ScienceLens.tsx';
+import ScienceFairBuddy from './components/ScienceFairBuddy.tsx';
+import ScienceFairIdeas from './components/ScienceFairIdeas.tsx';
+import ScienceFairPlan from './components/ScienceFairPlan.tsx';
+import VoiceTutor from './components/VoiceTutor.tsx';
+import ScientistSelector from './components/ScientistSelector.tsx';
+import HistoricalChat from './components/HistoricalChat.tsx';
+import LoginScreen from './components/LoginScreen.tsx';
+import RegistrationScreen from './components/RegistrationScreen.tsx';
+import Leaderboard from './components/Leaderboard.tsx';
+import ProfileScreen from './components/ProfileScreen.tsx';
+import HomeScreen from './components/HomeScreen.tsx';
+import AdminPanel from './components/AdminPanel.tsx';
+import ApiKeyScreen from './components/ApiKeyScreen.tsx';
+import FeatureNotConfiguredScreen from './components/FeatureNotConfiguredScreen.tsx';
+import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 
 // --- Main App Component ---

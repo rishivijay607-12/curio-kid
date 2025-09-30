@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Language, Grade } from '../types';
+import type { Language, Grade } from '../types.ts';
 
 interface LanguageSelectorProps {
   onLanguageSelect: (language: Language) => void;

@@ -1,6 +1,6 @@
 import React from 'react';
-import type { Grade, Diagram } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import type { Grade, Diagram } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface DiagramGeneratorProps {
     diagrams: Diagram[];

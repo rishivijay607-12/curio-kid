@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { CHAPTERS_BY_GRADE } from '../constants';
-import type { Grade, AppMode } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import { CHAPTERS_BY_GRADE } from '../constants.ts';
+import type { Grade, AppMode } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface TopicSelectorProps {
   onTopicSelect: (topic: string) => void;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { QuizQuestion, Grade, Difficulty } from '../types';
-import { generateQuizQuestions } from '../services/geminiService';
-import LoadingSpinner from './LoadingSpinner';
+import type { QuizQuestion, Grade, Difficulty } from '../types.ts';
+import { generateQuizQuestions } from '../services/geminiService.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface QuizProps {
   topic: string;

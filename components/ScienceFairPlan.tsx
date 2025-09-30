@@ -1,6 +1,6 @@
 import React from 'react';
-import type { ScienceFairIdea, ScienceFairPlanStep } from '../types';
-import LoadingSpinner from './LoadingSpinner';
+import type { ScienceFairIdea, ScienceFairPlanStep } from '../types.ts';
+import LoadingSpinner from './LoadingSpinner.tsx';
 
 interface ScienceFairPlanProps {
     idea: ScienceFairIdea;
