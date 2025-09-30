@@ -1,0 +1,9 @@
+{
+  "name": "curio-kid",
+  "version": "1.0.0",
+  "description": "An interactive science quiz for Grades 6-10.",
+  "scripts": {
+    "start": "echo \"No build process needed. See index.html\""
+  },
+  "private": true
+}
