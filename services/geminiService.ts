@@ -10,7 +10,7 @@ const proxyFetch = async (action: string, payload: object) => {
     }
 
     try {
-        const response = await fetch('/.netlify/functions/gemini-proxy', {
+        const response = await fetch('/api/gemini-proxy', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
