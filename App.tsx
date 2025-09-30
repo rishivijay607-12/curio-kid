@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types';
 
 // Service Imports
@@ -16,47 +16,52 @@ import {
     generateScienceFairPlan,
     generateScientistGreeting,
     getHistoricalChatResponse,
+    live, // Import the live service directly
 } from './services/geminiService';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService';
+import { getApiKey, saveApiKey } from './services/apiKeyService';
+
 
 // Component Imports
-const GradeSelector = React.lazy(() => import('./components/GradeSelector'));
-const TopicSelector = React.lazy(() => import('./components/TopicSelector'));
-const DifficultySelector = React.lazy(() => import('./components/DifficultySelector'));
-const QuestionCountSelector = React.lazy(() => import('./components/QuestionCountSelector'));
-const TimerSelector = React.lazy(() => import('./components/TimerSelector'));
-const Quiz = React.lazy(() => import('./components/Quiz'));
-const ScoreScreen = React.lazy(() => import('./components/ScoreScreen'));
-const WorksheetCountSelector = React.lazy(() => import('./components/WorksheetCountSelector'));
-const Worksheet = React.lazy(() => import('./components/Worksheet'));
-const Notes = React.lazy(() => import('./components/Notes'));
-const LanguageSelector = React.lazy(() => import('./components/LanguageSelector'));
-const DoubtSolver = React.lazy(() => import('./components/DoubtSolver'));
-const DiagramIdeaSelector = React.lazy(() => import('./components/DiagramIdeaSelector'));
-const DiagramGenerator = React.lazy(() => import('./components/DiagramGenerator'));
-const GenerativeText = React.lazy(() => import('./components/GenerativeText'));
-const ScienceLens = React.lazy(() => import('./components/ScienceLens'));
-const ScienceFairBuddy = React.lazy(() => import('./components/ScienceFairBuddy'));
-const ScienceFairIdeas = React.lazy(() => import('./components/ScienceFairIdeas'));
-const ScienceFairPlan = React.lazy(() => import('./components/ScienceFairPlan'));
-const VoiceTutor = React.lazy(() => import('./components/VoiceTutor'));
-const ScientistSelector = React.lazy(() => import('./components/ScientistSelector'));
-const HistoricalChat = React.lazy(() => import('./components/HistoricalChat'));
-const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
-const RegistrationScreen = React.lazy(() => import('./components/RegistrationScreen'));
-const Leaderboard = React.lazy(() => import('./components/Leaderboard'));
-const ProfileScreen = React.lazy(() => import('./components/ProfileScreen'));
-const HomeScreen = React.lazy(() => import('./components/HomeScreen'));
-const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
+const ApiKeyScreen = lazy(() => import('./components/ApiKeyScreen'));
+const GradeSelector = lazy(() => import('./components/GradeSelector'));
+const TopicSelector = lazy(() => import('./components/TopicSelector'));
+const DifficultySelector = lazy(() => import('./components/DifficultySelector'));
+const QuestionCountSelector = lazy(() => import('./components/QuestionCountSelector'));
+const TimerSelector = lazy(() => import('./components/TimerSelector'));
+const Quiz = lazy(() => import('./components/Quiz'));
+const ScoreScreen = lazy(() => import('./components/ScoreScreen'));
+const WorksheetCountSelector = lazy(() => import('./components/WorksheetCountSelector'));
+const Worksheet = lazy(() => import('./components/Worksheet'));
+const Notes = lazy(() => import('./components/Notes'));
+const LanguageSelector = lazy(() => import('./components/LanguageSelector'));
+const DoubtSolver = lazy(() => import('./components/DoubtSolver'));
+const DiagramIdeaSelector = lazy(() => import('./components/DiagramIdeaSelector'));
+const DiagramGenerator = lazy(() => import('./components/DiagramGenerator'));
+const GenerativeText = lazy(() => import('./components/GenerativeText'));
+const ScienceLens = lazy(() => import('./components/ScienceLens'));
+const ScienceFairBuddy = lazy(() => import('./components/ScienceFairBuddy'));
+const ScienceFairIdeas = lazy(() => import('./components/ScienceFairIdeas'));
+const ScienceFairPlan = lazy(() => import('./components/ScienceFairPlan'));
+const VoiceTutor = lazy(() => import('./components/VoiceTutor'));
+const ScientistSelector = lazy(() => import('./components/ScientistSelector'));
+const HistoricalChat = lazy(() => import('./components/HistoricalChat'));
+const LoginScreen = lazy(() => import('./components/LoginScreen'));
+const RegistrationScreen = lazy(() => import('./components/RegistrationScreen'));
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const ProfileScreen = lazy(() => import('./components/ProfileScreen'));
+const HomeScreen = lazy(() => import('./components/HomeScreen'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
 import LoadingSpinner from './components/LoadingSpinner';
 
 
 // --- Main App Component ---
 const App: React.FC = () => {
     // Game State
-    const [gameState, setGameState] = useState<string>('login');
+    const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
 
     // Config State
     const [appMode, setAppMode] = useState<AppMode>('home');
@@ -89,12 +94,25 @@ const App: React.FC = () => {
     
     // --- Effects ---
     useEffect(() => {
+        setApiKeyExists(!!getApiKey());
         const user = getCurrentUser();
         if (user) {
-            setCurrentUser(user);
-            setGameState('home');
+            handleUserLoggedIn(user);
+        } else {
+            setGameState('login');
         }
     }, []);
+
+    const handleUserLoggedIn = (user: User) => {
+        setCurrentUser(user);
+        const keyExists = !!getApiKey();
+        setApiKeyExists(keyExists);
+        if (user.isAdmin && !keyExists) {
+            setGameState('api_key_setup');
+        } else {
+            setGameState('home');
+        }
+    };
 
     // --- State Resets ---
     const resetAllState = useCallback(() => {
@@ -129,18 +147,22 @@ const App: React.FC = () => {
 
     // --- Handlers ---
 
-    // Auth
+    // Auth & Setup
+     const handleSaveApiKey = (key: string) => {
+        saveApiKey(key);
+        setApiKeyExists(true);
+        setGameState('home');
+    };
+
     const handleLogin = async (username: string, password: string) => {
         const user = await login(username, password);
-        setCurrentUser(user);
-        setGameState('home');
+        handleUserLoggedIn(user);
         return true;
     };
     
     const handleRegister = async (username: string, password: string) => {
         const user = await register(username, password);
-        setCurrentUser(user);
-        setGameState('home');
+        handleUserLoggedIn(user);
         return true;
     };
     
@@ -201,14 +223,10 @@ const App: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const questions = await generateWorksheet(topic, grade, difficulty, count, setGenerationProgress);
+            const questions = await generateWorksheet(topic, grade, difficulty, count);
             setWorksheetQuestions(questions);
             setGameState('WORKSHEET_DISPLAY');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
 
     // Notes Flow
@@ -221,11 +239,7 @@ const App: React.FC = () => {
             const notesData = await generateNotes(selectedTopic, grade);
             setNotes(notesData);
             setGameState('NOTES_DISPLAY');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
     
     // Chat & Tutor Flows
@@ -240,11 +254,7 @@ const App: React.FC = () => {
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
             setGameState('DOUBT_SOLVER_SESSION');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
     
     const handleSendMessage = async (message: string) => {
@@ -258,11 +268,7 @@ const App: React.FC = () => {
             const response = await getChatResponse(grade, newHistory, language, topic);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
     
     const handleScientistSelect = async (scientist: Scientist) => {
@@ -291,11 +297,7 @@ const App: React.FC = () => {
             const response = await getHistoricalChatResponse(selectedScientist, newHistory);
             const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
             setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
 
 
@@ -309,11 +311,7 @@ const App: React.FC = () => {
             const ideas = await generateDiagramIdeas(selectedTopic, grade);
             setDiagramIdeas(ideas);
             setGameState('DIAGRAM_IDEA_SELECTION');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
 
     const handleGenerateDiagrams = async (selectedIdeas: DiagramIdea[]) => {
@@ -365,11 +363,7 @@ const App: React.FC = () => {
         try {
             const result = await generateTextForMode(appMode, userInput, grade ?? undefined, topic ?? undefined);
             setGenerativeTextResult(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
 
     const handleScienceLensGenerate = async (base64Image: string, mimeType: string, prompt: string) => {
@@ -379,11 +373,7 @@ const App: React.FC = () => {
         try {
             const result = await explainImageWithText(base64Image, mimeType, prompt);
             setScienceLensResult(result);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
     
     const handleScienceFairIdeasGenerate = async (userInput: string) => {
@@ -394,34 +384,61 @@ const App: React.FC = () => {
             const ideas = await generateScienceFairIdeas(userInput);
             setScienceFairIdeas(ideas);
             setGameState('SCIENCE_FAIR_IDEAS');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+        } catch (err) CATCH_BLOCK
     };
 
     const handleSelectScienceFairIdea = async (idea: ScienceFairIdea) => {
         setSelectedScienceFairIdea(idea);
         setGameState('SCIENCE_FAIR_PLAN');
         setIsLoading(true);
+        setError(null);
+        setScienceFairPlan([]);
         try {
-            const plan = await generateScienceFairPlan(idea.title, idea.description, (progress) => {
-                 setGenerationProgress({current: progress.current, total: progress.total});
-            });
-            setScienceFairPlan(plan);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "An unknown error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
+            const plan = await generateScienceFairPlan(idea.title, idea.description);
+            const planWithImages: ScienceFairPlanStep[] = [];
+            setGenerationProgress({ current: 0, total: plan.length });
+            for (const step of plan) {
+                 setGenerationProgress({ current: planWithImages.length + 1, total: plan.length });
+                 const imageBytes = await generateDiagramImage(`Photorealistic image of a student working on a science fair project step: "${step.stepTitle}".`);
+                 planWithImages.push({ ...step, image: `data:image/png;base64,${imageBytes}` });
+            }
+            setScienceFairPlan(planWithImages);
+
+        } catch (err) CATCH_BLOCK
+    };
+
+    // Generic error handler to reduce repetition
+    const CATCH_BLOCK = (err: unknown) => {
+        setError(err instanceof Error ? err.message : "An unknown error occurred.");
+        setIsLoading(false);
     };
 
     // --- Render Logic ---
     const renderContent = () => {
+        if (gameState === 'initializing') {
+            return (
+                <div className="flex flex-col items-center justify-center">
+                    <LoadingSpinner />
+                </div>
+            );
+        }
+        
+        if (!apiKeyExists && currentUser && !currentUser.isAdmin) {
+            return (
+                <div className="text-center p-8 bg-slate-900 rounded-xl shadow-2xl border border-yellow-500">
+                    <h2 className="text-2xl font-bold text-yellow-400">Application Not Configured</h2>
+                    <p className="text-slate-300 mt-2">
+                        The administrator has not yet configured the AI service. Please check back later.
+                    </p>
+                </div>
+            );
+        }
+
         switch (gameState) {
             case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
             case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
+            case 'api_key_setup': return <ApiKeyScreen onKeySaved={handleSaveApiKey} error={null} />;
+
             case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} onGoToAdminPanel={handleGoToAdminPanel} />;
             case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
@@ -447,7 +464,7 @@ const App: React.FC = () => {
             
             case 'COUNT_SELECTION':
                 if (appMode === 'quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); setGameState('TIMER_SELECTION'); }} />;
-                if (appMode === 'worksheet') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} generationProgress={generationProgress} />;
+                if (appMode === 'worksheet') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} />;
                 return null;
             
             case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setGameState('QUIZ_RUNNING'); }} />;
@@ -474,7 +491,7 @@ const App: React.FC = () => {
            
             case 'science_fair_buddy': return <ScienceFairBuddy onGenerate={handleScienceFairIdeasGenerate} isLoading={isLoading} error={error} />;
             case 'SCIENCE_FAIR_IDEAS': return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={userScienceFairTopic} />;
-            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} plan={scienceFairPlan} />;
+            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} plan={scienceFairPlan} isLoading={isLoading} error={error} />;
 
             case 'VOICE_TUTOR_SESSION': return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
 
@@ -485,7 +502,7 @@ const App: React.FC = () => {
         }
     };
     
-    const showHeader = gameState !== 'login' && gameState !== 'register';
+    const showHeader = !['login', 'register', 'initializing', 'api_key_setup'].includes(gameState);
 
     return (
         <React.Suspense fallback={

@@ -21,7 +21,6 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [skipsRemaining, setSkipsRemaining] = useState(Math.floor(quizLength / 5));
-  const [generationProgress, setGenerationProgress] = useState({ current: 0, total: quizLength });
   const [timeLeft, setTimeLeft] = useState(timerDuration);
   
   const timerIdRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -48,11 +47,8 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   useEffect(() => {
     setIsLoading(true);
     setError(null);
-    setGenerationProgress({ current: 0, total: quizLength });
     
-    generateQuizQuestions(topic, grade, difficulty, quizLength, (progress) => {
-        setGenerationProgress(progress);
-      })
+    generateQuizQuestions(topic, grade, difficulty, quizLength)
       .then(fetchedQuestions => {
         if (fetchedQuestions.length < quizLength) {
             console.warn(`API returned ${fetchedQuestions.length} questions, but ${quizLength} were requested.`);
@@ -132,20 +128,10 @@ const Quiz: React.FC<QuizProps> = ({ topic, grade, difficulty, quizLength, timer
   };
 
   if (isLoading) {
-    const progressPercentage = generationProgress.total > 0 ? (generationProgress.current / generationProgress.total) * 100 : 0;
     return (
       <div className="flex flex-col items-center justify-center p-8 bg-slate-900 rounded-xl shadow-2xl border border-slate-800 min-h-[400px]">
         <LoadingSpinner />
         <p className="text-slate-300 mt-4 text-lg">Generating your personalized quiz...</p>
-        <div className="w-full max-w-sm mt-4">
-            <div className="flex justify-between mb-1 text-sm text-slate-400">
-                <span>Progress</span>
-                <span>{generationProgress.current} / {generationProgress.total}</span>
-            </div>
-            <div className="w-full bg-slate-800 rounded-full h-2.5">
-                <div className="bg-cyan-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
-            </div>
-        </div>
       </div>
     );
   }

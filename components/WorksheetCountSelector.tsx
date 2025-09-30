@@ -5,7 +5,6 @@ interface WorksheetCountSelectorProps {
   onCountSelect: (count: number) => void;
   isGenerating: boolean;
   error: string | null;
-  generationProgress: { current: number, total: number };
 }
 
 const AtomIcon: React.FC = () => (
@@ -27,9 +26,8 @@ const CountButton: React.FC<{ count: number; onClick: (count: number) => void, d
 );
 
 
-const WorksheetCountSelector: React.FC<WorksheetCountSelectorProps> = ({ onCountSelect, isGenerating, error, generationProgress }) => {
+const WorksheetCountSelector: React.FC<WorksheetCountSelectorProps> = ({ onCountSelect, isGenerating, error }) => {
   const counts = [10, 20, 30];
-  const progressPercentage = generationProgress.total > 0 ? (generationProgress.current / generationProgress.total) * 100 : 0;
 
   return (
     <div className="w-full max-w-2xl mx-auto p-4 md:p-8">
@@ -49,17 +47,6 @@ const WorksheetCountSelector: React.FC<WorksheetCountSelectorProps> = ({ onCount
         <div className="flex flex-col items-center justify-center p-8 bg-slate-900/50 rounded-xl min-h-[150px]">
             <LoadingSpinner />
             <p className="text-slate-300 mt-4 text-lg">Generating your worksheet...</p>
-            {generationProgress.total > 0 && (
-                <div className="w-full max-w-xs mt-4">
-                    <div className="flex justify-between mb-1 text-sm text-slate-400">
-                        <span>Progress</span>
-                        <span>{generationProgress.current} / {generationProgress.total}</span>
-                    </div>
-                    <div className="w-full bg-slate-800 rounded-full h-2.5">
-                        <div className="bg-cyan-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercentage}%` }}></div>
-                    </div>
-                </div>
-            )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
