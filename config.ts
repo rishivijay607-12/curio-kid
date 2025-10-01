@@ -5,4 +5,4 @@
 // environment variable in your Vercel project settings.
 // This file is now only for reference.
 // -------------------------------------------------------------------
-export const API_KEY = "PASTE_YOUR_API_KEY_HERE";
+export const API_KEY = "AIzaSyAAPXiTeJ66zUUU9FZVcBIf660pjVspnVg";

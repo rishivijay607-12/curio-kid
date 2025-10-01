@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
+import { API_KEY } from './config.ts';
 
 // Service Imports
 import {
@@ -56,6 +57,11 @@ import ApiKeyInstructions from './components/ApiKeyInstructions.tsx';
 // --- Main App Component ---
 const App: React.FC = () => {
     
+    // Check for API Key first - this is crucial for local development
+    if (!API_KEY || API_KEY === "PASTE_YOUR_API_KEY_HERE") {
+        return <ApiKeyInstructions />;
+    }
+
     // Game State
     const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
