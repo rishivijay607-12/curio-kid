@@ -1,12 +1,25 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
-import { API_KEY } from '../config.ts';
+import { fetchAndCacheApiKey } from './apiKeyService.ts';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
-if (!API_KEY || API_KEY.startsWith("AIza") && API_KEY.length === 39) {
-    console.warn("API key might be a placeholder. Please check your config.ts file.");
-}
+// Helper to call the serverless proxy
+const callProxy = async (endpoint: string, params: any): Promise<any> => {
+    const response = await fetch('/api/gemini-proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ endpoint, params }),
+    });
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || 'An unknown error occurred with the API proxy.');
+    }
+    
+    return data;
+};
 
 const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -29,7 +42,7 @@ Generate a set of ${count} unique, multiple-choice science quiz questions based 
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return JSON.parse(response.text.trim());
 };
 
@@ -47,7 +60,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return JSON.parse(response.text.trim());
 };
 
@@ -61,7 +74,7 @@ export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSe
             responseSchema: { type: Type.OBJECT, properties: { notes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, points: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['title', 'points'] } } }, required: ['notes'] },
         },
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return JSON.parse(response.text.trim()).notes;
 };
 
@@ -73,7 +86,7 @@ export const getChatResponse = async (grade: Grade, history: ChatMessage[], lang
         contents: history,
         config: { systemInstruction },
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return response.text;
 };
 
@@ -81,7 +94,7 @@ export const generateGreeting = async (grade: Grade, language: Language, topic: 
     let langInstruction = "in clear and simple English.";
     const prompt = `You are a friendly AI science tutor 'Curio'. Provide a very short, welcoming opening message for a Grade ${grade} student to start a doubt-solving session about '${topic}'. The message should be **${langInstruction}** Keep it to one or two sentences.`;
     const params = { model: "gemini-2.5-flash", contents: prompt };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return response.text;
 };
 
@@ -94,7 +107,7 @@ export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise
             responseSchema: { type: Type.OBJECT, properties: { diagrams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['prompt', 'description'] } } }, required: ['diagrams'] },
         }
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     const ideas: Omit<DiagramIdea, 'id'>[] = JSON.parse(response.text.trim()).diagrams;
     return ideas.map((idea) => ({ ...idea, id: self.crypto.randomUUID() }));
 };
@@ -105,7 +118,7 @@ export const generateDiagramImage = async (prompt: string): Promise<string> => {
         prompt: prompt,
         config: { numberOfImages: 1, outputMimeType: 'image/png', aspectRatio: '1:1' },
     };
-    const response = await ai.models.generateImages(params);
+    const response = await callProxy('generateImages', params);
     if (!response.generatedImages || response.generatedImages.length === 0) {
         throw new Error("Image generation returned no images.");
     }
@@ -119,7 +132,7 @@ export const generateTextForMode = async (mode: AppMode, userInput: string, grad
     const params = {
         model: "gemini-2.5-flash", contents, config: { systemInstruction, tools: useSearch ? [{ googleSearch: {} }] : undefined }
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return { text: response.text, sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks };
 };
 
@@ -128,7 +141,7 @@ export const explainImageWithText = async (base64Image: string, mimeType: string
         model: "gemini-2.5-flash",
         contents: { parts: [{ inlineData: { mimeType, data: base64Image } }, { text: prompt }] },
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return response.text;
 };
 
@@ -141,7 +154,7 @@ export const generateScienceFairIdeas = async (userInput: string): Promise<Scien
             responseSchema: { type: Type.OBJECT, properties: { ideas: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } } }, required: ['ideas'] },
         }
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return JSON.parse(response.text.trim()).ideas;
 };
 
@@ -154,26 +167,30 @@ export const generateScienceFairPlan = async (projectTitle: string, projectDescr
             responseSchema: { type: Type.OBJECT, properties: { plan: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stepTitle: { type: Type.STRING }, instructions: { type: Type.STRING } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
         }
     };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return JSON.parse(response.text.trim()).plan;
 };
 
 export const generateScientistGreeting = async (scientist: Scientist): Promise<string> => {
     const prompt = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Provide a short, welcoming opening message to start a chat session with a student. Speak in the first person.`;
     const params = { model: "gemini-2.5-flash", contents: prompt };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return response.text;
 };
 
 export const getHistoricalChatResponse = async (scientist: Scientist, history: ChatMessage[]): Promise<string> => {
     const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. Keep responses concise and engaging.`;
     const params = { model: "gemini-2.5-flash", contents: history, config: { systemInstruction } };
-    const response = await ai.models.generateContent(createModelParams(params));
+    const response = await callProxy('generateContent', createModelParams(params));
     return response.text;
 };
 
-// FIX: Correctly export the live connect method without using the non-existent 'LiveConnectOptions' type.
-// This change maintains the exported structure while ensuring type safety through inference.
+// The 'live' service requires a direct connection and cannot use the HTTP proxy.
+// It fetches the API key from a secure endpoint just-in-time.
 export const live = {
-    connect: ai.live.connect,
+    connect: async (options: any) => {
+        const apiKey = await fetchAndCacheApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+        return ai.live.connect(options);
+    },
 };
