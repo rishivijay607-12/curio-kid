@@ -1,12 +1,29 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
-import { API_KEY } from '../config.ts';
+import { fetchAndCacheApiKey } from './apiKeyService.ts';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
-if (!API_KEY || API_KEY === "PASTE_YOUR_API_KEY_HERE") {
-    throw new Error("API key is not configured. Please add it to config.ts");
+let aiInstance: GoogleGenAI | null = null;
+let aiPromise: Promise<GoogleGenAI> | null = null;
+
+function getAi(): Promise<GoogleGenAI> {
+    if (aiInstance) return Promise.resolve(aiInstance);
+    if (aiPromise) return aiPromise;
+
+    aiPromise = (async () => {
+        try {
+            const apiKey = await fetchAndCacheApiKey();
+            const ai = new GoogleGenAI({ apiKey });
+            aiInstance = ai;
+            return ai;
+        } catch (error) {
+            aiPromise = null; // Allow retry on failure
+            console.error("Failed to initialize GoogleGenAI:", error);
+            throw error;
+        }
+    })();
+    return aiPromise;
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
@@ -19,6 +36,7 @@ const createModelParams = (params: any) => ({
 });
 
 export const generateQuizQuestions = async (topic: string, grade: Grade, difficulty: Difficulty, count: number): Promise<QuizQuestion[]> => {
+    const ai = await getAi();
     const prompt = `You are an expert quiz creator for middle and high school students in India.
 Generate a set of ${count} unique, multiple-choice science quiz questions based on the content from the India NCERT Grade ${grade} Science textbook, focusing on the chapter: "${topic}". Each question must be of **${difficulty}** difficulty. For each question: type must be "MCQ", provide a clear question and 4 plausible options, the correct answer, and a brief, easy-to-understand explanation.`;
     const params = {
@@ -34,6 +52,7 @@ Generate a set of ${count} unique, multiple-choice science quiz questions based 
 };
 
 export const generateWorksheet = async (topic: string, grade: Grade, difficulty: Difficulty, count: number): Promise<QuizQuestion[]> => {
+    const ai = await getAi();
     const prompt = `You are an expert worksheet creator for students in India.
 Generate a mixed worksheet of ${count} science questions based on the India NCERT Grade ${grade} Science textbook chapter: "${topic}".
 All questions must be of **${difficulty}** difficulty.
@@ -52,6 +71,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
 };
 
 export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSection[]> => {
+    const ai = await getAi();
     const prompt = `You are an expert academic content creator for students in India. Generate a comprehensive, structured set of study notes for the chapter "${topic}" from the India NCERT Grade ${grade} Science textbook. Organize into logical sections with a title and 3-5 key bullet points each.`;
     const params = {
         model: "gemini-2.5-flash",
@@ -66,6 +86,7 @@ export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSe
 };
 
 export const getChatResponse = async (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {
+    const ai = await getAi();
     let langInstruction = 'Respond in clear and simple English.';
     const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **Teaching Method:** NEVER give the full answer at once. Guide the student step-by-step. After one small step, ALWAYS ask a simple question to check for understanding. Use analogies, lists, and short sentences. Be encouraging. Stay on topic.`;
     const params = {
@@ -78,6 +99,7 @@ export const getChatResponse = async (grade: Grade, history: ChatMessage[], lang
 };
 
 export const generateGreeting = async (grade: Grade, language: Language, topic: string): Promise<string> => {
+    const ai = await getAi();
     let langInstruction = "in clear and simple English.";
     const prompt = `You are a friendly AI science tutor 'Curio'. Provide a very short, welcoming opening message for a Grade ${grade} student to start a doubt-solving session about '${topic}'. The message should be **${langInstruction}** Keep it to one or two sentences.`;
     const params = { model: "gemini-2.5-flash", contents: prompt };
@@ -86,6 +108,7 @@ export const generateGreeting = async (grade: Grade, language: Language, topic: 
 };
 
 export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
+    const ai = await getAi();
     const prompt = `You are an expert science educator. Brainstorm 8 essential diagrams to help a Grade ${grade} student understand the chapter "${topic}". For each, provide a 'prompt' for an AI image model (simple, clear, black and white textbook line drawing) and a short 'description' for the student.`;
     const params = {
         model: "gemini-2.5-flash", contents: prompt,
@@ -100,6 +123,7 @@ export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise
 };
 
 export const generateDiagramImage = async (prompt: string): Promise<string> => {
+    const ai = await getAi();
     const params = {
         model: 'imagen-4.0-generate-001',
         prompt: prompt,
@@ -113,6 +137,7 @@ export const generateDiagramImage = async (prompt: string): Promise<string> => {
 };
 
 export const generateTextForMode = async (mode: AppMode, userInput: string, grade?: Grade, topic?: string): Promise<GenerativeTextResult> => {
+    const ai = await getAi();
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = mode === 'real_world_links';
@@ -124,6 +149,7 @@ export const generateTextForMode = async (mode: AppMode, userInput: string, grad
 };
 
 export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
+    const ai = await getAi();
     const params = {
         model: "gemini-2.5-flash",
         contents: { parts: [{ inlineData: { mimeType, data: base64Image } }, { text: prompt }] },
@@ -133,6 +159,7 @@ export const explainImageWithText = async (base64Image: string, mimeType: string
 };
 
 export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
+    const ai = await getAi();
     const prompt = `Brainstorm 3 unique and engaging science fair project ideas based on the student's interest in: "${userInput}". For each, provide a catchy 'title' and a detailed 'description'.`;
     const params = {
         model: "gemini-2.5-flash", contents: prompt,
@@ -146,6 +173,7 @@ export const generateScienceFairIdeas = async (userInput: string): Promise<Scien
 };
 
 export const generateScienceFairPlan = async (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string }[]> => {
+    const ai = await getAi();
     const prompt = `Create a detailed, 5-step plan for a science fair project. Title: "${projectTitle}". Description: "${projectDescription}". For each step, provide a 'stepTitle' and detailed 'instructions'.`;
     const params = {
         model: "gemini-2.5-flash", contents: prompt,
@@ -159,6 +187,7 @@ export const generateScienceFairPlan = async (projectTitle: string, projectDescr
 };
 
 export const generateScientistGreeting = async (scientist: Scientist): Promise<string> => {
+    const ai = await getAi();
     const prompt = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Provide a short, welcoming opening message to start a chat session with a student. Speak in the first person.`;
     const params = { model: "gemini-2.5-flash", contents: prompt };
     const response = await ai.models.generateContent(createModelParams(params));
@@ -166,15 +195,16 @@ export const generateScientistGreeting = async (scientist: Scientist): Promise<s
 };
 
 export const getHistoricalChatResponse = async (scientist: Scientist, history: ChatMessage[]): Promise<string> => {
+    const ai = await getAi();
     const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. Keep responses concise and engaging.`;
     const params = { model: "gemini-2.5-flash", contents: history, config: { systemInstruction } };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
 };
 
-// The 'live' service now directly uses the client-side `ai` instance.
 export const live = {
     connect: async (options: any) => {
+        const ai = await getAi();
         return ai.live.connect(options);
     },
 };
