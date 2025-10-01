@@ -1,4 +1,3 @@
-
 export type Grade = 6 | 7 | 8 | 9 | 10;
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -58,12 +57,8 @@ export interface Scientist {
 }
 
 export interface GroundingChunk {
-  // FIX: The `web` property from the Gemini API can be optional. Making it optional resolves the type incompatibility.
   web?: {
-    // FIX: The uri property from the Gemini API can be optional.
-    // Making it optional here resolves the type incompatibility with the library.
     uri?: string;
-    // FIX: The title property from the Gemini API can be optional. Making it optional to resolve the type error.
     title?: string;
   };
 }

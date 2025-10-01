@@ -87,7 +87,6 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
     );
 };
 
-// Fix: Added missing WorksheetProps interface
 interface WorksheetProps {
     questions: QuizQuestion[];
     onRestart: () => void;
