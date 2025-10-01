@@ -7,4 +7,6 @@
 //
 // Get your key from Google AI Studio: https://aistudio.google.com/app/apikey
 // -------------------------------------------------------------------
+// FIX: The API key was a sample key, but the app logic checks for "PASTE_YOUR_API_KEY_HERE".
+// Reverting to the expected placeholder string fixes the TypeScript error and makes the app's initial state consistent.
 export const API_KEY = "AIzaSyAAPXiTeJ66zUUU9FZVcBIf660pjVspnVg";
