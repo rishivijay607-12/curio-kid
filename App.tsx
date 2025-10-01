@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 
+// Config Import
+import { API_KEY } from './config.ts';
+
 // Service Imports
 import {
     generateQuizQuestions,
@@ -20,7 +23,7 @@ import {
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
 
-// Component Imports (switched from lazy to static)
+// Component Imports
 import GradeSelector from './components/GradeSelector.tsx';
 import TopicSelector from './components/TopicSelector.tsx';
 import DifficultySelector from './components/DifficultySelector.tsx';
@@ -50,11 +53,15 @@ import ProfileScreen from './components/ProfileScreen.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
+import ApiKeyInstructions from './components/ApiKeyInstructions.tsx';
 
 
 // --- Main App Component ---
 const App: React.FC = () => {
     
+    // API Key Check
+    const isApiKeyMissing = !API_KEY || API_KEY === "PASTE_YOUR_API_KEY_HERE";
+
     // Game State
     const [gameState, setGameState] = useState<string>('initializing');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -92,6 +99,7 @@ const App: React.FC = () => {
     
     // --- Effects ---
     useEffect(() => {
+        if (isApiKeyMissing) return; // Don't initialize if key is missing
         try {
             const user = getCurrentUser();
             if (user) {
@@ -105,7 +113,7 @@ const App: React.FC = () => {
             setError("Could not access browser storage. Please ensure it's enabled. The app may not work correctly in private/incognito mode.");
             setGameState('login'); // Fallback
         }
-    }, []);
+    }, [isApiKeyMissing]);
 
     // --- State Resets ---
     const resetAllState = useCallback(() => {
@@ -408,6 +416,10 @@ const App: React.FC = () => {
 
     // --- Render Logic ---
     const renderContent = () => {
+        if (isApiKeyMissing) {
+            return <ApiKeyInstructions />;
+        }
+
         if (gameState === 'initializing') {
             return (
                 <div className="flex flex-col items-center justify-center">
@@ -483,7 +495,7 @@ const App: React.FC = () => {
         }
     };
     
-    const showHeader = !['login', 'register', 'initializing'].includes(gameState);
+    const showHeader = !['login', 'register', 'initializing'].includes(gameState) && !isApiKeyMissing;
 
     return (
         <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">

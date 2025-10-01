@@ -5,8 +5,24 @@ const PROFILES_KEY = 'curiosity_profiles';
 const SCORES_KEY = 'curiosity_scores';
 const CURRENT_USER_KEY = 'curiosity_current_user';
 
+// --- Storage Availability Check ---
+const isStorageAvailable = (): boolean => {
+    try {
+        const testKey = '__curiosity_storage_test__';
+        localStorage.setItem(testKey, testKey);
+        localStorage.removeItem(testKey);
+        return true;
+    } catch (e) {
+        console.warn("localStorage is not available. User data will not be saved.");
+        return false;
+    }
+};
+const storageAvailable = isStorageAvailable();
+
+
 // --- Helper Functions ---
 const getFromStorage = <T>(key: string, defaultValue: T): T => {
+  if (!storageAvailable) return defaultValue;
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
@@ -17,7 +33,21 @@ const getFromStorage = <T>(key: string, defaultValue: T): T => {
 };
 
 const saveToStorage = (key: string, value: any) => {
-  localStorage.setItem(key, JSON.stringify(value));
+  if (!storageAvailable) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error(`Failed to save ${key} to localStorage`, e);
+  }
+};
+
+const removeFromStorage = (key: string) => {
+    if (!storageAvailable) return;
+    try {
+        localStorage.removeItem(key);
+    } catch (e) {
+        console.error(`Failed to remove ${key} from localStorage`, e);
+    }
 };
 
 // --- Profile Management ---
@@ -61,11 +91,22 @@ const initializeAdmin = () => {
         createProfile('Rishi');
     }
 };
-initializeAdmin();
+
+// Safely run initialization only if storage is available
+if (storageAvailable) {
+    try {
+        initializeAdmin();
+    } catch(e) {
+        console.error("Critical error during admin initialization:", e);
+    }
+}
 
 
 // --- Auth Management ---
 export const register = async (username: string, password: string): Promise<User> => {
+  if (!storageAvailable) {
+      throw new Error("User registration is disabled because browser storage is not accessible.");
+  }
   if (username.toLowerCase() === 'rishi') {
     throw new Error("This username is reserved.");
   }
@@ -80,6 +121,9 @@ export const register = async (username: string, password: string): Promise<User
 };
 
 export const login = async (username: string, password: string): Promise<User> => {
+  if (!storageAvailable) {
+      throw new Error("Login is disabled because browser storage is not accessible.");
+  }
   const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
   if (!users[username] || users[username] !== password) {
     throw new Error("Invalid username or password.");
@@ -91,7 +135,7 @@ export const login = async (username: string, password: string): Promise<User> =
 };
 
 export const logout = (): void => {
-  localStorage.removeItem(CURRENT_USER_KEY);
+  removeFromStorage(CURRENT_USER_KEY);
 };
 
 export const getCurrentUser = (): User | null => {
@@ -101,6 +145,7 @@ export const getCurrentUser = (): User | null => {
 
 // --- Leaderboard/Score Management ---
 export const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
+    if (!storageAvailable) return; // Silently fail if storage is off
     const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
     
     const newScore: QuizScore = {
@@ -181,6 +226,7 @@ export const getAllScores = async (): Promise<QuizScore[]> => {
 };
 
 export const deleteUser = async (usernameToDelete: string): Promise<void> => {
+    if (!storageAvailable) throw new Error("Storage not available.");
     if (usernameToDelete === 'Rishi') {
         throw new Error("Cannot delete the admin account.");
     }
@@ -195,10 +241,11 @@ export const deleteUser = async (usernameToDelete: string): Promise<void> => {
 
     const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
     const updatedScores = scores.filter(score => score.username !== usernameToDelete);
-    saveToStorage(SCORES_KEY, updatedScores);
+    saveToStorage(SCORES_KEY, scores);
 };
 
 export const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
+    if (!storageAvailable) throw new Error("Storage not available.");
     if (username === 'Rishi') {
         throw new Error("Cannot change the admin password from the panel.");
     }

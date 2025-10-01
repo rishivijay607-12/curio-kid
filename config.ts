@@ -1,8 +1,10 @@
 // -------------------------------------------------------------------
-// --- IMPORTANT: DO NOT PASTE YOUR API KEY HERE FOR DEPLOYMENT ---
+// --- IMPORTANT: PASTE YOUR API KEY HERE FOR THE APP TO WORK ---
 // -------------------------------------------------------------------
-// When deploying to Vercel, the API key should be set as an
-// environment variable in your Vercel project settings.
-// This file is now only for reference.
+// For the application to function, you must obtain a Google Gemini
+// API key and paste it in the quotes below.
+//
+// You can get a key from Google AI Studio:
+// https://aistudio.google.com/app/apikey
 // -------------------------------------------------------------------
 export const API_KEY = "AIzaSyAAPXiTeJ66zUUU9FZVcBIf660pjVspnVg";
