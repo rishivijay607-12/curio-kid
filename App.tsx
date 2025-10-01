@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { API_KEY } from './config.ts';
 import ApiKeyInstructions from './components/ApiKeyInstructions.tsx';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 
@@ -56,11 +55,6 @@ import LoadingSpinner from './components/LoadingSpinner.tsx';
 
 // --- Main App Component ---
 const App: React.FC = () => {
-    // Check for API Key first. If it's the placeholder, render instructions and stop.
-    // FIX: Cast API_KEY to string to avoid TypeScript literal type comparison error when checking for the placeholder key.
-    if ((API_KEY as string) === 'PASTE_YOUR_API_KEY_HERE') {
-        return <ApiKeyInstructions />;
-    }
     
     // Game State
     const [gameState, setGameState] = useState<string>('initializing');

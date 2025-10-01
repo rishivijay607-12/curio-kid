@@ -1,36 +1,51 @@
 
 
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
-import { API_KEY } from '../config.ts';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
-const getAi = () => {
-    // The main App.tsx component now handles the API key check at startup,
-    // so we can safely initialize the client here.
-    return new GoogleGenAI({ apiKey: API_KEY });
-};
+// FIX: Import types from @google/genai instead of ../types.ts.
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality, type LiveConnectOptions, type GenerateVideosOperationResponse, type Operation } from '@google/genai';
+import { fetchAndCacheApiKey } from './apiKeyService.ts';
+// FIX: Remove types that are not defined in types.ts. They are now imported from @google/genai.
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
 const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
 ];
 
-const generateContent = (config: any) => {
-    const ai = getAi();
-    return ai.models.generateContent({ ...config, config: { ...config.config, safetySettings } });
-};
+// Helper to call our Vercel serverless function proxy
+async function callProxy(endpoint: string, params: any) {
+    const response = await fetch('/api/gemini-proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            endpoint,
+            params: { ...params, config: { ...params.config, safetySettings } }
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `API request failed with status ${response.status}` }));
+        throw new Error(errorData.error || `API request failed with status ${response.status}`);
+    }
+
+    return response.json();
+}
+
 
 export const generateQuizQuestions = async (topic: string, grade: Grade, difficulty: Difficulty, count: number): Promise<QuizQuestion[]> => {
     const prompt = `You are an expert quiz creator for middle and high school students in India.
 Generate a set of ${count} unique, multiple-choice science quiz questions based on the content from the India NCERT Grade ${grade} Science textbook, focusing on the chapter: "${topic}". Each question must be of **${difficulty}** difficulty. For each question: type must be "MCQ", provide a clear question and 4 plausible options, the correct answer, and a brief, easy-to-understand explanation.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return JSON.parse(response.text.trim());
 };
 
@@ -40,69 +55,73 @@ Generate a mixed worksheet of ${count} science questions based on the India NCER
 All questions must be of **${difficulty}** difficulty.
 Include a mix of 'MCQ', 'True/False', 'Assertion/Reason', and 'Q&A' types.
 For every question, provide a brief, easy-to-understand explanation for the correct answer. Ensure the output is a valid JSON array of question objects.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash",
         contents: prompt,
          config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return JSON.parse(response.text.trim());
 };
 
 export const generateNotes = async (topic: string, grade: Grade): Promise<NoteSection[]> => {
     const prompt = `You are an expert academic content creator for students in India. Generate a comprehensive, structured set of study notes for the chapter "${topic}" from the India NCERT Grade ${grade} Science textbook. Organize into logical sections with a title and 3-5 key bullet points each.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.OBJECT, properties: { notes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, points: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['title', 'points'] } } }, required: ['notes'] },
         },
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return JSON.parse(response.text.trim()).notes;
 };
 
 export const getChatResponse = async (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {
     let langInstruction = 'Respond in clear and simple English.';
     const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **Teaching Method:** NEVER give the full answer at once. Guide the student step-by-step. After one small step, ALWAYS ask a simple question to check for understanding. Use analogies, lists, and short sentences. Be encouraging. Stay on topic.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash",
         contents: history,
         config: { systemInstruction },
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return response.text;
 };
 
 export const generateGreeting = async (grade: Grade, language: Language, topic: string): Promise<string> => {
     let langInstruction = "in clear and simple English.";
     const prompt = `You are a friendly AI science tutor 'Curio'. Provide a very short, welcoming opening message for a Grade ${grade} student to start a doubt-solving session about '${topic}'. The message should be **${langInstruction}** Keep it to one or two sentences.`;
-    const response = await generateContent({ model: "gemini-2.5-flash", contents: prompt });
+    const params = { model: "gemini-2.5-flash", contents: prompt };
+    const response = await callProxy('generateContent', params);
     return response.text;
 };
 
 export const generateDiagramIdeas = async (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
     const prompt = `You are an expert science educator. Brainstorm 8 essential diagrams to help a Grade ${grade} student understand the chapter "${topic}". For each, provide a 'prompt' for an AI image model (simple, clear, black and white textbook line drawing) and a short 'description' for the student.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.OBJECT, properties: { diagrams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['prompt', 'description'] } } }, required: ['diagrams'] },
         }
-    });
-    // Add client-side UUIDs
+    };
+    const response = await callProxy('generateContent', params);
     const ideas: Omit<DiagramIdea, 'id'>[] = JSON.parse(response.text.trim()).diagrams;
     return ideas.map((idea) => ({ ...idea, id: self.crypto.randomUUID() }));
 };
 
 export const generateDiagramImage = async (prompt: string): Promise<string> => {
-    const ai = getAi();
-    const response = await ai.models.generateImages({
+    const params = {
         model: 'imagen-4.0-generate-001',
         prompt: prompt,
         config: { numberOfImages: 1, outputMimeType: 'image/png', aspectRatio: '1:1' },
-    });
+    };
+    const response = await callProxy('generateImages', params);
     if (!response.generatedImages || response.generatedImages.length === 0) {
         throw new Error("Image generation returned no images.");
     }
@@ -113,66 +132,72 @@ export const generateTextForMode = async (mode: AppMode, userInput: string, grad
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = mode === 'real_world_links';
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash", contents, config: { systemInstruction, tools: useSearch ? [{ googleSearch: {} }] : undefined }
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return { text: response.text, sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks };
 };
 
 export const explainImageWithText = async (base64Image: string, mimeType: string, prompt: string): Promise<string> => {
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash",
         contents: { parts: [{ inlineData: { mimeType, data: base64Image } }, { text: prompt }] },
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return response.text;
 };
 
 export const generateScienceFairIdeas = async (userInput: string): Promise<ScienceFairIdea[]> => {
     const prompt = `Brainstorm 3 unique and engaging science fair project ideas based on the student's interest in: "${userInput}". For each, provide a catchy 'title' and a detailed 'description'.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.OBJECT, properties: { ideas: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } } }, required: ['ideas'] },
         }
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return JSON.parse(response.text.trim()).ideas;
 };
 
 export const generateScienceFairPlan = async (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string }[]> => {
     const prompt = `Create a detailed, 5-step plan for a science fair project. Title: "${projectTitle}". Description: "${projectDescription}". For each step, provide a 'stepTitle' and detailed 'instructions'.`;
-    const response = await generateContent({
+    const params = {
         model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.OBJECT, properties: { plan: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stepTitle: { type: Type.STRING }, instructions: { type: Type.STRING } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
         }
-    });
+    };
+    const response = await callProxy('generateContent', params);
     return JSON.parse(response.text.trim()).plan;
 };
 
 export const generateScientistGreeting = async (scientist: Scientist): Promise<string> => {
     const prompt = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Provide a short, welcoming opening message to start a chat session with a student. Speak in the first person.`;
-    const response = await generateContent({ model: "gemini-2.5-flash", contents: prompt });
+    const params = { model: "gemini-2.5-flash", contents: prompt };
+    const response = await callProxy('generateContent', params);
     return response.text;
 };
 
 export const getHistoricalChatResponse = async (scientist: Scientist, history: ChatMessage[]): Promise<string> => {
     const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. Keep responses concise and engaging.`;
-    const response = await generateContent({ model: "gemini-2.5-flash", contents: history, config: { systemInstruction } });
+    const params = { model: "gemini-2.5-flash", contents: history, config: { systemInstruction } };
+    const response = await callProxy('generateContent', params);
     return response.text;
 };
 
 export const live = {
-    connect: (options: any) => {
-        // FIX: Cast API_KEY to string to avoid TypeScript literal type comparison error when checking for the placeholder key.
-        if ((API_KEY as string) === 'PASTE_YOUR_API_KEY_HERE') {
-            // This error will be caught by the calling component (VoiceTutor)
-            // and will prevent the session from starting, showing the user an error.
-            throw new Error("API key is not configured. Please add it to config.ts.");
+    connect: async (options: LiveConnectOptions) => {
+        try {
+            const apiKey = await fetchAndCacheApiKey();
+            const ai = new GoogleGenAI({ apiKey });
+            return ai.live.connect(options);
+        } catch (error) {
+            console.error("Failed to connect to live session:", error);
+            // Re-throw the error so the calling component can handle it
+            throw error;
         }
-        const ai = getAi();
-        // The connect method from the SDK returns a promise that resolves with the session object.
-        return ai.live.connect(options);
     }
 };
