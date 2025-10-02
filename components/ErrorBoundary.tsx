@@ -1,5 +1,4 @@
-
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -10,26 +9,20 @@ interface State {
   error?: Error;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Replaced the constructor with a class field for state initialization.
-  // This is a more modern and robust way to declare state in a class component,
-  // resolving the error about 'state' not existing on the type.
+class ErrorBoundary extends Component<Props, State> {
   state: State = { 
     hasError: false,
     error: undefined,
   };
 
-  // FIX: Removed 'public' keyword. It's the default and not conventional in React.
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  // FIX: Removed 'public' keyword for convention.
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  // FIX: Removed 'public' keyword for convention. This ensures `this.props` and `this.state` are correctly typed.
   render() {
     if (this.state.hasError) {
       return (
