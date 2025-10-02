@@ -3,24 +3,28 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
+// --- Initialization and Validation (Module Scope) ---
+// This code runs once when the serverless function is "cold-started".
+
+// CRITICAL: Perform a one-time check for the API key when the function initializes.
+if (!process.env.API_KEY) {
+    // This error will be logged in Vercel and will prevent the function from starting if the key is missing.
+    // Given the user's screenshot, this should not trigger, but it's a critical safeguard.
+    throw new Error("FATAL: The API_KEY environment variable is not set on the server.");
+}
+
+// Initialize the client once and reuse it across multiple invocations (for "warm" starts).
+// This is a crucial performance optimization to avoid timeouts on Vercel's Hobby plan.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+
 // This function is the single server-side entry point for all standard AI interactions on Vercel.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // --- CRITICAL DIAGNOSTIC STEP ---
-    // Explicitly check for the API key at the start of every request.
-    // This provides a clear error message if the environment variable is not configured correctly on Vercel.
-    if (!process.env.API_KEY) {
-        console.error('CRITICAL: API_KEY environment variable is not set on the server.');
-        return res.status(500).json({ error: 'The API_KEY environment variable is not set on the server. Please make sure it is configured correctly in your Vercel project settings.' });
-    }
-    
-    // Initialize the client on every request. This is less performant than a shared instance,
-    // but it's more robust for debugging this specific environment variable issue.
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+    // By the time we get here, the 'ai' instance is already initialized and ready.
     const { action, params } = req.body;
 
     try {
