@@ -1,10 +1,8 @@
-
 import { GoogleGenAI } from '@google/genai';
-import { API_KEY } from '../config.ts'; // Only for 'live' service
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea, Diagram } from '../types.ts';
 
 
-// Helper function to call our new, secure serverless proxy
+// Helper function to call our secure serverless proxy
 async function callApi<T>(action: string, params: object): Promise<T> {
     const response = await fetch('/api/gemini-proxy', {
         method: 'POST',
@@ -78,22 +76,40 @@ export const getHistoricalChatResponse = (scientist: Scientist, history: ChatMes
 
 // --- SPECIAL CASE for Voice Tutor ---
 // The 'live' service establishes a direct WebSocket connection and MUST be initialized on the client.
-// It will use the API key injected via the build command.
+// This section now fetches the key securely from an API endpoint instead of a build-injected file.
 
 let ai: GoogleGenAI | null = null;
-const getAiForLive = (): GoogleGenAI => {
-    if (!API_KEY || API_KEY === 'GEMINI_API_KEY_PLACEHOLDER') {
-        throw new Error("API key not configured for Voice Tutor. Please set the API_KEY environment variable on your hosting platform.");
+let clientSideApiKey: string | null = null;
+
+async function getClientSideApiKey(): Promise<string> {
+    if (clientSideApiKey) {
+        return clientSideApiKey;
     }
-    if (!ai) {
-        ai = new GoogleGenAI({ apiKey: API_KEY });
+    const response = await fetch('/api/get-key');
+    if (!response.ok) {
+        throw new Error("Could not fetch the API key for the Voice Tutor.");
     }
+    const data = await response.json();
+    if (!data.apiKey) {
+        throw new Error("API key was not provided by the server.");
+    }
+    clientSideApiKey = data.apiKey;
+    return clientSideApiKey;
+}
+
+
+const getAiForLive = async (): Promise<GoogleGenAI> => {
+    if (ai) {
+        return ai;
+    }
+    const apiKey = await getClientSideApiKey();
+    ai = new GoogleGenAI({ apiKey });
     return ai;
 };
 
 export const live = {
     connect: async (options: any) => {
-        const aiInstance = getAiForLive();
+        const aiInstance = await getAiForLive();
         return aiInstance.live.connect(options);
     },
 };
