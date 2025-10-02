@@ -111,3 +111,12 @@ export interface UserProfile {
     currentStreak: number;
     lastQuizDate: string | null; // ISO date string
 }
+
+export type GenerationStatus = 'pending' | 'in-progress' | 'complete' | 'failed' | 'skipped';
+
+export interface GenerationLogEntry {
+    id: string;
+    title: string;
+    status: GenerationStatus;
+    error?: string;
+}

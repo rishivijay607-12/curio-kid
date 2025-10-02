@@ -93,7 +93,6 @@ const App: React.FC = () => {
     const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
     const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
     const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
-    const [scienceFairPlan, setScienceFairPlan] = useState<ScienceFairPlanStep[]>([]);
     
     // --- Effects ---
     useEffect(() => {
@@ -133,7 +132,6 @@ const App: React.FC = () => {
         setScienceLensResult(null);
         setScienceFairIdeas([]);
         setSelectedScienceFairIdea(null);
-        setScienceFairPlan([]);
         setSelectedScientist(null);
         setUserProfile(null);
     }, []);
@@ -391,24 +389,9 @@ const App: React.FC = () => {
         } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
-    const handleSelectScienceFairIdea = async (idea: ScienceFairIdea) => {
+    const handleSelectScienceFairIdea = (idea: ScienceFairIdea) => {
         setSelectedScienceFairIdea(idea);
         setGameState('SCIENCE_FAIR_PLAN');
-        setIsLoading(true);
-        setError(null);
-        setScienceFairPlan([]);
-        try {
-            const plan = await generateScienceFairPlan(idea.title, idea.description);
-            const planWithImages: ScienceFairPlanStep[] = [];
-            setGenerationProgress({ current: 0, total: plan.length });
-            for (const step of plan) {
-                 setGenerationProgress({ current: planWithImages.length + 1, total: plan.length });
-                 const imageBytes = await generateDiagramImage(`Photorealistic image of a student working on a science fair project step: "${step.stepTitle}".`);
-                 planWithImages.push({ ...step, image: `data:image/png;base64,${imageBytes}` });
-            }
-            setScienceFairPlan(planWithImages);
-
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
     // --- Render Logic ---
@@ -477,7 +460,7 @@ const App: React.FC = () => {
            
             case 'science_fair_buddy': return <ScienceFairBuddy onGenerate={handleScienceFairIdeasGenerate} isLoading={isLoading} error={error} />;
             case 'SCIENCE_FAIR_IDEAS': return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={userScienceFairTopic} />;
-            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} plan={scienceFairPlan} isLoading={isLoading} error={error} />;
+            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} onRestart={resetToHome} />;
 
             case 'VOICE_TUTOR_SESSION': return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
 

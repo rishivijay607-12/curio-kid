@@ -73,6 +73,10 @@ export const getHistoricalChatResponse = (scientist: Scientist, history: ChatMes
     return callApi('getHistoricalChatResponse', { scientist, history });
 };
 
+export const analyzeGenerationFailure = (errorMessage: string): Promise<string> => {
+    return callApi('analyzeGenerationFailure', { errorMessage });
+};
+
 
 // --- SPECIAL CASE for Voice Tutor ---
 // The 'live' service establishes a direct WebSocket connection and MUST be initialized on the client.
