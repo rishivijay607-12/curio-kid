@@ -8,11 +8,11 @@
   },
   "private": true,
   "dependencies": {
-    "@google/genai": "^1.19.0",
-    "@vercel/node": "^5.3.24"
+    "@google/genai": "^1.19.0"
   },
   "devDependencies": {
     "@parcel/transformer-typescript-types": "^2.12.0",
+    "@netlify/functions": "^2.6.0",
     "parcel": "^2.12.0",
     "typescript": "^5.4.5"
   }
