@@ -3,11 +3,17 @@
   "version": "1.0.0",
   "description": "An interactive science quiz for Grades 6-10.",
   "scripts": {
-    "start": "echo \"No build process needed. See index.html\""
+    "start": "echo \"No build process needed. See index.html\"",
+    "build": "parcel build index.html --dist-dir dist"
   },
   "private": true,
   "dependencies": {
     "@google/genai": "^1.19.0",
     "@vercel/node": "^5.3.24"
+  },
+  "devDependencies": {
+    "@parcel/transformer-typescript-types": "^2.12.0",
+    "parcel": "^2.12.0",
+    "typescript": "^5.4.5"
   }
 }
