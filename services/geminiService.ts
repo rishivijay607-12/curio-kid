@@ -10,13 +10,28 @@ async function callApi<T>(action: string, params: object): Promise<T> {
         body: JSON.stringify({ action, params }),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
-        throw new Error(data.error || 'An error occurred while communicating with the server.');
+        let errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+        try {
+            // Try to get a specific error message from the JSON body, if it exists
+            const errorData = await response.json();
+            if (errorData && errorData.error) {
+                errorMessage = errorData.error;
+            }
+        } catch (e) {
+            // The response was not JSON, likely an HTML error page.
+            // The generic message is the best we can do.
+            console.error('Could not parse error response as JSON.', e);
+        }
+        throw new Error(errorMessage);
     }
-
-    return data as T;
+    
+    try {
+        const data = await response.json();
+        return data as T;
+    } catch (e) {
+        throw new Error('Failed to parse a successful server response. The response may not be valid JSON.');
+    }
 }
 
 // --- All functions below now use the secure proxy ---
