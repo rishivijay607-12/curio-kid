@@ -195,7 +195,7 @@ const HistoricalChat: React.FC<HistoricalChatProps> = ({ scientist, history, onS
                     />
                     {isSpeechSupported && (
                         <button type="button" onClick={handleMicClick} className={`p-3 rounded-lg shadow-lg transition-colors disabled:opacity-50 ${isListening ? 'bg-red-600 hover:bg-red-500 animate-pulse' : 'bg-slate-700 hover:bg-slate-600'}`} disabled={isLoading} aria-label={isListening ? 'Stop listening' : 'Start listening'}>
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                             </svg>
                         </button>
@@ -206,7 +206,7 @@ const HistoricalChat: React.FC<HistoricalChatProps> = ({ scientist, history, onS
                         className="p-3 bg-cyan-600 text-white rounded-lg shadow-lg hover:bg-cyan-500 transition-colors disabled:bg-slate-700 disabled:cursor-not-allowed"
                         aria-label="Send message"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
                         </svg>
                     </button>
