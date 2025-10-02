@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
@@ -475,7 +476,7 @@ const App: React.FC = () => {
 
     return (
         <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">
-            <div className="absolute inset-0 bg-grid-slate-800/[0.2] [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
+            <div className="absolute inset-0 bg-grid-pattern [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
             
             {showHeader && (
                 <header className="w-full max-w-screen-2xl mx-auto flex justify-between items-center p-4 sticky top-0 z-50">

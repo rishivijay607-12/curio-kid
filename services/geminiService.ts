@@ -4,7 +4,7 @@ import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSectio
 
 // Helper function to call our secure serverless proxy
 async function callApi<T>(action: string, params: object): Promise<T> {
-    const response = await fetch('/api/gemini-proxy', {
+    const response = await fetch('/.netlify/functions/gemini-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, params }),
@@ -89,7 +89,7 @@ async function getClientSideApiKey(): Promise<string> {
     if (clientSideApiKey) {
         return clientSideApiKey;
     }
-    const response = await fetch('/api/get-key');
+    const response = await fetch('/.netlify/functions/get-key');
     if (!response.ok) {
         throw new Error("Could not fetch the API key for the Voice Tutor.");
     }
