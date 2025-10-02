@@ -1,16 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>The Book of Curiosity | Science Quiz</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Book of Curiosity</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for a better look */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b; /* slate-800 */
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569; /* slate-600 */
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b; /* slate-500 */
+    }
+    /* Simple fade-in animation */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+    }
+    /* Styles for printing */
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .printable-worksheet {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+       .worksheet-question, .worksheet-notes {
+        page-break-inside: avoid;
+      }
+    }
+    .bg-grid-slate-800\/\\[0\.2\\] {
+        background-image: linear-gradient(theme(colors.slate.800 / 0.2) 1px, transparent 1px), linear-gradient(to right, theme(colors.slate.800 / 0.2) 1px, transparent 1px);
+        background-size: 2rem 2rem;
+    }
+  </style>
+
+  <!-- This import map is critical for telling the browser where to find the code libraries -->
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "react": "https://aistudiocdn.com/react@^19.1.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react/jsx-runtime": "https://aistudiocdn.com/react@^19.1.1/jsx-runtime",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.19.0",
@@ -18,55 +66,23 @@
   }
 }
 </script>
-<script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.tsx" defer></script>
-<style>
-  @media print {
-    body {
-      background-color: white !important;
-      -webkit-print-color-adjust: exact;
-      color-adjust: exact;
-    }
-    .no-print {
-      display: none !important;
-    }
-    .printable-worksheet {
-      box-shadow: none !important;
-      border: none !important;
-      color: black !important;
-      background-color: white !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      padding: 0 !important;
-    }
-    .printable-worksheet * {
-      color: black !important;
-    }
-     .worksheet-question {
-      page-break-inside: avoid;
-    }
-  }
-  .static-loader {
-      color: white;
-      text-align: center;
-      padding-top: 20vh;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-  }
-</style>
+
 </head>
-  <body class="bg-slate-950">
-    <div id="root">
-        <div class="static-loader">
-            <svg class="animate-spin h-12 w-12 text-cyan-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <h1 style="font-size: 2rem; font-weight: bold; color: #E2E8F0;">Loading The Book of Curiosity...</h1>
-            <p style="font-size: 1rem; color: #94A3B8; margin-top: 0.5rem;">If this message persists, a script error may have occurred.</p>
-        </div>
+<body class="bg-slate-950">
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div id="root">
+      <!-- Fallback loading screen in case of slow script loading or errors -->
+      <div class="flex flex-col items-center justify-center min-h-screen text-center text-slate-100 p-4">
+        <svg class="animate-spin h-12 w-12 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <h1 class="text-3xl font-bold mt-6">Loading The Book of Curiosity...</h1>
+        <p class="text-slate-400 mt-2">If this message persists, a script error may have occurred.</p>
     </div>
-  </body>
+  </div>
+
+  <!-- Main application script -->
+  <script type="module" src="/index.tsx"></script>
+</body>
 </html>
