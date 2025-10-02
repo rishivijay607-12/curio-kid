@@ -2,20 +2,35 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
+// --- OPTIMIZATION: Initialize the AI client once at the module level. ---
+// This allows the client instance to be reused across "warm" function invocations,
+// reducing latency and helping to avoid the 10-second timeout on Vercel's Hobby plan.
+let ai: GoogleGenAI | null = null;
+if (process.env.API_KEY) {
+    try {
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    } catch (e) {
+        console.error("Failed to initialize GoogleGenAI client:", e);
+    }
+} else {
+    console.warn("API_KEY environment variable is not set. The API proxy will not work.");
+}
+
+
 // This function is the single server-side entry point for all standard AI interactions on Vercel.
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
+    
+    // Check if the AI client was initialized successfully.
+    if (!ai) {
+        return res.status(500).json({ error: 'API key not configured correctly on the server, or client failed to initialize.' });
+    }
 
     const { action, params } = req.body;
 
-    if (!process.env.API_KEY) {
-        return res.status(500).json({ error: 'API key not configured on the server.' });
-    }
-
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         let result;
 
         // Route the request to the appropriate function based on the 'action'
