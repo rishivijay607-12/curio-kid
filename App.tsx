@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 
-// Config Import
-import { API_KEY } from './config.ts';
-
 // Service Imports
 import {
     generateQuizQuestions,
@@ -60,7 +57,8 @@ import ApiKeyInstructions from './components/ApiKeyInstructions.tsx';
 const App: React.FC = () => {
     
     // API Key Check
-    const isApiKeyMissing = !API_KEY || API_KEY === "PASTE_YOUR_API_KEY_HERE";
+    // FIX: Use process.env.API_KEY as per guidelines, which also resolves the TypeScript error.
+    const isApiKeyMissing = !process.env.API_KEY;
 
     // Game State
     const [gameState, setGameState] = useState<string>('initializing');

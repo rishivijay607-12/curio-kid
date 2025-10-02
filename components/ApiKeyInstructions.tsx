@@ -9,22 +9,14 @@ const ApiKeyInstructions: React.FC = () => {
         </svg>
         <h1 className="text-3xl font-bold mt-4 text-red-300">Configuration Required</h1>
         <p className="mt-4 text-slate-300 text-lg">
-          The application cannot start because the Google Gemini API Key is missing.
+          The Google Gemini API Key is missing.
         </p>
         <div className="mt-6 text-left bg-slate-950 p-6 rounded-lg border border-slate-700">
-            <p className="text-slate-400 font-semibold">Please follow these steps:</p>
-            <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-200">
-                <li>Find the file named <code className="bg-slate-700 px-2 py-1 rounded-md text-cyan-300">config.ts</code> in the main file explorer.</li>
-                <li>Open it and you will see this line of code:
-                    <pre className="bg-black/50 p-3 rounded-md mt-2 text-sm overflow-x-auto">
-                        <code className="text-yellow-300">export const API_KEY = "PASTE_YOUR_API_KEY_HERE";</code>
-                    </pre>
-                </li>
-                <li>Replace <code className="bg-slate-700 px-2 py-1 rounded-md text-cyan-300">"PASTE_YOUR_API_KEY_HERE"</code> with your actual Gemini API key.</li>
-            </ol>
+            <p className="text-slate-400 font-semibold">To run this application, the <code className="bg-slate-700 px-2 py-1 rounded-md text-cyan-300">API_KEY</code> environment variable must be set.</p>
+            <p className="mt-3 text-slate-200">Please ensure the environment is configured correctly before running the application.</p>
         </div>
          <p className="mt-6 text-sm text-slate-500">
-            After you add the key, the application will load automatically. You can get your key from Google AI Studio.
+            The application will not function until the API key is provided.
         </p>
       </div>
     </div>

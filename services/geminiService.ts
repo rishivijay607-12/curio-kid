@@ -1,5 +1,4 @@
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
-import { API_KEY } from '../config.ts';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
 // A private, cached instance of the AI client.
@@ -11,12 +10,13 @@ let ai: GoogleGenAI | null = null;
  * Throws an error if the API key is not configured.
  */
 const getAi = (): GoogleGenAI => {
-    if (!API_KEY || API_KEY === "PASTE_YOUR_API_KEY_HERE") {
-        throw new Error("API key not configured. Please add your Gemini API key to config.ts to use this feature.");
+    // FIX: Use process.env.API_KEY as per guidelines, which also resolves the TypeScript error.
+    if (!process.env.API_KEY) {
+        throw new Error("API key not configured. Please set the API_KEY environment variable to use this feature.");
     }
     // Initialize the AI client if it hasn't been already.
     if (!ai) {
-        ai = new GoogleGenAI({ apiKey: API_KEY });
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
     return ai;
 };

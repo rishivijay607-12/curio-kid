@@ -209,7 +209,7 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                                      return;
                                  }
 
-                                 const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+                                 const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
                                  if (base64Audio) {
                                      setStatus('speaking');
                                      const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContextRef.current, 24000, 1);
