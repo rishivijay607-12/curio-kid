@@ -10,10 +10,14 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  state: State = { 
-    hasError: false,
-    error: undefined,
-  };
+  // Fix: Initialize state in the constructor to ensure compatibility with all TypeScript/React configurations.
+  constructor(props: Props) {
+    super(props);
+    this.state = { 
+      hasError: false,
+      error: undefined,
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
