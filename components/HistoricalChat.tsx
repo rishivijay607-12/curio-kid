@@ -91,7 +91,10 @@ const HistoricalChat: React.FC<HistoricalChatProps> = ({ scientist, history, onS
             recognition.continuous = false;
             recognition.interimResults = false;
             recognition.lang = 'en-US';
-            recognition.onresult = (event) => setInput(prev => prev + event.results[event.results.length - 1][0].transcript.trim());
+            recognition.onresult = (event) => {
+                const transcript = event.results[event.results.length - 1][0].transcript.trim();
+                setInput(prevInput => prevInput ? `${prevInput} ${transcript}` : transcript);
+            };
             recognition.onend = () => setIsListening(false);
             recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
                 console.error('Speech recognition error:', event.error, event.message);
