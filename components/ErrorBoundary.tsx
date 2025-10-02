@@ -9,8 +9,6 @@ interface State {
   error?: Error;
 }
 
-// FIX: Changed `extends Component` to `extends React.Component` to resolve potential
-// TypeScript type resolution issues where `this.props` might not be correctly inferred.
 class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
