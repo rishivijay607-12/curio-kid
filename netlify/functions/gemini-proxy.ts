@@ -1,6 +1,6 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../../types';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../../types.ts';
 
 // This function is the single server-side entry point for all standard AI interactions.
 const handler: Handler = async (event: HandlerEvent) => {
@@ -71,6 +71,9 @@ const handler: Handler = async (event: HandlerEvent) => {
                 break;
             case 'getHistoricalChatResponse':
                 result = await getHistoricalChatResponse(ai, params);
+                break;
+            case 'analyzeGenerationFailure':
+                result = await analyzeGenerationFailure(ai, params);
                 break;
             default:
                 return { 
@@ -262,6 +265,16 @@ const generateScientistGreeting = async (ai: GoogleGenAI, { scientist }: any): P
 const getHistoricalChatResponse = async (ai: GoogleGenAI, { scientist, history }: any): Promise<string> => {
     const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. Keep responses concise and engaging.`;
     const params = { model: "gemini-2.5-flash", contents: history, config: { systemInstruction } };
+    const response = await ai.models.generateContent(createModelParams(params));
+    return response.text;
+};
+
+const analyzeGenerationFailure = async (ai: GoogleGenAI, { errorMessage }: any): Promise<string> => {
+    const prompt = `A user's attempt to generate content failed in my web application. Here is the technical error message: "${errorMessage}". Please analyze this error and provide a simple, user-friendly explanation (in one or two sentences) of what likely went wrong and what they can try next. Do not provide code or technical jargon. Address the user directly.`;
+    const params = {
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
 };
