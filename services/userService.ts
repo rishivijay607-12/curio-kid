@@ -241,7 +241,8 @@ export const deleteUser = async (usernameToDelete: string): Promise<void> => {
 
     const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
     const updatedScores = scores.filter(score => score.username !== usernameToDelete);
-    saveToStorage(SCORES_KEY, scores);
+    // FIX: Save the updatedScores array, not the original scores array.
+    saveToStorage(SCORES_KEY, updatedScores);
 };
 
 export const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {

@@ -164,7 +164,9 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
     };
     const response = await ai.models.generateContent(createModelParams(params));
     const ideas: Omit<DiagramIdea, 'id'>[] = JSON.parse(response.text.trim()).diagrams;
-    return ideas.map((idea) => ({ ...idea, id: self.crypto.randomUUID() }));
+    // FIX: Use globalThis.crypto.randomUUID() which is standard in Node.js environments
+    // instead of `self.crypto.randomUUID()` which is not.
+    return ideas.map((idea) => ({ ...idea, id: globalThis.crypto.randomUUID() }));
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<string> => {
