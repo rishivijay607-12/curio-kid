@@ -1,10 +1,5 @@
-// -------------------------------------------------------------------
-// --- IMPORTANT: PASTE YOUR API KEY HERE FOR THE APP TO WORK ---
-// -------------------------------------------------------------------
-// For the application to function, you must obtain a Google Gemini
-// API key and paste it in the quotes below.
-//
-// You can get a key from Google AI Studio:
-// https://aistudio.google.com/app/apikey
-// -------------------------------------------------------------------
-export const API_KEY = "AIzaSyAAPXiTeJ66zUUU9FZVcBIf660pjVspnVg";
+// This file is a placeholder for the Gemini API key.
+// During the Vercel build process, the placeholder string
+// will be replaced by the actual API key from environment variables.
+// Do not commit your actual API key to this file.
+export const API_KEY = "GEMINI_API_KEY_PLACEHOLDER";
