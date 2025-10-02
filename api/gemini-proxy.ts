@@ -174,9 +174,14 @@ const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<s
         config: { numberOfImages: 1, outputMimeType: 'image/png', aspectRatio: '1:1' },
     };
     const response = await ai.models.generateImages(params);
-    if (!response.generatedImages || response.generatedImages.length === 0) {
-        throw new Error("Image generation returned no images.");
+
+    // Robustly check the response structure before accessing properties.
+    if (!response.generatedImages || response.generatedImages.length === 0 || !response.generatedImages[0].image || !response.generatedImages[0].image.imageBytes) {
+        console.error("Invalid or empty response from image generation API:", JSON.stringify(response, null, 2));
+        throw new Error("Image generation failed to return a valid image.");
     }
+    
+    // The base64-encoded image data is in the imageBytes property.
     return response.generatedImages[0].image.imageBytes;
 };
 
