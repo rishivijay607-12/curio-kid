@@ -4,23 +4,66 @@ import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/gen
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
 // --- Initialization and Validation (Module Scope) ---
-// This code runs once when the serverless function is "cold-started".
-
-// CRITICAL: Perform a one-time check for the API key when the function initializes.
 if (!process.env.API_KEY) {
-    // This error will be logged in Vercel and will prevent the function from starting if the key is missing.
     throw new Error("FATAL: The API_KEY environment variable is not set on the server.");
 }
 
-// Initialize the client once and reuse it across multiple invocations (for "warm" starts).
-// This is a crucial performance optimization to avoid timeouts on Vercel's Hobby plan.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-// Simple unique ID generator to avoid Node.js crypto module issues in Vercel.
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
+/**
+ * Intelligently extracts a JSON object or array from a string,
+ * tolerating markdown code blocks and other text noise from an LLM.
+ * @param text The raw text response from the AI model.
+ * @returns The parsed JSON object or array.
+ * @throws An error if valid JSON cannot be found or parsed.
+ */
+function extractJson<T>(text: string): T {
+    // 1. Try to find a markdown-style JSON block first.
+    const markdownMatch = text.match(/```(json)?\s*([\s\S]*?)\s*```/);
+    if (markdownMatch && markdownMatch[2]) {
+        try {
+            return JSON.parse(markdownMatch[2]) as T;
+        } catch (e) {
+            console.warn('Could not parse markdown JSON block, falling back to substring search.', e);
+        }
+    }
 
-// This function is the single server-side entry point for all standard AI interactions on Vercel.
+    // 2. Fallback to finding the first '{' or '[' and last '}' or ']'.
+    const firstBracket = text.indexOf('{');
+    const firstSquare = text.indexOf('[');
+    
+    let startIndex;
+    if (firstBracket === -1 && firstSquare === -1) {
+        console.error("No JSON object or array found in response text:", text);
+        throw new Error('No JSON object or array found in the AI response.');
+    }
+
+    if (firstBracket === -1) startIndex = firstSquare;
+    else if (firstSquare === -1) startIndex = firstBracket;
+    else startIndex = Math.min(firstBracket, firstSquare);
+
+    const lastBracket = text.lastIndexOf('}');
+    const lastSquare = text.lastIndexOf(']');
+    const endIndex = Math.max(lastBracket, lastSquare);
+
+    if (endIndex === -1 || endIndex < startIndex) {
+        console.error("Could not find a valid JSON structure in response text:", text);
+        throw new Error('Could not find a valid JSON structure in the AI response.');
+    }
+
+    const jsonString = text.substring(startIndex, endIndex + 1);
+    
+    try {
+        return JSON.parse(jsonString) as T;
+    } catch (e) {
+        console.error("Failed to parse extracted JSON string. Raw string:", jsonString);
+        console.error("Full AI response text for debugging:", text);
+        throw new Error('The AI returned a malformed JSON response that could not be parsed.');
+    }
+}
+
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
@@ -30,137 +73,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         let result;
-
-        // Route the request to the appropriate function based on the 'action'
         switch (action) {
-            case 'generateQuizQuestions':
-                result = await generateQuizQuestions(ai, params);
-                break;
-            case 'generateWorksheet':
-                result = await generateWorksheet(ai, params);
-                break;
-            case 'generateNotes':
-                result = await generateNotes(ai, params);
-                break;
-            case 'getChatResponse':
-                result = await getChatResponse(ai, params);
-                break;
-            case 'generateGreeting':
-                result = await generateGreeting(ai, params);
-                break;
-            case 'generateDiagramIdeas':
-                result = await generateDiagramIdeas(ai, params);
-                break;
-            case 'generateDiagramImage':
-                result = await generateDiagramImage(ai, params);
-                break;
-            case 'generateTextForMode':
-                result = await generateTextForMode(ai, params);
-                break;
-            case 'explainImageWithText':
-                result = await explainImageWithText(ai, params);
-                break;
-            case 'generateScienceFairIdeas':
-                result = await generateScienceFairIdeas(ai, params);
-                break;
-            case 'generateScienceFairPlan':
-                result = await generateScienceFairPlan(ai, params);
-                break;
-            case 'generateScientistGreeting':
-                result = await generateScientistGreeting(ai, params);
-                break;
-            case 'getHistoricalChatResponse':
-                result = await getHistoricalChatResponse(ai, params);
-                break;
-            case 'analyzeGenerationFailure':
-                result = await analyzeGenerationFailure(ai, params);
-                break;
-            case 'startVideoGeneration':
-                result = await startVideoGeneration(ai, params);
-                break;
-            case 'checkVideoGenerationStatus':
-                result = await checkVideoGenerationStatus(ai, params);
-                break;
-            default:
-                return res.status(400).json({ error: 'Invalid action specified.' });
+            case 'generateQuizQuestions': result = await generateQuizQuestions(ai, params); break;
+            case 'generateWorksheet': result = await generateWorksheet(ai, params); break;
+            case 'generateNotes': result = await generateNotes(ai, params); break;
+            case 'getChatResponse': result = await getChatResponse(ai, params); break;
+            case 'generateGreeting': result = await generateGreeting(ai, params); break;
+            case 'generateDiagramIdeas': result = await generateDiagramIdeas(ai, params); break;
+            case 'generateDiagramImage': result = await generateDiagramImage(ai, params); break;
+            case 'generateTextForMode': result = await generateTextForMode(ai, params); break;
+            case 'explainImageWithText': result = await explainImageWithText(ai, params); break;
+            case 'generateScienceFairIdeas': result = await generateScienceFairIdeas(ai, params); break;
+            case 'generateScienceFairPlan': result = await generateScienceFairPlan(ai, params); break;
+            case 'generateScientistGreeting': result = await generateScientistGreeting(ai, params); break;
+            case 'getHistoricalChatResponse': result = await getHistoricalChatResponse(ai, params); break;
+            case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
+            case 'startVideoGeneration': result = await startVideoGeneration(ai, params); break;
+            case 'checkVideoGenerationStatus': result = await checkVideoGenerationStatus(ai, params); break;
+            default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
-        
         return res.status(200).json(result);
 
     } catch (error) {
-        // Enhanced error logging for Vercel
         console.error(`[GEMINI_PROXY_ERROR] Action: "${action}" failed.`);
+        console.error(`[PARAMS_DEBUG] ${JSON.stringify(params, null, 2)}`);
+
+        let userMessage = "The AI is unable to process your request at the moment. This might be due to high traffic or a content safety block. Please try again with a different prompt.";
+        let statusCode = 500;
+
         if (error instanceof Error) {
-            // Log essential details for easier debugging in Vercel logs
             console.error(`[ERROR_DETAILS] Name: ${error.name}`);
             console.error(`[ERROR_DETAILS] Message: ${error.message}`);
             if (error.stack) {
                 console.error(`[ERROR_DETAILS] Stack: ${error.stack}`);
             }
+
+            if (error.message.includes('API key not valid')) {
+                userMessage = "The server is configured with an invalid API key. Please contact the administrator.";
+            } else if (error.message.includes('malformed JSON response')) {
+                userMessage = "The AI returned a response that could not be understood. This can be a temporary issue. Please try again.";
+            } else if (error.message.toLowerCase().includes('timeout')) {
+                userMessage = "The request to the AI timed out. Your request might be too complex. Please try simplifying it.";
+                statusCode = 504; // Gateway Timeout
+            }
         } else {
-            // Handle cases where a non-Error object is thrown
             console.error('[ERROR_DETAILS] A non-Error object was thrown:', error);
         }
-
-        // Provide a generic, user-friendly message to the client-side application
-        const userMessage = "The AI is unable to process your request at the moment. This might be due to high traffic or a server configuration issue. Please try again later.";
         
-        return res.status(500).json({ error: userMessage });
+        return res.status(statusCode).json({ error: userMessage });
     }
 }
 
-
 // --- All Gemini Logic is here, on the server ---
-
 const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
 ];
-
-const createModelParams = (params: any) => ({
-    ...params,
-    config: { ...params.config, safetySettings }
-});
-
-function extractJson<T>(text: string): T {
-    // Find the first '{' or '[' to determine the start of the JSON
-    const firstBracket = text.indexOf('{');
-    const firstSquare = text.indexOf('[');
-    
-    let startIndex;
-    if (firstBracket === -1 && firstSquare === -1) {
-        throw new Error('No JSON object or array found in the AI response.');
-    }
-    if (firstBracket === -1) startIndex = firstSquare;
-    else if (firstSquare === -1) startIndex = firstBracket;
-    else startIndex = Math.min(firstBracket, firstSquare);
-
-    // Find the last '}' or ']' to determine the end
-    const lastBracket = text.lastIndexOf('}');
-    const lastSquare = text.lastIndexOf(']');
-    const endIndex = Math.max(lastBracket, lastSquare);
-
-    if (endIndex === -1 || endIndex < startIndex) {
-        throw new Error('Could not find a valid JSON structure in the AI response.');
-    }
-
-    const jsonString = text.substring(startIndex, endIndex + 1);
-    
-    try {
-        return JSON.parse(jsonString) as T;
-    } catch (e) {
-        console.error("Failed to parse extracted JSON string:", jsonString);
-        throw new Error('The AI returned a malformed JSON response.');
-    }
-}
-
+const createModelParams = (params: any) => ({ ...params, config: { ...params.config, safetySettings } });
 
 const generateQuizQuestions = async (ai: GoogleGenAI, { topic, grade, difficulty, count }: any): Promise<QuizQuestion[]> => {
     const prompt = `You are an expert quiz creator for middle and high school students in India.
 Generate a set of ${count} unique, multiple-choice science quiz questions based on the content from the India NCERT Grade ${grade} Science textbook, focusing on the chapter: "${topic}". Each question must be of **${difficulty}** difficulty. For each question: type must be "MCQ", provide a clear question and 4 plausible options, the correct answer, and a brief, easy-to-understand explanation.`;
     const params = {
-        model: "gemini-2.5-flash",
-        contents: prompt,
+        model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
@@ -177,8 +152,7 @@ All questions must be of **${difficulty}** difficulty.
 Include a mix of 'MCQ', 'True/False', 'Assertion/Reason', and 'Q&A' types.
 For every question, provide a brief, easy-to-understand explanation for the correct answer. Ensure the output is a valid JSON array of question objects.`;
     const params = {
-        model: "gemini-2.5-flash",
-        contents: prompt,
+        model: "gemini-2.5-flash", contents: prompt,
          config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
@@ -191,8 +165,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
 const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<NoteSection[]> => {
     const prompt = `You are an expert academic content creator for students in India. Generate a comprehensive, structured set of study notes for the chapter "${topic}" from the India NCERT Grade ${grade} Science textbook. Organize into logical sections with a title and 3-5 key bullet points each.`;
     const params = {
-        model: "gemini-2.5-flash",
-        contents: prompt,
+        model: "gemini-2.5-flash", contents: prompt,
         config: {
             responseMimeType: "application/json",
             responseSchema: { type: Type.OBJECT, properties: { notes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, points: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['title', 'points'] } } }, required: ['notes'] },
@@ -206,18 +179,13 @@ const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<No
 const getChatResponse = async (ai: GoogleGenAI, { grade, history, language, topic }: any): Promise<string> => {
     let langInstruction = 'Respond in clear and simple English.';
     const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **Teaching Method:** NEVER give the full answer at once. Guide the student step-by-step. After one small step, ALWAYS ask a simple question to check for understanding. Use analogies, lists, and short sentences. Be encouraging. Stay on topic.`;
-    const params = {
-        model: "gemini-2.5-flash",
-        contents: history,
-        config: { systemInstruction },
-    };
+    const params = { model: "gemini-2.5-flash", contents: history, config: { systemInstruction } };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
 };
 
 const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any): Promise<string> => {
-    let langInstruction = "in clear and simple English.";
-    const prompt = `You are a friendly AI science tutor 'Curio'. Provide a very short, welcoming opening message for a Grade ${grade} student to start a doubt-solving session about '${topic}'. The message should be **${langInstruction}** Keep it to one or two sentences.`;
+    const prompt = `You are a friendly AI science tutor 'Curio'. Provide a very short, welcoming opening message for a Grade ${grade} student to start a doubt-solving session about '${topic}'. The message should be in clear and simple English. Keep it to one or two sentences.`;
     const params = { model: "gemini-2.5-flash", contents: prompt };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
@@ -239,17 +207,14 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
 
 const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<string> => {
     const params = {
-        model: 'imagen-4.0-generate-001',
-        prompt: prompt,
+        model: 'imagen-4.0-generate-001', prompt,
         config: { numberOfImages: 1, outputMimeType: 'image/png', aspectRatio: '1:1' },
     };
     const response = await ai.models.generateImages(params);
-    
-    if (!response.generatedImages || response.generatedImages.length === 0 || !response.generatedImages[0].image || !response.generatedImages[0].image.imageBytes) {
+    if (!response.generatedImages?.[0]?.image?.imageBytes) {
         console.error("Invalid or empty response from image generation API:", JSON.stringify(response, null, 2));
         throw new Error("Image generation failed to return a valid image.");
     }
-    
     return response.generatedImages[0].image.imageBytes;
 };
 
@@ -257,9 +222,7 @@ const generateTextForMode = async (ai: GoogleGenAI, { mode, userInput, grade, to
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = mode === 'real_world_links';
-    const params = {
-        model: "gemini-2.5-flash", contents, config: { systemInstruction, tools: useSearch ? [{ googleSearch: {} }] : undefined }
-    };
+    const params = { model: "gemini-2.5-flash", contents, config: { systemInstruction, tools: useSearch ? [{ googleSearch: {} }] : undefined } };
     const response = await ai.models.generateContent(createModelParams(params));
     return { text: response.text, sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks };
 };
@@ -283,8 +246,7 @@ const generateScienceFairIdeas = async (ai: GoogleGenAI, { userInput }: any): Pr
         }
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    const data = extractJson<{ ideas: ScienceFairIdea[] }>(response.text);
-    return data.ideas;
+    return extractJson<{ ideas: ScienceFairIdea[] }>(response.text).ideas;
 };
 
 const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectDescription }: any): Promise<{ stepTitle: string; instructions: string }[]> => {
@@ -297,8 +259,7 @@ const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectD
         }
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    const data = extractJson<{ plan: { stepTitle: string; instructions: string }[] }>(response.text);
-    return data.plan;
+    return extractJson<{ plan: { stepTitle: string; instructions: string }[] }>(response.text).plan;
 };
 
 const generateScientistGreeting = async (ai: GoogleGenAI, { scientist }: any): Promise<string> => {
@@ -317,26 +278,18 @@ const getHistoricalChatResponse = async (ai: GoogleGenAI, { scientist, history }
 
 const analyzeGenerationFailure = async (ai: GoogleGenAI, { errorMessage }: any): Promise<string> => {
     const prompt = `A user's attempt to generate content failed in my web application. Here is the technical error message: "${errorMessage}". Please analyze this error and provide a simple, user-friendly explanation (in one or two sentences) of what likely went wrong and what they can try next. Do not provide code or technical jargon. Address the user directly.`;
-    const params = {
-        model: "gemini-2.5-flash",
-        contents: prompt,
-    };
+    const params = { model: "gemini-2.5-flash", contents: prompt };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
 };
 
-// --- Video Generation Functions ---
 const startVideoGeneration = async (ai: GoogleGenAI, { topic, grade }: any): Promise<any> => {
     const prompt = `Create a short, engaging, and simple educational video (around 30 seconds) for a Grade ${grade} student about "${topic}". The video should be visually appealing with clear narration. Focus on one key concept from the topic.`;
-    const operation = await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001',
-        prompt: prompt,
-        config: { numberOfVideos: 1 }
+    return await ai.models.generateVideos({
+        model: 'veo-2.0-generate-001', prompt, config: { numberOfVideos: 1 }
     });
-    return operation;
 };
 
 const checkVideoGenerationStatus = async (ai: GoogleGenAI, { operation }: any): Promise<any> => {
-    const updatedOperation = await ai.operations.getVideosOperation({ operation: operation });
-    return updatedOperation;
+    return await ai.operations.getVideosOperation({ operation });
 };
