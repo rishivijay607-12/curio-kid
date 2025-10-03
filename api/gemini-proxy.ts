@@ -3,12 +3,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
-// --- Initialization and Validation (Module Scope) ---
-if (!process.env.API_KEY) {
-    throw new Error("FATAL: The API_KEY environment variable is not set on the server.");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 /**
@@ -68,10 +62,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
-
+    
     const { action, params } = req.body;
 
     try {
+        // --- Initialization and Validation (Handler Scope) ---
+        // This is moved from the module scope to prevent the entire function from crashing on load if the API key is missing.
+        if (!process.env.API_KEY) {
+            console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
+            // This now returns a clean JSON error instead of crashing the function
+            return res.status(500).json({ error: "The application's AI service is not configured correctly. Please contact the administrator." });
+        }
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
         let result;
         switch (action) {
             case 'generateQuizQuestions': result = await generateQuizQuestions(ai, params); break;
