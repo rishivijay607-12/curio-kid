@@ -1,6 +1,7 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type, Modality } from '@google/genai';
+import { randomUUID } from 'node:crypto';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
 // --- Initialization and Validation (Module Scope) ---
@@ -231,7 +232,7 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
     };
     const response = await ai.models.generateContent(createModelParams(params));
     const ideasData = extractJson<{ diagrams: Omit<DiagramIdea, 'id'>[] }>(response.text);
-    return ideasData.diagrams.map((idea) => ({ ...idea, id: globalThis.crypto.randomUUID() }));
+    return ideasData.diagrams.map((idea) => ({ ...idea, id: randomUUID() }));
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<string> => {

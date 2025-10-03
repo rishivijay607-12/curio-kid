@@ -10,11 +10,14 @@ interface State {
 }
 
 class ErrorBoundary extends Component<Props, State> {
-  // Fix: Initialize state directly as a class property to ensure `this.state` is available.
-  public state: State = { 
-    hasError: false,
-    error: undefined,
-  };
+  // Fix: Initialize state in the constructor to ensure `this.props` is correctly recognized by the type system.
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: undefined,
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
