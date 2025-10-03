@@ -1,6 +1,5 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { randomUUID } from 'node:crypto';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
 
@@ -16,6 +15,9 @@ if (!process.env.API_KEY) {
 // Initialize the client once and reuse it across multiple invocations (for "warm" starts).
 // This is a crucial performance optimization to avoid timeouts on Vercel's Hobby plan.
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+// Simple unique ID generator to avoid Node.js crypto module issues in Vercel.
+const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 
 // This function is the single server-side entry point for all standard AI interactions on Vercel.
@@ -232,7 +234,7 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
     };
     const response = await ai.models.generateContent(createModelParams(params));
     const ideasData = extractJson<{ diagrams: Omit<DiagramIdea, 'id'>[] }>(response.text);
-    return ideasData.diagrams.map((idea) => ({ ...idea, id: randomUUID() }));
+    return ideasData.diagrams.map((idea) => ({ ...idea, id: generateUniqueId() }));
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<string> => {
