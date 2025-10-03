@@ -59,6 +59,11 @@ function extractJson<T>(text: string): T {
 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // CRITICAL FIX: Prevent crashes by ensuring the body exists before destructuring.
+    if (!req.body) {
+        return res.status(400).json({ error: 'Bad Request: Missing request body.' });
+    }
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -67,10 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         // --- Initialization and Validation (Handler Scope) ---
-        // This is moved from the module scope to prevent the entire function from crashing on load if the API key is missing.
         if (!process.env.API_KEY) {
             console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
-            // This now returns a clean JSON error instead of crashing the function
             return res.status(500).json({ error: "The application's AI service is not configured correctly. Please contact the administrator." });
         }
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -133,11 +136,10 @@ const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
 ];
 
-// FIX: Safely handle cases where params.config might be undefined to prevent crashes.
 const createModelParams = (params: any) => ({
     ...params,
     config: {
-        ...(params.config || {}), // Safely spread config, defaulting to an empty object
+        ...(params.config || {}),
         safetySettings,
     },
 });
@@ -166,7 +168,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
         model: "gemini-2.5-flash", contents: prompt,
          config: {
             responseMimeType: "application/json",
-            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
+            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'answer', 'explanation'] } },
         },
     };
     const response = await ai.models.generateContent(createModelParams(params));

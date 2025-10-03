@@ -1,11 +1,13 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
 
 // Service Imports
 import {
+    ApiError, // Import custom error type
     generateQuizQuestions,
     generateWorksheet,
     generateNotes,
@@ -57,6 +59,7 @@ import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 import VideoGenerator from './components/VideoGenerator.tsx';
+import ErrorScreen from './components/ErrorScreen.tsx'; // Import new error screen
 // ApiKeyInstructions is no longer needed
 
 
@@ -84,7 +87,8 @@ const App: React.FC = () => {
 
     // Data & UI State
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null); // Keep for simple component-level errors
+    const [errorDetails, setErrorDetails] = useState<{ code: number; message: string } | null>(null); // For global errors
     const [lastScore, setLastScore] = useState(0);
     const [worksheetQuestions, setWorksheetQuestions] = useState<QuizQuestion[]>([]);
     const [notes, setNotes] = useState<NoteSection[]>([]);
@@ -166,6 +170,7 @@ const App: React.FC = () => {
         setTimerDuration(null);
         setLanguage(null);
         setError(null);
+        setErrorDetails(null);
         setIsLoading(false);
         setWorksheetQuestions([]);
         setNotes([]);
@@ -241,7 +246,7 @@ const App: React.FC = () => {
             setUserProfile(profileData);
             setGameState('PROFILE_SCREEN');
         } catch(err) {
-            setError(err instanceof Error ? err.message : 'Could not load profile.');
+            CATCH_BLOCK(err);
         } finally {
             setIsLoading(false);
         }
@@ -249,9 +254,28 @@ const App: React.FC = () => {
 
     // Generic error handler to reduce repetition
     const CATCH_BLOCK = (err: unknown) => {
-        const message = err instanceof Error ? err.message : "An unknown error occurred.";
-        setError(message);
         setIsLoading(false);
+        let code = 500;
+        let message = "An unexpected error occurred. Please try again.";
+
+        if (err instanceof ApiError) {
+            message = err.message;
+            code = err.status;
+        } else if (err instanceof Error) {
+            message = err.message;
+        }
+        
+        console.error(`Caught error (Code: ${code}):`, message);
+
+        // For simple, non-critical errors, we might just set the local error state
+        // For critical errors (like 500), we show the global error screen.
+        if (code >= 500) {
+            setErrorDetails({ code, message });
+            setGameState('ERROR_SCREEN');
+        } else {
+            // Set local error for display on the current screen (e.g., TopicSelector)
+            setError(message);
+        }
     };
 
     // Quiz Flow
@@ -331,7 +355,7 @@ const App: React.FC = () => {
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to get a greeting.');
+            CATCH_BLOCK(err);
         } finally {
             setIsLoading(false);
         }
@@ -401,6 +425,7 @@ const App: React.FC = () => {
             setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, image: newImage } : d));
         } catch (err) {
             console.error('Failed to regenerate diagram', err);
+            CATCH_BLOCK(err);
         } finally {
             setRegeneratingId(null);
         }
@@ -480,6 +505,8 @@ const App: React.FC = () => {
             case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
             case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
 
+            case 'ERROR_SCREEN': return <ErrorScreen errorCode={errorDetails?.code ?? 500} errorMessage={errorDetails?.message ?? 'An unknown error occurred.'} onGoHome={resetToHome} />;
+
             case 'GRADE_SELECTION': return <GradeSelector 
                 onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
                 appMode={appMode} 
@@ -514,7 +541,7 @@ const App: React.FC = () => {
             case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={lang => {
                 setLanguage(lang);
                 if(appMode === 'doubt_solver') handleStartChat(topic!, lang);
-                else setGameState('VOICE_TUTOR_SESSION');
+                else setGameState('VOICE_Tutor_SESSION');
             }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} />;
 
             case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
@@ -537,11 +564,11 @@ const App: React.FC = () => {
             case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
             case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
 
-            default: return <p className="text-center">Oops! Something went wrong. <button onClick={resetToHome} className="text-cyan-400 underline">Go Home</button></p>;
+            default: return <ErrorScreen errorCode={404} errorMessage={`The application state "${gameState}" does not exist.`} onGoHome={resetToHome} />;
         }
     };
     
-    const showHeader = !['login', 'register', 'initializing'].includes(gameState);
+    const showHeader = !['login', 'register', 'initializing', 'ERROR_SCREEN'].includes(gameState);
 
     return (
         <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">

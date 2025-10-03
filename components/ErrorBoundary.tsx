@@ -1,4 +1,6 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+// FIX: Changed the import to no longer destructure `Component` and updated the class to extend `React.Component` directly.
+// This can resolve subtle TypeScript errors where `this.props` is not correctly inferred on the component instance.
+import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -9,26 +11,21 @@ interface State {
   error?: Error;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-  // FIX: The component's state and props were not available because the constructor was missing.
-  // Adding a constructor with `super(props)` and state initialization makes `this.state` and `this.props` accessible.
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: undefined,
-    };
-  }
+class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = {
+    hasError: false,
+    error: undefined,
+  };
 
-  static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
       return (
         <div className="w-full max-w-2xl mx-auto p-8 bg-slate-900 rounded-xl shadow-2xl border border-red-500 text-center flex flex-col items-center justify-center min-h-screen">

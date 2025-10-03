@@ -1,5 +1,16 @@
+
 import { GoogleGenAI } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea, Diagram } from '../types.ts';
+
+// Define a custom error class to hold the status code for better error handling in the UI
+export class ApiError extends Error {
+    public status: number;
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
 
 
 // Helper function to call our secure serverless proxy
@@ -13,17 +24,15 @@ async function callApi<T>(action: string, params: object): Promise<T> {
     if (!response.ok) {
         let errorMessage = `Server Error: ${response.status} ${response.statusText}`;
         try {
-            // Try to get a specific error message from the JSON body, if it exists
             const errorData = await response.json();
             if (errorData && errorData.error) {
                 errorMessage = errorData.error;
             }
         } catch (e) {
-            // The response was not JSON, likely an HTML error page.
-            // The generic message is the best we can do.
             console.error('Could not parse error response as JSON.', e);
         }
-        throw new Error(errorMessage);
+        // Throw our custom error to propagate the status code
+        throw new ApiError(errorMessage, response.status);
     }
     
     try {
