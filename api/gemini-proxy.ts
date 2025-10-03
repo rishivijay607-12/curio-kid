@@ -132,7 +132,15 @@ const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
 ];
-const createModelParams = (params: any) => ({ ...params, config: { ...params.config, safetySettings } });
+
+// FIX: Safely handle cases where params.config might be undefined to prevent crashes.
+const createModelParams = (params: any) => ({
+    ...params,
+    config: {
+        ...(params.config || {}), // Safely spread config, defaulting to an empty object
+        safetySettings,
+    },
+});
 
 const generateQuizQuestions = async (ai: GoogleGenAI, { topic, grade, difficulty, count }: any): Promise<QuizQuestion[]> => {
     const prompt = `You are an expert quiz creator for middle and high school students in India.
