@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 /**
@@ -10,8 +11,12 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    console.error('API_KEY environment variable is not set on the server.');
-    return res.status(500).json({ error: 'API key not configured on the server.' });
+    // Log a detailed error on the server for debugging
+    console.error('[GET_KEY_ERROR] The API_KEY environment variable is not set on the server.');
+    
+    // Provide a user-friendly message to the client
+    const userMessage = "The voice tutor is not configured correctly on the server. Please contact support.";
+    return res.status(500).json({ error: userMessage });
   }
 
   // Return the key in a JSON object

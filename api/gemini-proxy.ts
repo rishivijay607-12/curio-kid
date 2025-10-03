@@ -9,7 +9,6 @@ import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSectio
 // CRITICAL: Perform a one-time check for the API key when the function initializes.
 if (!process.env.API_KEY) {
     // This error will be logged in Vercel and will prevent the function from starting if the key is missing.
-    // Given the user's screenshot, this should not trigger, but it's a critical safeguard.
     throw new Error("FATAL: The API_KEY environment variable is not set on the server.");
 }
 
@@ -24,7 +23,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    // By the time we get here, the 'ai' instance is already initialized and ready.
     const { action, params } = req.body;
 
     try {
@@ -74,6 +72,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'analyzeGenerationFailure':
                 result = await analyzeGenerationFailure(ai, params);
                 break;
+            case 'startVideoGeneration':
+                result = await startVideoGeneration(ai, params);
+                break;
+            case 'checkVideoGenerationStatus':
+                result = await checkVideoGenerationStatus(ai, params);
+                break;
             default:
                 return res.status(400).json({ error: 'Invalid action specified.' });
         }
@@ -81,9 +85,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(result);
 
     } catch (error) {
-        console.error(`Error in action "${action}":`, error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown server error occurred.';
-        return res.status(500).json({ error: errorMessage });
+        // Enhanced error logging for Vercel
+        console.error(`[GEMINI_PROXY_ERROR] Action: "${action}" failed.`);
+        if (error instanceof Error) {
+            // Log essential details for easier debugging in Vercel logs
+            console.error(`[ERROR_DETAILS] Name: ${error.name}`);
+            console.error(`[ERROR_DETAILS] Message: ${error.message}`);
+            if (error.stack) {
+                console.error(`[ERROR_DETAILS] Stack: ${error.stack}`);
+            }
+        } else {
+            // Handle cases where a non-Error object is thrown
+            console.error('[ERROR_DETAILS] A non-Error object was thrown:', error);
+        }
+
+        // Provide a generic, user-friendly message to the client-side application
+        const userMessage = "The AI is unable to process your request at the moment. This might be due to high traffic or a server configuration issue. Please try again later.";
+        
+        return res.status(500).json({ error: userMessage });
     }
 }
 
@@ -100,6 +119,39 @@ const createModelParams = (params: any) => ({
     config: { ...params.config, safetySettings }
 });
 
+function extractJson<T>(text: string): T {
+    // Find the first '{' or '[' to determine the start of the JSON
+    const firstBracket = text.indexOf('{');
+    const firstSquare = text.indexOf('[');
+    
+    let startIndex;
+    if (firstBracket === -1 && firstSquare === -1) {
+        throw new Error('No JSON object or array found in the AI response.');
+    }
+    if (firstBracket === -1) startIndex = firstSquare;
+    else if (firstSquare === -1) startIndex = firstBracket;
+    else startIndex = Math.min(firstBracket, firstSquare);
+
+    // Find the last '}' or ']' to determine the end
+    const lastBracket = text.lastIndexOf('}');
+    const lastSquare = text.lastIndexOf(']');
+    const endIndex = Math.max(lastBracket, lastSquare);
+
+    if (endIndex === -1 || endIndex < startIndex) {
+        throw new Error('Could not find a valid JSON structure in the AI response.');
+    }
+
+    const jsonString = text.substring(startIndex, endIndex + 1);
+    
+    try {
+        return JSON.parse(jsonString) as T;
+    } catch (e) {
+        console.error("Failed to parse extracted JSON string:", jsonString);
+        throw new Error('The AI returned a malformed JSON response.');
+    }
+}
+
+
 const generateQuizQuestions = async (ai: GoogleGenAI, { topic, grade, difficulty, count }: any): Promise<QuizQuestion[]> => {
     const prompt = `You are an expert quiz creator for middle and high school students in India.
 Generate a set of ${count} unique, multiple-choice science quiz questions based on the content from the India NCERT Grade ${grade} Science textbook, focusing on the chapter: "${topic}". Each question must be of **${difficulty}** difficulty. For each question: type must be "MCQ", provide a clear question and 4 plausible options, the correct answer, and a brief, easy-to-understand explanation.`;
@@ -112,7 +164,7 @@ Generate a set of ${count} unique, multiple-choice science quiz questions based 
         },
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    return JSON.parse(response.text.trim());
+    return extractJson<QuizQuestion[]>(response.text);
 };
 
 const generateWorksheet = async (ai: GoogleGenAI, { topic, grade, difficulty, count }: any): Promise<QuizQuestion[]> => {
@@ -130,7 +182,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
         },
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    return JSON.parse(response.text.trim());
+    return extractJson<QuizQuestion[]>(response.text);
 };
 
 const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<NoteSection[]> => {
@@ -144,7 +196,8 @@ const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<No
         },
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    return JSON.parse(response.text.trim()).notes;
+    const data = extractJson<{ notes: NoteSection[] }>(response.text);
+    return data.notes;
 };
 
 const getChatResponse = async (ai: GoogleGenAI, { grade, history, language, topic }: any): Promise<string> => {
@@ -177,8 +230,8 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
         }
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    const ideas: Omit<DiagramIdea, 'id'>[] = JSON.parse(response.text.trim()).diagrams;
-    return ideas.map((idea) => ({ ...idea, id: globalThis.crypto.randomUUID() }));
+    const ideasData = extractJson<{ diagrams: Omit<DiagramIdea, 'id'>[] }>(response.text);
+    return ideasData.diagrams.map((idea) => ({ ...idea, id: globalThis.crypto.randomUUID() }));
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { prompt }: any): Promise<string> => {
@@ -227,7 +280,8 @@ const generateScienceFairIdeas = async (ai: GoogleGenAI, { userInput }: any): Pr
         }
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    return JSON.parse(response.text.trim()).ideas;
+    const data = extractJson<{ ideas: ScienceFairIdea[] }>(response.text);
+    return data.ideas;
 };
 
 const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectDescription }: any): Promise<{ stepTitle: string; instructions: string }[]> => {
@@ -240,7 +294,8 @@ const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectD
         }
     };
     const response = await ai.models.generateContent(createModelParams(params));
-    return JSON.parse(response.text.trim()).plan;
+    const data = extractJson<{ plan: { stepTitle: string; instructions: string }[] }>(response.text);
+    return data.plan;
 };
 
 const generateScientistGreeting = async (ai: GoogleGenAI, { scientist }: any): Promise<string> => {
@@ -265,4 +320,20 @@ const analyzeGenerationFailure = async (ai: GoogleGenAI, { errorMessage }: any):
     };
     const response = await ai.models.generateContent(createModelParams(params));
     return response.text;
+};
+
+// --- Video Generation Functions ---
+const startVideoGeneration = async (ai: GoogleGenAI, { topic, grade }: any): Promise<any> => {
+    const prompt = `Create a short, engaging, and simple educational video (around 30 seconds) for a Grade ${grade} student about "${topic}". The video should be visually appealing with clear narration. Focus on one key concept from the topic.`;
+    const operation = await ai.models.generateVideos({
+        model: 'veo-2.0-generate-001',
+        prompt: prompt,
+        config: { numberOfVideos: 1 }
+    });
+    return operation;
+};
+
+const checkVideoGenerationStatus = async (ai: GoogleGenAI, { operation }: any): Promise<any> => {
+    const updatedOperation = await ai.operations.getVideosOperation({ operation: operation });
+    return updatedOperation;
 };

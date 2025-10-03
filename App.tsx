@@ -1,6 +1,6 @@
 
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
 
@@ -20,6 +20,9 @@ import {
     generateScientistGreeting,
     getHistoricalChatResponse,
     live, // Import the live service directly
+    startVideoGeneration,
+    checkVideoGenerationStatus,
+    getClientSideApiKey,
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
 
@@ -53,6 +56,7 @@ import ProfileScreen from './components/ProfileScreen.tsx';
 import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
+import VideoGenerator from './components/VideoGenerator.tsx';
 // ApiKeyInstructions is no longer needed
 
 
@@ -94,6 +98,10 @@ const App: React.FC = () => {
     const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
     const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
     const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
+    const [videoOperation, setVideoOperation] = useState<any>(null);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoProgressMessage, setVideoProgressMessage] = useState('');
+    const pollingIntervalRef = useRef<number | null>(null);
     
     // --- Effects ---
     useEffect(() => {
@@ -111,6 +119,42 @@ const App: React.FC = () => {
             setGameState('login'); // Fallback
         }
     }, []);
+
+    const clearPollingInterval = useCallback(() => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+    }, []);
+    
+    useEffect(() => {
+        if (gameState === 'VIDEO_GENERATING' && videoOperation && !videoOperation.done) {
+            pollingIntervalRef.current = window.setInterval(async () => {
+                try {
+                    const newStatus = await checkVideoGenerationStatus(videoOperation);
+                    setVideoOperation(newStatus);
+                    if (newStatus.done) {
+                        clearPollingInterval();
+                        setIsLoading(false);
+                        setVideoProgressMessage('Video ready!');
+                        const downloadLink = newStatus.response?.generatedVideos?.[0]?.video?.uri;
+                        if (downloadLink) {
+                            const apiKey = await getClientSideApiKey();
+                            setVideoUrl(`${downloadLink}&key=${apiKey}`);
+                        } else {
+                            throw new Error("Generation finished, but no video link was provided.");
+                        }
+                    }
+                } catch (err) {
+                    clearPollingInterval();
+                    CATCH_BLOCK(err);
+                    setIsLoading(false);
+                }
+            }, 10000); // Poll every 10 seconds
+        }
+    
+        return () => clearPollingInterval();
+    }, [gameState, videoOperation, clearPollingInterval]);
 
     // --- State Resets ---
     const resetAllState = useCallback(() => {
@@ -135,7 +179,11 @@ const App: React.FC = () => {
         setSelectedScienceFairIdea(null);
         setSelectedScientist(null);
         setUserProfile(null);
-    }, []);
+        setVideoOperation(null);
+        setVideoUrl(null);
+        setVideoProgressMessage('');
+        clearPollingInterval();
+    }, [clearPollingInterval]);
 
     const resetToHome = useCallback(() => {
         setGameState('home');
@@ -358,6 +406,24 @@ const App: React.FC = () => {
         }
     };
 
+    // Video Flow
+    const handleVideoTopicSelect = async (selectedTopic: string) => {
+        if (!grade) return;
+        setTopic(selectedTopic);
+        setGameState('VIDEO_GENERATING');
+        setIsLoading(true);
+        setError(null);
+        setVideoProgressMessage('Sending request to the video model...');
+        try {
+            const initialOperation = await startVideoGeneration(selectedTopic, grade);
+            setVideoOperation(initialOperation);
+            setVideoProgressMessage('Request accepted. Waiting for generation to start...');
+        } catch (err) {
+            CATCH_BLOCK(err);
+            setIsLoading(false);
+        }
+    };
+
     // Other Generative Features
     const handleGenerateText = async (userInput: string) => {
         setIsLoading(true);
@@ -425,6 +491,7 @@ const App: React.FC = () => {
                 setTopic(t);
                 if (appMode === 'notes') handleNotesTopicSelect(t);
                 else if (appMode === 'diagram') handleDiagramTopicSelect(t);
+                else if (appMode === 'video') handleVideoTopicSelect(t);
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
                 else setGameState('DIFFICULTY_SELECTION');
@@ -455,6 +522,8 @@ const App: React.FC = () => {
             case 'DIAGRAM_IDEA_SELECTION': return <DiagramIdeaSelector ideas={diagramIdeas} onGenerate={handleGenerateDiagrams} />;
             case 'DIAGRAM_DISPLAY': return <DiagramGenerator diagrams={diagrams} isGenerating={isLoading} grade={grade!} topic={topic!} onRestart={resetToHome} onCancelGeneration={() => setIsGenerationCancelled(true)} generationProgress={generationProgress} onRegenerate={handleRegenerateDiagram} regeneratingId={regeneratingId} />;
             
+            case 'VIDEO_GENERATING': return <VideoGenerator videoUrl={videoUrl} isGenerating={isLoading} progressMessage={videoProgressMessage} grade={grade!} topic={topic!} onRestart={resetToHome} error={error} />;
+
             case 'generative_text_input': return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerateText} isLoading={isLoading} result={generativeTextResult} error={error} />;
             
             case 'science_lens': return <ScienceLens onGenerate={handleScienceLensGenerate} isLoading={isLoading} result={scienceLensResult} error={error} />;

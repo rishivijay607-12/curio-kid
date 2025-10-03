@@ -92,6 +92,15 @@ export const analyzeGenerationFailure = (errorMessage: string): Promise<string> 
     return callApi('analyzeGenerationFailure', { errorMessage });
 };
 
+// Video Generation
+export const startVideoGeneration = (topic: string, grade: Grade): Promise<any> => {
+    return callApi('startVideoGeneration', { topic, grade });
+};
+
+export const checkVideoGenerationStatus = (operation: any): Promise<any> => {
+    return callApi('checkVideoGenerationStatus', { operation });
+};
+
 
 // --- SPECIAL CASE for Voice Tutor ---
 // The 'live' service establishes a direct WebSocket connection and MUST be initialized on the client.
@@ -100,7 +109,7 @@ export const analyzeGenerationFailure = (errorMessage: string): Promise<string> 
 let ai: GoogleGenAI | null = null;
 let clientSideApiKey: string | null = null;
 
-async function getClientSideApiKey(): Promise<string> {
+export async function getClientSideApiKey(): Promise<string> {
     if (clientSideApiKey) {
         return clientSideApiKey;
     }
