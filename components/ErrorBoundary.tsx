@@ -1,5 +1,3 @@
-// FIX: Changed the import to no longer destructure `Component` and updated the class to extend `React.Component` directly.
-// This can resolve subtle TypeScript errors where `this.props` is not correctly inferred on the component instance.
 import React, { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -12,7 +10,10 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  public state: State = {
+  // FIX: Replaced the constructor with a class property for state initialization.
+  // This modern syntax correctly declares the `state` property, resolving TypeScript errors
+  // about `state` and `props` not being found on the component instance.
+  state: State = {
     hasError: false,
     error: undefined,
   };
