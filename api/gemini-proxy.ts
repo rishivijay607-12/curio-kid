@@ -1,4 +1,3 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
@@ -163,12 +162,13 @@ const generateWorksheet = async (ai: GoogleGenAI, { topic, grade, difficulty, co
 Generate a mixed worksheet of ${count} science questions based on the India NCERT Grade ${grade} Science textbook chapter: "${topic}".
 All questions must be of **${difficulty}** difficulty.
 Include a mix of 'MCQ', 'True/False', 'Assertion/Reason', and 'Q&A' types.
+For 'Assertion/Reason' questions, combine both the Assertion and the Reason into the main 'question' field, clearly labeling them as 'Assertion (A):' and 'Reason (R):'. Do not use a separate 'reason' field.
 For every question, provide a brief, easy-to-understand explanation for the correct answer. Ensure the output is a valid JSON array of question objects.`;
     const params = {
         model: "gemini-2.5-flash", contents: prompt,
          config: {
             responseMimeType: "application/json",
-            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, reason: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'answer', 'explanation'] } },
+            responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'answer', 'explanation'] } },
         },
     };
     const response = await ai.models.generateContent(createModelParams(params));

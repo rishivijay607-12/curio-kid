@@ -38,14 +38,7 @@ const QuestionItem: React.FC<QuestionItemProps> = ({ question: q, number, questi
                 {q.type === 'Assertion/Reason' && <span className="font-normal italic"> In the following question, a statement of assertion (A) is followed by a statement of reason (R). Mark the correct choice.</span>}
             </h3>
 
-            {q.type === 'Assertion/Reason' ? (
-                <div className="space-y-2 my-3 pl-4">
-                    <p className="text-slate-200"><span className="font-semibold">Assertion (A):</span> {q.question}</p>
-                    <p className="text-slate-200"><span className="font-semibold">Reason (R):</span> {q.reason}</p>
-                </div>
-            ) : (
-                <p className="text-slate-200 my-3 pl-4">{q.question}</p>
-            )}
+            <p className="text-slate-200 my-3 pl-4 whitespace-pre-wrap">{q.question}</p>
 
             {q.type === 'Q&A' ? (
                  <div className="pl-4">
