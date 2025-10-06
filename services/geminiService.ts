@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea, Diagram } from '../types.ts';
 
@@ -70,8 +71,8 @@ export const generateDiagramIdeas = (topic: string, grade: Grade): Promise<Diagr
     return callApi('generateDiagramIdeas', { topic, grade });
 };
 
-export const generateDiagramImage = (prompt: string): Promise<string> => {
-    return callApi('generateDiagramImage', { prompt });
+export const generateDiagramImage = (description: string): Promise<string> => {
+    return callApi('generateDiagramImage', { description });
 };
 
 export const generateTextForMode = (mode: AppMode, userInput: string, grade?: Grade, topic?: string): Promise<GenerativeTextResult> => {

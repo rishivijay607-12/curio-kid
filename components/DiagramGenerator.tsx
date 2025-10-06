@@ -14,50 +14,73 @@ interface DiagramGeneratorProps {
     regeneratingId: string | null;
 }
 
-const DiagramCard: React.FC<{ diagram: Diagram; onRegenerate: (id: string) => void; isRegenerating: boolean }> = ({ diagram, onRegenerate, isRegenerating }) => (
-    <div className="bg-slate-950/50 border border-slate-800 rounded-lg p-4 flex flex-col items-center text-center">
-        <div className="relative w-full aspect-square">
-            <img 
-                src={diagram.image} 
-                alt={diagram.idea.description} 
-                className={`w-full h-full object-contain rounded-md bg-white transition-opacity duration-300 ${isRegenerating ? 'opacity-20' : 'opacity-100'}`} 
-            />
-            {isRegenerating && (
-                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md">
+const DiagramCard: React.FC<{ diagram: Diagram; onRegenerate: (id: string) => void; isRegenerating: boolean; isGenerating: boolean; }> = ({ diagram, onRegenerate, isRegenerating, isGenerating }) => {
+    
+    const renderContent = () => {
+        if (isRegenerating || diagram.status === 'pending') {
+            return (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md">
                     <LoadingSpinner />
                 </div>
+            );
+        }
+        if (diagram.status === 'failed') {
+            return (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/80 rounded-md p-2 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm font-semibold text-red-300">Generation Failed</p>
+                </div>
+            );
+        }
+        if (diagram.status === 'complete' && diagram.image) {
+            return (
+                <img 
+                    src={diagram.image} 
+                    alt={diagram.idea.description} 
+                    className="w-full h-full object-contain rounded-md bg-white" 
+                />
+            );
+        }
+        return null; // Should not happen
+    };
+
+    return (
+        <div className="bg-slate-950/50 border border-slate-800 rounded-lg p-4 flex flex-col items-center text-center">
+            <div className="relative w-full aspect-square bg-slate-900 rounded-md">
+                {renderContent()}
+            </div>
+            <p className="text-slate-300 mt-3 text-sm leading-relaxed flex-grow">{diagram.idea.description}</p>
+            {/* FIX: The variable `isGenerating` was not in scope. It is now passed down from the parent to correctly control the visibility of the regenerate button. */}
+            {(diagram.status === 'complete' || diagram.status === 'failed') && !isGenerating && (
+                <button
+                    onClick={() => onRegenerate(diagram.id)}
+                    disabled={isRegenerating}
+                    className="mt-3 px-4 py-1 bg-slate-800 text-slate-200 font-semibold rounded-md hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-wait no-print"
+                >
+                    Regenerate
+                </button>
             )}
         </div>
-        <p className="text-slate-300 mt-3 text-sm leading-relaxed flex-grow">{diagram.idea.description}</p>
-        <button
-            onClick={() => onRegenerate(diagram.id)}
-            disabled={isRegenerating}
-            className="mt-3 px-4 py-1 bg-slate-800 text-slate-200 font-semibold rounded-md hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-wait no-print"
-        >
-            Regenerate
-        </button>
-    </div>
-);
-
-const PlaceholderCard: React.FC = () => (
-    <div className="bg-slate-950/50 border border-slate-800 rounded-lg p-4 flex flex-col items-center justify-center aspect-square">
-        <LoadingSpinner />
-    </div>
-);
+    );
+};
 
 
 const DiagramGenerator: React.FC<DiagramGeneratorProps> = ({ diagrams, isGenerating, grade, topic, onRestart, onCancelGeneration, generationProgress, onRegenerate, regeneratingId }) => {
-    const placeholdersCount = isGenerating ? Math.max(0, generationProgress.total - diagrams.length) : 0;
-    const placeholders = Array(placeholdersCount).fill(0);
 
     const getStatusText = () => {
         if (!isGenerating && generationProgress.current < generationProgress.total && generationProgress.current > 0) {
             return `Generation stopped. ${generationProgress.current} of ${generationProgress.total} diagrams were created.`;
         }
-        if (isGenerating && generationProgress.current < generationProgress.total) {
-            return `Generating diagram ${generationProgress.current + 1} of ${generationProgress.total}...`;
+        if (isGenerating && generationProgress.total > 0) {
+            return `Generating diagram ${Math.min(generationProgress.current + 1, generationProgress.total)} of ${generationProgress.total}...`;
         }
         if (!isGenerating && generationProgress.total > 0 && generationProgress.current === generationProgress.total) {
+             const failedCount = diagrams.filter(d => d.status === 'failed').length;
+             if (failedCount > 0) {
+                return `Generation complete. ${diagrams.length - failedCount} of ${diagrams.length} succeeded.`;
+             }
             return `Successfully generated ${generationProgress.total} diagrams!`;
         }
         return '';
@@ -96,7 +119,7 @@ const DiagramGenerator: React.FC<DiagramGeneratorProps> = ({ diagrams, isGenerat
                     </button>
                     <button
                         onClick={() => window.print()}
-                        disabled={isGenerating || diagrams.length === 0}
+                        disabled={isGenerating || diagrams.every(d => d.status !== 'complete')}
                         className="px-6 py-2 bg-cyan-600 text-white font-bold rounded-lg shadow-lg hover:bg-cyan-500 transition-colors disabled:bg-slate-700 disabled:cursor-not-allowed"
                     >
                         Print Diagrams
@@ -137,9 +160,9 @@ const DiagramGenerator: React.FC<DiagramGeneratorProps> = ({ diagrams, isGenerat
                         diagram={diag} 
                         onRegenerate={onRegenerate}
                         isRegenerating={regeneratingId === diag.id}
+                        isGenerating={isGenerating}
                     />
                 ))}
-                {placeholders.map((_, index) => <PlaceholderCard key={`placeholder-${index}`} />)}
             </div>
         </div>
     );

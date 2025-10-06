@@ -2,6 +2,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
@@ -352,23 +354,38 @@ const App: React.FC = () => {
         setIsLoading(true);
         setIsGenerationCancelled(false);
         setGenerationProgress({ current: 0, total: selectedIdeas.length });
+
+        const initialDiagrams: Diagram[] = selectedIdeas.map(idea => ({
+            id: idea.id,
+            idea,
+            status: 'pending',
+        }));
+        setDiagrams(initialDiagrams);
         
-        const generated: Diagram[] = [];
-        setDiagrams(generated);
-        for (let i = 0; i < selectedIdeas.length; i++) {
-            if (isGenerationCancelled) break;
-            const idea = selectedIdeas[i];
-            setGenerationProgress({ current: i, total: selectedIdeas.length });
-            try {
-                const imageBytes = await generateDiagramImage(idea.prompt);
-                const newDiagram: Diagram = { id: idea.id, idea, image: `data:image/png;base64,${imageBytes}` };
-                generated.push(newDiagram);
-                setDiagrams([...generated]);
-            } catch (err) {
-                console.error(`Failed to generate image for: ${idea.prompt}`, err);
+        for (const idea of selectedIdeas) {
+            if (isGenerationCancelled) {
+                // Mark remaining as skipped/failed if needed, or just stop
+                break;
             }
+            try {
+                const imageBytes = await generateDiagramImage(idea.description);
+                setDiagrams(prev => prev.map(d => 
+                    d.id === idea.id 
+                    ? { ...d, status: 'complete', image: `data:image/png;base64,${imageBytes}` }
+                    : d
+                ));
+            } catch (err) {
+                console.error(`Failed to generate image for: ${idea.description}`, err);
+                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+                setDiagrams(prev => prev.map(d =>
+                    d.id === idea.id
+                    ? { ...d, status: 'failed', error: errorMessage }
+                    : d
+                ));
+            }
+            setGenerationProgress(prev => ({ ...prev, current: prev.current + 1 }));
         }
-        setGenerationProgress(prev => ({ ...prev, current: generated.length }));
+        
         setIsLoading(false);
     };
 
@@ -378,12 +395,13 @@ const App: React.FC = () => {
         
         setRegeneratingId(diagramId);
         try {
-            const imageBytes = await generateDiagramImage(diagramToRegen.idea.prompt);
+            const imageBytes = await generateDiagramImage(diagramToRegen.idea.description);
             const newImage = `data:image/png;base64,${imageBytes}`;
-            setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, image: newImage } : d));
+            setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, image: newImage, status: 'complete', error: undefined } : d));
         } catch (err) {
             console.error('Failed to regenerate diagram', err);
-            CATCH_BLOCK(err);
+            const errorMessage = err instanceof Error ? err.message : "Regeneration failed.";
+            setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, status: 'failed', error: errorMessage } : d));
         } finally {
             setRegeneratingId(null);
         }

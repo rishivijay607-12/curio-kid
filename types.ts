@@ -69,14 +69,15 @@ export interface GenerativeTextResult {
 
 export interface DiagramIdea {
   id: string;
-  prompt: string;
   description: string;
 }
 
 export interface Diagram {
   id: string;
   idea: DiagramIdea;
-  image: string; // base64 data URL
+  image?: string; // base64 data URL, optional now
+  status: 'pending' | 'complete' | 'failed';
+  error?: string;
 }
 
 export interface ScienceFairIdea {
