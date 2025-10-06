@@ -179,11 +179,10 @@ const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any
 };
 
 const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Promise<DiagramIdea[]> => {
-    const prompt = `You are a science education expert. For the Grade ${grade} chapter "${topic}", list 8 key scientific concepts that can be illustrated with a diagram.
-For each concept, provide a very short, factual 'description' for an illustrator, listing only the core scientific objects or elements to be drawn.
-**CRITICAL RULE: Your description MUST NOT include any reference to people, humans, body parts, or hands.**
-Example of a good description: "A plant cell with its main organelles: nucleus, cytoplasm, cell wall, vacuole."
-Example of a bad description: "A student looking at a plant cell under a microscope."
+    const prompt = `You are a science textbook author. For the Grade ${grade} chapter "${topic}", list 8 core concepts suitable for a diagram.
+For each concept, provide a 'description' which is a simple, factual list of the scientific objects and labels that MUST appear in the diagram.
+**ABSOLUTE RULE: The description must ONLY contain a list of objects. DO NOT describe any actions, people, or body parts.**
+Example: "Plant cell, nucleus, cytoplasm, cell wall, vacuole, chloroplasts".
 Generate a JSON object with a 'diagrams' array.`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -199,10 +198,10 @@ Generate a JSON object with a 'diagrams' array.`;
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { description }: any): Promise<string> => {
-    const finalPrompt = `TASK: Create a diagram for a science textbook.
-CONTENT: The diagram must illustrate: "${description}".
-STYLE: Use a simple, 2D vector art style. The illustration must be clear, with bright, vibrant colors and clean lines, set against a plain, solid-colored background.
-NEGATIVE CONSTRAINT: This is a strict rule. The diagram MUST NOT contain any people, human figures, or body parts of any kind. Focus only on the scientific objects and processes.`;
+    const finalPrompt = `TASK: Generate an educational diagram for a science textbook.
+CONTENT: The diagram must visually represent the following elements: ${description}.
+STYLE: Simple 2D vector illustration with bright colors, clean lines, and clear labels for each element. The background must be a single, solid color.
+CRITICAL SAFETY RULE: The final image MUST NOT contain any people, human figures, or body parts. Depict only the scientific objects listed.`;
 
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001',
