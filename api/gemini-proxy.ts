@@ -178,7 +178,7 @@ const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any
 };
 
 const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Promise<DiagramIdea[]> => {
-    const prompt = `You are an expert science educator. Brainstorm 8 essential diagrams to help a Grade ${grade} student understand the chapter "${topic}". For each, provide a 'prompt' for an AI image model (simple, clear, black and white textbook line drawing) and a short 'description' for the student.`;
+    const prompt = `You are an expert science illustrator. Brainstorm 8 essential diagrams for the Grade ${grade} chapter "${topic}". For each, provide a short 'description' for the student, and a detailed 'prompt' for an AI image model. The prompt should describe a clear, colorful, illustrative-style diagram focusing on the scientific concepts, not people. For example: 'A vibrant illustration of the water cycle, showing evaporation, condensation, precipitation, and collection. Use clear labels and arrows. Style: clean, educational, digital illustration.'`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
@@ -252,7 +252,7 @@ Project Description: "${projectDescription}"
 For each of the 5 steps, provide:
 1.  A short, clear "stepTitle".
 2.  Detailed "instructions" for the student to follow.
-3.  A detailed, descriptive "imagePrompt" for an AI image generator. This prompt should be optimized for a model like Imagen to create a high-quality, photorealistic image. It must describe a student (e.g., 'a focused high school student') performing the specific action of the step in a realistic setting (e.g., 'in a well-lit school science lab'). Include details about key objects, lighting, and composition. Example: "Photorealistic, high-resolution photo of a focused high school student wearing safety goggles, carefully pouring a vibrant blue liquid from a glass beaker into a test tube held in a rack. The scene is in a well-lit school science lab with other lab equipment blurred in the background, cinematic lighting."`;
+3.  A detailed, descriptive "imagePrompt" for an AI image generator. The prompt should describe an illustrative-style image focusing on the scientific process or equipment for the step. **Do not describe people or body parts.** The style should be clear, colorful, and educational. Example: 'A clean, digital illustration of a science experiment setup on a lab bench. A glass beaker with vibrant blue liquid is being poured into a test tube. Include labels for "beaker" and "test tube". Style: educational, vector illustration.'`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
