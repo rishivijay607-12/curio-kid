@@ -247,18 +247,41 @@ const generateScienceFairIdeas = async (ai: GoogleGenAI, { userInput }: any): Pr
     return data.ideas;
 };
 
-const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectDescription }: any): Promise<{ stepTitle: string; instructions: string }[]> => {
-    const prompt = `Create a detailed, 5-step plan for a science fair project. Title: "${projectTitle}". Description: "${projectDescription}". For each step, provide a 'stepTitle' and detailed 'instructions'.`;
+const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectDescription }: any): Promise<{ stepTitle: string; instructions: string; imagePrompt: string }[]> => {
+    const prompt = `Create a detailed, 5-step plan for a science fair project.
+Project Title: "${projectTitle}"
+Project Description: "${projectDescription}"
+For each of the 5 steps, provide:
+1.  A short, clear "stepTitle".
+2.  Detailed "instructions" for the student to follow.
+3.  A concise, descriptive "imagePrompt" for an AI image generator. This prompt should describe a photorealistic image of a student performing the action in the step. Example: "A high school student carefully pouring a blue liquid from a beaker into a test tube in a science lab."`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
         config: {
             safetySettings,
             responseMimeType: "application/json",
-            responseSchema: { type: Type.OBJECT, properties: { plan: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stepTitle: { type: Type.STRING }, instructions: { type: Type.STRING } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    plan: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                stepTitle: { type: Type.STRING },
+                                instructions: { type: Type.STRING },
+                                imagePrompt: { type: Type.STRING }
+                            },
+                            required: ['stepTitle', 'instructions', 'imagePrompt']
+                        }
+                    }
+                },
+                required: ['plan']
+            },
         }
     });
-    const data = JSON.parse(response.text) as { plan: { stepTitle: string; instructions: string }[] };
+    const data = JSON.parse(response.text) as { plan: { stepTitle: string; instructions: string; imagePrompt: string }[] };
     return data.plan;
 };
 

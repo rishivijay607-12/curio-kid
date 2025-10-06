@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea, Diagram } from '../types.ts';
 
@@ -85,7 +86,8 @@ export const generateScienceFairIdeas = (userInput: string): Promise<ScienceFair
     return callApi('generateScienceFairIdeas', { userInput });
 };
 
-export const generateScienceFairPlan = (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string }[]> => {
+// FIX: Added `imagePrompt` to the return type to match the server implementation and fix the type error.
+export const generateScienceFairPlan = (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string; imagePrompt: string }[]> => {
     return callApi('generateScienceFairPlan', { projectTitle, projectDescription });
 };
 
