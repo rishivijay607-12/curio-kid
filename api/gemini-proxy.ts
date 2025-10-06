@@ -20,15 +20,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          return res.status(400).json({ error: 'Bad Request: "action" property must be a non-empty string.' });
     }
 
+    const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
+    
+    if (!apiKey) {
+        console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
+        return res.status(500).json({ error: "Configuration Error: The AI service API key is MISSING on the server. Please contact the administrator." });
+    }
+    
+    let ai: GoogleGenAI;
     try {
-        const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
-        
-        if (!apiKey) {
-            console.error('[GEMINI_PROXY_FATAL] The API_KEY (or NEXT_PUBLIC_API_KEY) environment variable is not set on the server.');
-            return res.status(500).json({ error: "The application's AI service is not configured correctly. Please contact the administrator." });
-        }
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-        
+        ai = new GoogleGenAI({ apiKey });
+    } catch (initError) {
+        console.error('[GEMINI_PROXY_FATAL] Failed to initialize GoogleGenAI. The API key might be invalid.', initError);
+        return res.status(500).json({ error: "Configuration Error: The AI service could not be initialized. The provided API key may be INVALID." });
+    }
+
+    try {
         let result;
         switch (action) {
             case 'generateQuizQuestions': result = await generateQuizQuestions(ai, params); break;

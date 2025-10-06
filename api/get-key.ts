@@ -15,7 +15,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     console.error('[GET_KEY_ERROR] The API_KEY (or NEXT_PUBLIC_API_KEY) environment variable is not set on the server.');
     
     // Provide a user-friendly message to the client
-    const userMessage = "The voice tutor is not configured correctly on the server. Please contact support.";
+    const userMessage = "The Voice Tutor is not configured correctly on the server (API key is missing). Please contact the administrator.";
     return res.status(500).json({ error: userMessage });
   }
 
