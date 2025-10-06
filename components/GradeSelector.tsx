@@ -14,7 +14,6 @@ const featureTitles: { [key in AppMode]?: string } = {
     'quiz': 'Interactive Quiz',
     'worksheet': 'Printable Worksheet',
     'notes': 'Quick Study Notes',
-    'diagram': 'Diagram Generator',
     'concept_deep_dive': 'Concept Deep Dive',
     'virtual_lab': 'Virtual Lab',
     'real_world_links': 'Real World Links',

@@ -1,8 +1,9 @@
 
 
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -44,8 +45,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateNotes': result = await generateNotes(ai, params); break;
             case 'getChatResponse': result = await getChatResponse(ai, params); break;
             case 'generateGreeting': result = await generateGreeting(ai, params); break;
-            case 'generateDiagramIdeas': result = await generateDiagramIdeas(ai, params); break;
-            case 'generateDiagramImage': result = await generateDiagramImage(ai, params); break;
             case 'generateTextForMode': result = await generateTextForMode(ai, params); break;
             case 'explainImageWithText': result = await explainImageWithText(ai, params); break;
             case 'generateScienceFairIdeas': result = await generateScienceFairIdeas(ai, params); break;
@@ -176,43 +175,6 @@ const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any
         config: { safetySettings }
     });
     return response.text;
-};
-
-const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Promise<DiagramIdea[]> => {
-    const prompt = `You are a science textbook author. For the Grade ${grade} chapter "${topic}", list 8 core concepts suitable for a diagram.
-For each concept, provide a 'description' which is a simple, factual list of the scientific objects and labels that MUST appear in the diagram.
-**ABSOLUTE RULE: The description must ONLY contain a list of objects. DO NOT describe any actions, people, or body parts.**
-Example: "Plant cell, nucleus, cytoplasm, cell wall, vacuole, chloroplasts".
-Generate a JSON object with a 'diagrams' array.`;
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-            safetySettings,
-            responseMimeType: "application/json",
-            responseSchema: { type: Type.OBJECT, properties: { diagrams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { description: { type: Type.STRING } }, required: ['description'] } } }, required: ['diagrams'] },
-        }
-    });
-    const ideasData = JSON.parse(response.text) as { diagrams: Omit<DiagramIdea, 'id'>[] };
-    return ideasData.diagrams.map((idea) => ({ ...idea, id: generateUniqueId() }));
-};
-
-const generateDiagramImage = async (ai: GoogleGenAI, { description }: any): Promise<string> => {
-    const finalPrompt = `TASK: Generate an educational diagram for a science textbook.
-CONTENT: The diagram must visually represent the following elements: ${description}.
-STYLE: Simple 2D vector illustration with bright colors, clean lines, and clear labels for each element. The background must be a single, solid color.
-CRITICAL SAFETY RULE: The final image MUST NOT contain any people, human figures, or body parts. Depict only the scientific objects listed.`;
-
-    const response = await ai.models.generateImages({
-        model: 'imagen-4.0-generate-001',
-        prompt: finalPrompt,
-        config: { numberOfImages: 1, outputMimeType: 'image/png', aspectRatio: '1:1' },
-    });
-    if (!response.generatedImages?.[0]?.image?.imageBytes) {
-        console.error("Invalid or empty response from image generation API:", JSON.stringify(response, null, 2));
-        throw new Error("Image generation failed to return a valid image.");
-    }
-    return response.generatedImages[0].image.imageBytes;
 };
 
 const generateTextForMode = async (ai: GoogleGenAI, { mode, userInput, grade, topic }: any): Promise<GenerativeTextResult> => {

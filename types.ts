@@ -6,7 +6,6 @@ export type AppMode =
   | 'quiz'
   | 'worksheet'
   | 'notes'
-  | 'diagram'
   | 'doubt_solver'
   | 'chat_with_history'
   | 'concept_deep_dive'
@@ -65,19 +64,6 @@ export interface GroundingChunk {
 export interface GenerativeTextResult {
   text: string;
   sources?: GroundingChunk[];
-}
-
-export interface DiagramIdea {
-  id: string;
-  description: string;
-}
-
-export interface Diagram {
-  id: string;
-  idea: DiagramIdea;
-  image?: string; // base64 data URL, optional now
-  status: 'pending' | 'complete' | 'failed';
-  error?: string;
 }
 
 export interface ScienceFairIdea {

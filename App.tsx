@@ -5,7 +5,7 @@
 
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
 
 // Service Imports
@@ -16,8 +16,6 @@ import {
     generateNotes,
     generateGreeting,
     getChatResponse,
-    generateDiagramIdeas,
-    generateDiagramImage,
     generateTextForMode,
     explainImageWithText,
     generateScienceFairIdeas,
@@ -42,8 +40,6 @@ import Worksheet from './components/Worksheet.tsx';
 import Notes from './components/Notes.tsx';
 import LanguageSelector from './components/LanguageSelector.tsx';
 import DoubtSolver from './components/DoubtSolver.tsx';
-import DiagramIdeaSelector from './components/DiagramIdeaSelector.tsx';
-import DiagramGenerator from './components/DiagramGenerator.tsx';
 import GenerativeText from './components/GenerativeText.tsx';
 import ScienceLens from './components/ScienceLens.tsx';
 import ScienceFairBuddy from './components/ScienceFairBuddy.tsx';
@@ -93,11 +89,6 @@ const App: React.FC = () => {
     const [worksheetQuestions, setWorksheetQuestions] = useState<QuizQuestion[]>([]);
     const [notes, setNotes] = useState<NoteSection[]>([]);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-    const [generationProgress, setGenerationProgress] = useState({ current: 0, total: 0 });
-    const [diagramIdeas, setDiagramIdeas] = useState<DiagramIdea[]>([]);
-    const [diagrams, setDiagrams] = useState<Diagram[]>([]);
-    const [isGenerationCancelled, setIsGenerationCancelled] = useState(false);
-    const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
     const [generativeTextResult, setGenerativeTextResult] = useState<GenerativeTextResult | null>(null);
     const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
     const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
@@ -135,9 +126,6 @@ const App: React.FC = () => {
         setWorksheetQuestions([]);
         setNotes([]);
         setChatHistory([]);
-        setGenerationProgress({ current: 0, total: 0 });
-        setDiagramIdeas([]);
-        setDiagrams([]);
         setGenerativeTextResult(null);
         setScienceLensResult(null);
         setScienceFairIdeas([]);
@@ -335,78 +323,6 @@ const App: React.FC = () => {
         } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
-
-    // Diagram Flow
-    const handleDiagramTopicSelect = async (selectedTopic: string) => {
-        if (!grade) return;
-        setTopic(selectedTopic);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const ideas = await generateDiagramIdeas(selectedTopic, grade);
-            setDiagramIdeas(ideas);
-            setGameState('DIAGRAM_IDEA_SELECTION');
-        } catch (err) { CATCH_BLOCK(err); }
-    };
-
-    const handleGenerateDiagrams = async (selectedIdeas: DiagramIdea[]) => {
-        setGameState('DIAGRAM_DISPLAY');
-        setIsLoading(true);
-        setIsGenerationCancelled(false);
-        setGenerationProgress({ current: 0, total: selectedIdeas.length });
-
-        const initialDiagrams: Diagram[] = selectedIdeas.map(idea => ({
-            id: idea.id,
-            idea,
-            status: 'pending',
-        }));
-        setDiagrams(initialDiagrams);
-        
-        for (const idea of selectedIdeas) {
-            if (isGenerationCancelled) {
-                // Mark remaining as skipped/failed if needed, or just stop
-                break;
-            }
-            try {
-                const imageBytes = await generateDiagramImage(idea.description);
-                setDiagrams(prev => prev.map(d => 
-                    d.id === idea.id 
-                    ? { ...d, status: 'complete', image: `data:image/png;base64,${imageBytes}` }
-                    : d
-                ));
-            } catch (err) {
-                console.error(`Failed to generate image for: ${idea.description}`, err);
-                const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-                setDiagrams(prev => prev.map(d =>
-                    d.id === idea.id
-                    ? { ...d, status: 'failed', error: errorMessage }
-                    : d
-                ));
-            }
-            setGenerationProgress(prev => ({ ...prev, current: prev.current + 1 }));
-        }
-        
-        setIsLoading(false);
-    };
-
-    const handleRegenerateDiagram = async (diagramId: string) => {
-        const diagramToRegen = diagrams.find(d => d.id === diagramId);
-        if (!diagramToRegen) return;
-        
-        setRegeneratingId(diagramId);
-        try {
-            const imageBytes = await generateDiagramImage(diagramToRegen.idea.description);
-            const newImage = `data:image/png;base64,${imageBytes}`;
-            setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, image: newImage, status: 'complete', error: undefined } : d));
-        } catch (err) {
-            console.error('Failed to regenerate diagram', err);
-            const errorMessage = err instanceof Error ? err.message : "Regeneration failed.";
-            setDiagrams(prev => prev.map(d => d.id === diagramId ? { ...d, status: 'failed', error: errorMessage } : d));
-        } finally {
-            setRegeneratingId(null);
-        }
-    };
-
     // Other Generative Features
     const handleGenerateText = async (userInput: string) => {
         setIsLoading(true);
@@ -475,7 +391,6 @@ const App: React.FC = () => {
             case 'TOPIC_SELECTION': return <TopicSelector onTopicSelect={(t) => {
                 setTopic(t);
                 if (appMode === 'notes') handleNotesTopicSelect(t);
-                else if (appMode === 'diagram') handleDiagramTopicSelect(t);
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
                 else setGameState('DIFFICULTY_SELECTION');
@@ -502,9 +417,6 @@ const App: React.FC = () => {
             }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} />;
 
             case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
-            
-            case 'DIAGRAM_IDEA_SELECTION': return <DiagramIdeaSelector ideas={diagramIdeas} onGenerate={handleGenerateDiagrams} />;
-            case 'DIAGRAM_DISPLAY': return <DiagramGenerator diagrams={diagrams} isGenerating={isLoading} grade={grade!} topic={topic!} onRestart={resetToHome} onCancelGeneration={() => setIsGenerationCancelled(true)} generationProgress={generationProgress} onRegenerate={handleRegenerateDiagram} regeneratingId={regeneratingId} />;
             
             case 'generative_text_input': return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerateText} isLoading={isLoading} result={generativeTextResult} error={error} />;
             

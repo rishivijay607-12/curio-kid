@@ -2,7 +2,7 @@
 
 
 import { GoogleGenAI } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, DiagramIdea, Diagram } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
 export class ApiError extends Error {
@@ -65,14 +65,6 @@ export const getChatResponse = (grade: Grade, history: ChatMessage[], language: 
 
 export const generateGreeting = (grade: Grade, language: Language, topic: string): Promise<string> => {
     return callApi('generateGreeting', { grade, language, topic });
-};
-
-export const generateDiagramIdeas = (topic: string, grade: Grade): Promise<DiagramIdea[]> => {
-    return callApi('generateDiagramIdeas', { topic, grade });
-};
-
-export const generateDiagramImage = (description: string): Promise<string> => {
-    return callApi('generateDiagramImage', { description });
 };
 
 export const generateTextForMode = (mode: AppMode, userInput: string, grade?: Grade, topic?: string): Promise<GenerativeTextResult> => {
