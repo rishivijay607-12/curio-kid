@@ -86,8 +86,7 @@ export const generateScienceFairIdeas = (userInput: string): Promise<ScienceFair
     return callApi('generateScienceFairIdeas', { userInput });
 };
 
-// FIX: Added `imagePrompt` to the return type to match the server implementation and fix the type error.
-export const generateScienceFairPlan = (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string; imagePrompt: string }[]> => {
+export const generateScienceFairPlan = (projectTitle: string, projectDescription: string): Promise<{ stepTitle: string; instructions: string }[]> => {
     return callApi('generateScienceFairPlan', { projectTitle, projectDescription });
 };
 

@@ -88,7 +88,6 @@ export interface ScienceFairIdea {
 export interface ScienceFairPlanStep {
     stepTitle: string;
     instructions: string;
-    image: string; // base64 data URL
 }
 
 export interface QuizScore {
