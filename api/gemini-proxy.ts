@@ -10,7 +10,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
     
-    // Stricter validation to prevent crashes from malformed requests
     if (!req.body || typeof req.body !== 'object') {
         return res.status(400).json({ error: 'Bad Request: Missing or malformed JSON body.' });
     }
@@ -22,12 +21,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        // --- Initialization and Validation (Handler Scope) ---
-        if (!process.env.API_KEY) {
-            console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
+        const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
+        
+        if (!apiKey) {
+            console.error('[GEMINI_PROXY_FATAL] The API_KEY (or NEXT_PUBLIC_API_KEY) environment variable is not set on the server.');
             return res.status(500).json({ error: "The application's AI service is not configured correctly. Please contact the administrator." });
         }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: apiKey });
         
         let result;
         switch (action) {
@@ -55,14 +55,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error(`[GEMINI_PROXY_ERROR] Action: "${action}" failed.`);
         console.error(`[PARAMS_DEBUG] ${JSON.stringify(params, null, 2)}`);
         
-        // Enhanced logging for better debugging in Vercel
         console.error('[RAW_ERROR]', error);
 
         let userMessage = "The AI is unable to process your request at the moment. This might be due to high traffic or a content safety block. Please try again with a different prompt.";
         let statusCode = 500;
 
         if (error instanceof Error) {
-            // No need for detailed logging here as the raw error is logged above
             if (error.message.includes('JSON.parse')) {
                  userMessage = "The AI returned a response that could not be understood. This can be a temporary issue. Please try again.";
             } else if (error.message.includes('API key not valid')) {
