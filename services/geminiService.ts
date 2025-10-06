@@ -103,16 +103,6 @@ export const analyzeGenerationFailure = (errorMessage: string): Promise<string> 
     return callApi('analyzeGenerationFailure', { errorMessage });
 };
 
-// Video Generation
-export const startVideoGeneration = (topic: string, grade: Grade): Promise<any> => {
-    return callApi('startVideoGeneration', { topic, grade });
-};
-
-export const checkVideoGenerationStatus = (operation: any): Promise<any> => {
-    return callApi('checkVideoGenerationStatus', { operation });
-};
-
-
 // --- SPECIAL CASE for Voice Tutor ---
 // The 'live' service establishes a direct WebSocket connection and MUST be initialized on the client.
 // This section now fetches the key securely from an API endpoint instead of a build-injected file.

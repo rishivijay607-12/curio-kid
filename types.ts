@@ -7,7 +7,6 @@ export type AppMode =
   | 'worksheet'
   | 'notes'
   | 'diagram'
-  | 'video'
   | 'doubt_solver'
   | 'chat_with_history'
   | 'concept_deep_dive'

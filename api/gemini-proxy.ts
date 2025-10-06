@@ -52,8 +52,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateScientistGreeting': result = await generateScientistGreeting(ai, params); break;
             case 'getHistoricalChatResponse': result = await getHistoricalChatResponse(ai, params); break;
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
-            case 'startVideoGeneration': result = await startVideoGeneration(ai, params); break;
-            case 'checkVideoGenerationStatus': result = await checkVideoGenerationStatus(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -254,7 +252,7 @@ Project Description: "${projectDescription}"
 For each of the 5 steps, provide:
 1.  A short, clear "stepTitle".
 2.  Detailed "instructions" for the student to follow.
-3.  A concise, descriptive "imagePrompt" for an AI image generator. This prompt should describe a photorealistic image of a student performing the action in the step. Example: "A high school student carefully pouring a blue liquid from a beaker into a test tube in a science lab."`;
+3.  A detailed, descriptive "imagePrompt" for an AI image generator. This prompt should be optimized for a model like Imagen to create a high-quality, photorealistic image. It must describe a student (e.g., 'a focused high school student') performing the specific action of the step in a realistic setting (e.g., 'in a well-lit school science lab'). Include details about key objects, lighting, and composition. Example: "Photorealistic, high-resolution photo of a focused high school student wearing safety goggles, carefully pouring a vibrant blue liquid from a glass beaker into a test tube held in a rack. The scene is in a well-lit school science lab with other lab equipment blurred in the background, cinematic lighting."`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
@@ -316,15 +314,4 @@ const analyzeGenerationFailure = async (ai: GoogleGenAI, { errorMessage }: any):
         config: { safetySettings },
     });
     return response.text;
-};
-
-const startVideoGeneration = async (ai: GoogleGenAI, { topic, grade }: any): Promise<any> => {
-    const prompt = `Create a short, engaging, and simple educational video (around 30 seconds) for a Grade ${grade} student about "${topic}". The video should be visually appealing with clear narration. Focus on one key concept from the topic.`;
-    return await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001', prompt, config: { numberOfVideos: 1 }
-    });
-};
-
-const checkVideoGenerationStatus = async (ai: GoogleGenAI, { operation }: any): Promise<any> => {
-    return await ai.operations.getVideosOperation({ operation });
 };
