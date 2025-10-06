@@ -6,16 +6,20 @@ import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSectio
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    // CRITICAL FIX: Prevent crashes by ensuring the body exists before destructuring.
-    if (!req.body) {
-        return res.status(400).json({ error: 'Bad Request: Missing request body.' });
-    }
-
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
     
+    // Stricter validation to prevent crashes from malformed requests
+    if (!req.body || typeof req.body !== 'object') {
+        return res.status(400).json({ error: 'Bad Request: Missing or malformed JSON body.' });
+    }
+
     const { action, params } = req.body;
+
+    if (typeof action !== 'string' || !action) {
+         return res.status(400).json({ error: 'Bad Request: "action" property must be a non-empty string.' });
+    }
 
     try {
         // --- Initialization and Validation (Handler Scope) ---
@@ -50,17 +54,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
         console.error(`[GEMINI_PROXY_ERROR] Action: "${action}" failed.`);
         console.error(`[PARAMS_DEBUG] ${JSON.stringify(params, null, 2)}`);
+        
+        // Enhanced logging for better debugging in Vercel
+        console.error('[RAW_ERROR]', error);
 
         let userMessage = "The AI is unable to process your request at the moment. This might be due to high traffic or a content safety block. Please try again with a different prompt.";
         let statusCode = 500;
 
         if (error instanceof Error) {
-            console.error(`[ERROR_DETAILS] Name: ${error.name}`);
-            console.error(`[ERROR_DETAILS] Message: ${error.message}`);
-            if (error.stack) {
-                console.error(`[ERROR_DETAILS] Stack: ${error.stack}`);
-            }
-            
+            // No need for detailed logging here as the raw error is logged above
             if (error.message.includes('JSON.parse')) {
                  userMessage = "The AI returned a response that could not be understood. This can be a temporary issue. Please try again.";
             } else if (error.message.includes('API key not valid')) {
@@ -69,8 +71,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 userMessage = "The request to the AI timed out. Your request might be too complex. Please try simplifying it.";
                 statusCode = 504; // Gateway Timeout
             }
-        } else {
-            console.error('[ERROR_DETAILS] A non-Error object was thrown:', error);
         }
         
         return res.status(statusCode).json({ error: userMessage });
@@ -133,7 +133,25 @@ const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<No
 };
 
 const getChatResponse = async (ai: GoogleGenAI, { grade, history, language, topic }: any): Promise<string> => {
-    let langInstruction = 'Respond in clear and simple English.';
+    let langInstruction = "Respond in clear and simple English.";
+    switch (language) {
+        case 'English+Tamil':
+            langInstruction = "Respond in a mix of English and Tamil (Tanglish).";
+            break;
+        case 'English+Malayalam':
+            langInstruction = "Respond in a mix of English and Malayalam (Manglish).";
+            break;
+        case 'English+Hindi':
+            langInstruction = "Respond in a mix of English and Hindi (Hinglish).";
+            break;
+        case 'English+Telugu':
+            langInstruction = "Respond in a mix of English and Telugu (Tenglish).";
+            break;
+        case 'English+Kannada':
+            langInstruction = "Respond in a mix of English and Kannada (Kanglish).";
+            break;
+    }
+
     const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **Teaching Method:** NEVER give the full answer at once. Guide the student step-by-step. After one small step, ALWAYS ask a simple question to check for understanding. Use analogies, lists, and short sentences. Be encouraging. Stay on topic.`;
     const response = await ai.models.generateContent({ 
         model: "gemini-2.5-flash", 

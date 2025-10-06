@@ -18,9 +18,9 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // FIX: Reduce file size limit to 3MB to avoid exceeding Vercel's 4.5MB request body limit after Base64 encoding.
-            if (file.size > 3 * 1024 * 1024) { 
-                setFileError('File is too large. Please select an image under 3MB.');
+            // FIX: Reduce file size limit to 2MB to avoid exceeding Vercel's 4.5MB request body limit after Base64 encoding.
+            if (file.size > 2 * 1024 * 1024) { 
+                setFileError('File is too large. Please select an image under 2MB.');
                 return;
             }
             if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -88,7 +88,7 @@ const ScienceLens: React.FC<ScienceLensProps> = ({ onGenerate, isLoading, result
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 <p className="mt-2">Click to upload an image</p>
-                                <p className="text-xs mt-1">(JPG, PNG, WEBP, Max 3MB)</p>
+                                <p className="text-xs mt-1">(JPG, PNG, WEBP, Max 2MB)</p>
                             </div>
                         )}
                     </div>
