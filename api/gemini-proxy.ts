@@ -1,7 +1,3 @@
-
-
-
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
@@ -156,7 +152,7 @@ const getChatResponse = async (ai: GoogleGenAI, { grade, history, language, topi
             break;
     }
 
-    const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **Teaching Method:** NEVER give the full answer at once. Guide the student step-by-step. After one small step, ALWAYS ask a simple question to check for understanding. Use analogies, lists, and short sentences. Be encouraging. Stay on topic.`;
+    const systemInstruction = `You are a friendly and masterful science tutor for a Grade ${grade} student in India. Your name is 'Curio'. The student wants to ask questions specifically about the chapter: "${topic}". Your goal is to teach, not just to answer. ${langInstruction} **CRITICAL TEACHING METHOD:** Your responses MUST be very short, typically one or two sentences. NEVER give a long answer at once. Your primary goal is to guide the student step-by-step. After each small piece of information, ask a simple question to check for understanding. Use analogies and short sentences. Be encouraging. Stay on topic. Only provide a detailed explanation if the student explicitly asks for it (e.g., "explain more", "tell me everything").`;
     const response = await ai.models.generateContent({ 
         model: "gemini-2.5-flash", 
         contents: history, 
@@ -273,7 +269,7 @@ const generateScientistGreeting = async (ai: GoogleGenAI, { scientist }: any): P
 };
 
 const getHistoricalChatResponse = async (ai: GoogleGenAI, { scientist, history }: any): Promise<string> => {
-    const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. Keep responses concise and engaging.`;
+    const systemInstruction = `You are role-playing as ${scientist.name}, the famous ${scientist.field}. Act and speak as this person, from their historical perspective and personality. **CRITICAL INSTRUCTION:** Keep your responses very short and conversational, like a real chat. Your answers should be one or two sentences maximum. Your goal is to be engaging and prompt the user to ask more questions, not to give long lectures. Only provide a detailed explanation if the student explicitly asks for one.`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: history, 
