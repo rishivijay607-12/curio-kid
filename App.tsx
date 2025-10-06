@@ -408,7 +408,7 @@ const App: React.FC = () => {
                 setLanguage(lang);
                 if(appMode === 'doubt_solver') handleStartChat(topic!, lang);
                 else setGameState('VOICE_TUTOR_SESSION');
-            }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} />;
+            }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} isLoading={isLoading} error={error} />;
 
             case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
             
