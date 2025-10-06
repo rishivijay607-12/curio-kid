@@ -8,11 +8,11 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
  * The key is read from server-side environment variables and is never exposed in the source code.
  */
 export default function handler(req: VercelRequest, res: VercelResponse) {
-  const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
+  const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
     // Log a detailed error on the server for debugging
-    console.error('[GET_KEY_ERROR] The API_KEY (or NEXT_PUBLIC_API_KEY) environment variable is not set on the server.');
+    console.error('[GET_KEY_ERROR] The API_KEY environment variable is not set on the server.');
     
     // Provide a user-friendly message to the client
     const userMessage = "The Voice Tutor is not configured correctly on the server (API key is missing). Please contact the administrator.";

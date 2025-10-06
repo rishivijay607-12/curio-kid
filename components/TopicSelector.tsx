@@ -17,7 +17,6 @@ const featureTitles: { [key in AppMode]?: string } = {
     'quiz': 'Interactive Quiz',
     'worksheet': 'Printable Worksheet',
     'notes': 'Quick Study Notes',
-    'flashcards': 'Flashcards',
     'concept_deep_dive': 'Concept Deep Dive',
     'virtual_lab': 'Virtual Lab',
     'real_world_links': 'Real World Links',
@@ -40,7 +39,6 @@ const TopicSelector: React.FC<TopicSelectorProps> = ({ onTopicSelect, grade, isG
         if (isSolverSetup) return 'Preparing your AI tutor...';
         switch(appMode) {
             case 'notes': return 'Generating your notes...';
-            case 'flashcards': return 'Generating your flashcards...';
             default: return 'Loading...';
         }
     }

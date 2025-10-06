@@ -16,7 +16,6 @@ export type AppMode =
   | 'science_lens'
   | 'science_fair_buddy'
   | 'voice_tutor'
-  | 'flashcards'
   | 'leaderboard'
   | 'profile';
 
@@ -67,6 +66,12 @@ export interface GenerativeTextResult {
   sources?: GroundingChunk[];
 }
 
+// FIX: Added the missing 'Flashcard' type definition.
+export interface Flashcard {
+  term: string;
+  definition: string;
+}
+
 export interface ScienceFairIdea {
     id?: string;
     title: string;
@@ -105,9 +110,4 @@ export interface GenerationLogEntry {
     title: string;
     status: GenerationStatus;
     error?: string;
-}
-
-export interface Flashcard {
-  term: string;
-  definition: string;
 }

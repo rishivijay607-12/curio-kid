@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
          return res.status(400).json({ error: 'Bad Request: "action" property must be a non-empty string.' });
     }
 
-    const apiKey = process.env.API_KEY || process.env.NEXT_PUBLIC_API_KEY;
+    const apiKey = process.env.API_KEY;
     
     if (!apiKey) {
         console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
@@ -40,7 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateQuizQuestions': result = await generateQuizQuestions(ai, params); break;
             case 'generateWorksheet': result = await generateWorksheet(ai, params); break;
             case 'generateNotes': result = await generateNotes(ai, params); break;
-            case 'generateFlashcards': result = await generateFlashcards(ai, params); break;
             case 'getChatResponse': result = await getChatResponse(ai, params); break;
             case 'generateGreeting': result = await generateGreeting(ai, params); break;
             case 'generateTextForMode': result = await generateTextForMode(ai, params); break;
@@ -131,39 +130,6 @@ const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<No
     });
     const data = JSON.parse(response.text) as { notes: NoteSection[] };
     return data.notes;
-};
-
-const generateFlashcards = async (ai: GoogleGenAI, { topic, grade }: any): Promise<Flashcard[]> => {
-    const prompt = `You are an expert in creating educational materials. Generate a set of 15 concise flashcards for a Grade ${grade} student studying the chapter "${topic}".
-Each flashcard must have a 'term' (a key concept, name, or item) and a 'definition' (a clear and simple explanation of the term).
-The term should be on the front of the card, and the definition on the back.`;
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash", 
-        contents: prompt,
-        config: {
-            safetySettings,
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    flashcards: {
-                        type: Type.ARRAY,
-                        items: {
-                            type: Type.OBJECT,
-                            properties: {
-                                term: { type: Type.STRING },
-                                definition: { type: Type.STRING }
-                            },
-                            required: ['term', 'definition']
-                        }
-                    }
-                },
-                required: ['flashcards']
-            },
-        },
-    });
-    const data = JSON.parse(response.text) as { flashcards: Flashcard[] };
-    return data.flashcards;
 };
 
 const getChatResponse = async (ai: GoogleGenAI, { grade, history, language, topic }: any): Promise<string> => {

@@ -14,7 +14,6 @@ const featureTitles: { [key in AppMode]?: string } = {
     'quiz': 'Interactive Quiz',
     'worksheet': 'Printable Worksheet',
     'notes': 'Quick Study Notes',
-    'flashcards': 'Flashcards',
     'concept_deep_dive': 'Concept Deep Dive',
     'virtual_lab': 'Virtual Lab',
     'real_world_links': 'Real World Links',
@@ -25,7 +24,7 @@ const featureTitles: { [key in AppMode]?: string } = {
 };
 
 const AtomIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-cyan-400" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={1}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M14.5 3.5C14.5 5.433 12.933 7 11 7s-3.5-1.567-3.5-3.5S9.067 0 11 0s3.5 1.567 3.5 3.5zM11 24c-1.933 0-3.5-1.567-3.5-3.5S9.067 17 11 17s3.5 1.567 3.5 3.5S12.933 24 11 24zM3.5 14.5C1.567 14.5 0 12.933 0 11s1.567-3.5 3.5-3.5S7 9.067 7 11s-1.567 3.5-3.5 3.5zM18.5 14.5C16.567 14.5 15 12.933 15 11s1.567-3.5 3.5-3.5S22 9.067 22 11s-1.567 3.5-3.5 3.5z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M11 21a10 10 0 100-20 10 10 0 000 20z" />
     </svg>
