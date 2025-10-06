@@ -16,6 +16,7 @@ export type AppMode =
   | 'science_lens'
   | 'science_fair_buddy'
   | 'voice_tutor'
+  | 'flashcards'
   | 'leaderboard'
   | 'profile';
 
@@ -104,4 +105,9 @@ export interface GenerationLogEntry {
     title: string;
     status: GenerationStatus;
     error?: string;
+}
+
+export interface Flashcard {
+  term: string;
+  definition: string;
 }
