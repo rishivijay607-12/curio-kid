@@ -179,8 +179,12 @@ const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any
 };
 
 const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Promise<DiagramIdea[]> => {
-    const prompt = `You are an expert science illustrator. Brainstorm 8 essential diagrams for the Grade ${grade} chapter "${topic}". For each, provide a short, clear 'description' of what the diagram should show. This description will be shown to the student.
-Example description: "The life cycle of a butterfly, showing the egg, larva (caterpillar), pupa (chrysalis), and adult butterfly stages."`;
+    const prompt = `You are an expert science illustrator. Brainstorm 8 essential diagrams for the Grade ${grade} chapter "${topic}".
+For each, provide a short, clear 'description' of what the diagram should show.
+**CRITICAL RULE: The descriptions MUST focus on scientific processes, objects, or concepts. DO NOT describe any people, human figures, or body parts.**
+This description will be used to generate an image, so it must be safe and objective.
+Example of a good description: "The water cycle, showing evaporation, condensation, precipitation, and collection."
+Example of a bad description: "A student looking at the water cycle."`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
@@ -195,7 +199,15 @@ Example description: "The life cycle of a butterfly, showing the egg, larva (cat
 };
 
 const generateDiagramImage = async (ai: GoogleGenAI, { description }: any): Promise<string> => {
-    const finalPrompt = `A clear and colorful educational illustration for a science textbook, depicting: "${description}". The style should be simple, clean, and easy to understand for a student. Use clear labels where appropriate. IMPORTANT: Do not include any people, human figures, or text that is not a scientific label.`;
+    const finalPrompt = `Create a very simple, 2D, illustrative-style educational diagram for a science textbook.
+The diagram should depict: "${description}".
+Style guidelines:
+- Use bright, friendly colors.
+- Use clean, simple lines and shapes.
+- The style should be a flat, vector-like illustration.
+- Use clear, minimalist labels for key parts if necessary.
+- **ABSOLUTELY NO people, human figures, or body parts.**
+- The background should be plain white or a simple gradient.`;
 
     const response = await ai.models.generateImages({
         model: 'imagen-4.0-generate-001', 
