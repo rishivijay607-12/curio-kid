@@ -271,7 +271,11 @@ const App: React.FC = () => {
             const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
             setChatHistory([greetingMessage]);
             setGameState('DOUBT_SOLVER_SESSION');
-        } catch (err) { CATCH_BLOCK(err); }
+        } catch (err) {
+            CATCH_BLOCK(err);
+        } finally {
+            setIsLoading(false);
+        }
     };
     
     const handleSendMessage = async (message: string) => {
