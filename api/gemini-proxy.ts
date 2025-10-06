@@ -1,6 +1,7 @@
 
 
 
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
@@ -181,6 +182,14 @@ const generateTextForMode = async (ai: GoogleGenAI, { mode, userInput, grade, to
     let systemInstruction = "You are a helpful and engaging AI science expert.";
     let contents = `My question: "${userInput}"`;
     let useSearch = mode === 'real_world_links';
+
+    if (mode === 'story_weaver') {
+        systemInstruction = `You are a master storyteller for young adults, skilled at weaving scientific concepts into compelling narratives. Your goal is to create an engaging story, not a lesson.`;
+        contents = `Create a short story for a Grade ${grade} student based on the chapter "${topic}". The story should be inspired by the user's idea: "${userInput}".
+        
+CRITICAL INSTRUCTION: The scientific principles from the chapter should be a central part of the plot or the world. DO NOT explain the science like a textbook. Instead, SHOW the science in action through the characters' experiences, the setting, or the challenges they overcome. The narrative and characters are the priority.`;
+    }
+
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents, 

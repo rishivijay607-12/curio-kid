@@ -33,7 +33,7 @@ const featureDetails: { [key in AppMode]?: { title: string; description: string,
     },
     'story_weaver': {
         title: 'AI Story Weaver',
-        description: 'Turn any science concept into a fun, educational story.',
+        description: 'Weave any science concept into a thrilling, imaginative story.',
         placeholder: 'e.g., A story about photosynthesis from the perspective of a leaf.',
         resultTitle: 'Your AI-Crafted Story'
     },
