@@ -5,59 +5,6 @@ import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSectio
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-/**
- * Intelligently extracts a JSON object or array from a string,
- * tolerating markdown code blocks and other text noise from an LLM.
- * @param text The raw text response from the AI model.
- * @returns The parsed JSON object or array.
- * @throws An error if valid JSON cannot be found or parsed.
- */
-function extractJson<T>(text: string): T {
-    // 1. Try to find a markdown-style JSON block first.
-    const markdownMatch = text.match(/```(json)?\s*([\s\S]*?)\s*```/);
-    if (markdownMatch && markdownMatch[2]) {
-        try {
-            return JSON.parse(markdownMatch[2]) as T;
-        } catch (e) {
-            console.warn('Could not parse markdown JSON block, falling back to substring search.', e);
-        }
-    }
-
-    // 2. Fallback to finding the first '{' or '[' and last '}' or ']'.
-    const firstBracket = text.indexOf('{');
-    const firstSquare = text.indexOf('[');
-    
-    let startIndex;
-    if (firstBracket === -1 && firstSquare === -1) {
-        console.error("No JSON object or array found in response text:", text);
-        throw new Error('No JSON object or array found in the AI response.');
-    }
-
-    if (firstBracket === -1) startIndex = firstSquare;
-    else if (firstSquare === -1) startIndex = firstBracket;
-    else startIndex = Math.min(firstBracket, firstSquare);
-
-    const lastBracket = text.lastIndexOf('}');
-    const lastSquare = text.lastIndexOf(']');
-    const endIndex = Math.max(lastBracket, lastSquare);
-
-    if (endIndex === -1 || endIndex < startIndex) {
-        console.error("Could not find a valid JSON structure in response text:", text);
-        throw new Error('Could not find a valid JSON structure in the AI response.');
-    }
-
-    const jsonString = text.substring(startIndex, endIndex + 1);
-    
-    try {
-        return JSON.parse(jsonString) as T;
-    } catch (e) {
-        console.error("Failed to parse extracted JSON string. Raw string:", jsonString);
-        console.error("Full AI response text for debugging:", text);
-        throw new Error('The AI returned a malformed JSON response that could not be parsed.');
-    }
-}
-
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // CRITICAL FIX: Prevent crashes by ensuring the body exists before destructuring.
     if (!req.body) {
@@ -113,11 +60,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (error.stack) {
                 console.error(`[ERROR_DETAILS] Stack: ${error.stack}`);
             }
-
-            if (error.message.includes('API key not valid')) {
+            
+            if (error.message.includes('JSON.parse')) {
+                 userMessage = "The AI returned a response that could not be understood. This can be a temporary issue. Please try again.";
+            } else if (error.message.includes('API key not valid')) {
                 userMessage = "The server is configured with an invalid API key. Please contact the administrator.";
-            } else if (error.message.includes('malformed JSON response')) {
-                userMessage = "The AI returned a response that could not be understood. This can be a temporary issue. Please try again.";
             } else if (error.message.toLowerCase().includes('timeout')) {
                 userMessage = "The request to the AI timed out. Your request might be too complex. Please try simplifying it.";
                 statusCode = 504; // Gateway Timeout
@@ -148,7 +95,7 @@ Generate a set of ${count} unique, multiple-choice science quiz questions based 
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'options', 'answer', 'explanation'] } },
         },
     });
-    return extractJson<QuizQuestion[]>(response.text);
+    return JSON.parse(response.text) as QuizQuestion[];
 };
 
 const generateWorksheet = async (ai: GoogleGenAI, { topic, grade, difficulty, count }: any): Promise<QuizQuestion[]> => {
@@ -167,7 +114,7 @@ For every question, provide a brief, easy-to-understand explanation for the corr
             responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, question: { type: Type.STRING }, options: { type: Type.ARRAY, items: { type: Type.STRING } }, answer: { type: Type.STRING }, explanation: { type: Type.STRING } }, required: ['type', 'question', 'answer', 'explanation'] } },
         },
     });
-    return extractJson<QuizQuestion[]>(response.text);
+    return JSON.parse(response.text) as QuizQuestion[];
 };
 
 const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<NoteSection[]> => {
@@ -181,7 +128,7 @@ const generateNotes = async (ai: GoogleGenAI, { topic, grade }: any): Promise<No
             responseSchema: { type: Type.OBJECT, properties: { notes: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, points: { type: Type.ARRAY, items: { type: Type.STRING } } }, required: ['title', 'points'] } } }, required: ['notes'] },
         },
     });
-    const data = extractJson<{ notes: NoteSection[] }>(response.text);
+    const data = JSON.parse(response.text) as { notes: NoteSection[] };
     return data.notes;
 };
 
@@ -220,7 +167,7 @@ const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Pro
             responseSchema: { type: Type.OBJECT, properties: { diagrams: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { prompt: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['prompt', 'description'] } } }, required: ['diagrams'] },
         }
     });
-    const ideasData = extractJson<{ diagrams: Omit<DiagramIdea, 'id'>[] }>(response.text);
+    const ideasData = JSON.parse(response.text) as { diagrams: Omit<DiagramIdea, 'id'>[] };
     return ideasData.diagrams.map((idea) => ({ ...idea, id: generateUniqueId() }));
 };
 
@@ -273,7 +220,8 @@ const generateScienceFairIdeas = async (ai: GoogleGenAI, { userInput }: any): Pr
             responseSchema: { type: Type.OBJECT, properties: { ideas: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { title: { type: Type.STRING }, description: { type: Type.STRING } }, required: ['title', 'description'] } } }, required: ['ideas'] },
         }
     });
-    return extractJson<{ ideas: ScienceFairIdea[] }>(response.text).ideas;
+    const data = JSON.parse(response.text) as { ideas: ScienceFairIdea[] };
+    return data.ideas;
 };
 
 const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectDescription }: any): Promise<{ stepTitle: string; instructions: string }[]> => {
@@ -287,7 +235,8 @@ const generateScienceFairPlan = async (ai: GoogleGenAI, { projectTitle, projectD
             responseSchema: { type: Type.OBJECT, properties: { plan: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { stepTitle: { type: Type.STRING }, instructions: { type: Type.STRING } }, required: ['stepTitle', 'instructions'] } } }, required: ['plan'] },
         }
     });
-    return extractJson<{ plan: { stepTitle: string; instructions: string }[] }>(response.text).plan;
+    const data = JSON.parse(response.text) as { plan: { stepTitle: string; instructions: string }[] };
+    return data.plan;
 };
 
 const generateScientistGreeting = async (ai: GoogleGenAI, { scientist }: any): Promise<string> => {
