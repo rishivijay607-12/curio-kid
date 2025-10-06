@@ -178,7 +178,14 @@ const generateGreeting = async (ai: GoogleGenAI, { grade, language, topic }: any
 };
 
 const generateDiagramIdeas = async (ai: GoogleGenAI, { topic, grade }: any): Promise<DiagramIdea[]> => {
-    const prompt = `You are an expert science illustrator. Brainstorm 8 essential diagrams for the Grade ${grade} chapter "${topic}". For each, provide a short 'description' for the student, and a detailed 'prompt' for an AI image model. The prompt should describe a clear, colorful, illustrative-style diagram focusing on the scientific concepts, not people. For example: 'A vibrant illustration of the water cycle, showing evaporation, condensation, precipitation, and collection. Use clear labels and arrows. Style: clean, educational, digital illustration.'`;
+    const prompt = `You are an expert science illustrator. Brainstorm 8 essential diagrams for the Grade ${grade} chapter "${topic}". For each, provide:
+1.  A short 'description' for the student.
+2.  A detailed 'prompt' for an AI image generation model.
+**CRITICAL Rules for the prompt:**
+- The prompt MUST describe a clear, colorful, illustrative-style diagram.
+- It MUST focus ONLY on scientific concepts, objects, and processes.
+- It MUST NOT describe or mention any people, humans, students, teachers, or body parts. This is a strict rule to avoid safety blocks.
+- Use simple, direct language. For example: 'A vibrant illustration of the water cycle, showing evaporation, condensation, precipitation, and collection. Use clear labels and arrows. Style: clean, educational, digital illustration.'`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
