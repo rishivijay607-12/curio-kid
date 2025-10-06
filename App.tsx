@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, DiagramIdea, Diagram, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
@@ -226,12 +227,16 @@ const App: React.FC = () => {
     const handleStartFeature = (mode: AppMode) => {
         setAppMode(mode);
         
-        if (['science_lens', 'science_fair_buddy', 'what_if', 'concept_deep_dive', 'virtual_lab', 'story_weaver'].includes(mode)) {
-            setGameState('generative_text_input');
+        // Features that do not require grade/topic selection
+        if (mode === 'science_lens') {
+            setGameState('science_lens');
+        } else if (mode === 'science_fair_buddy') {
+            setGameState('science_fair_buddy');
         } else if (mode === 'chat_with_history') {
             setGameState('HISTORICAL_SCIENTIST_SELECTION');
         } else {
-             setGameState('GRADE_SELECTION');
+            // All other features start by selecting a grade.
+            setGameState('GRADE_SELECTION');
         }
     };
     
