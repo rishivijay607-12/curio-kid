@@ -252,7 +252,12 @@ Project Description: "${projectDescription}"
 For each of the 5 steps, provide:
 1.  A short, clear "stepTitle".
 2.  Detailed "instructions" for the student to follow.
-3.  A detailed, descriptive "imagePrompt" for an AI image generator. The prompt should describe an illustrative-style image focusing on the scientific process or equipment for the step. **Do not describe people or body parts.** The style should be clear, colorful, and educational. Example: 'A clean, digital illustration of a science experiment setup on a lab bench. A glass beaker with vibrant blue liquid is being poured into a test tube. Include labels for "beaker" and "test tube". Style: educational, vector illustration.'`;
+3.  A detailed, descriptive "imagePrompt" for an AI image generator. The prompt must follow these rules:
+    - Describe an illustrative-style image focusing on the scientific process, symbols, or equipment for the step.
+    - **Crucially, do not describe people, faces, or body parts.**
+    - For abstract concepts like 'Research' or 'Analysis', create prompts for symbolic visuals (e.g., a magnifying glass over a book, a brain with gears, a chart with an upward trend) instead of scenes that might imply people.
+    - The style should be clear, colorful, and educational.
+    - Example of a good prompt: 'A clean, digital illustration of a science experiment setup on a lab bench. A glass beaker with vibrant blue liquid is being poured into a test tube. Include labels for "beaker" and "test tube". Style: educational, vector illustration.'`;
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash", 
         contents: prompt,
