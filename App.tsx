@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
 // No longer need to import API_KEY here
@@ -413,7 +407,7 @@ const App: React.FC = () => {
             case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={lang => {
                 setLanguage(lang);
                 if(appMode === 'doubt_solver') handleStartChat(topic!, lang);
-                else setGameState('VOICE_Tutor_SESSION');
+                else setGameState('VOICE_TUTOR_SESSION');
             }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} />;
 
             case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
