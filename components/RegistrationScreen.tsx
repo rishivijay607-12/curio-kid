@@ -43,7 +43,12 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ onRegister, onN
       await onRegister(username.trim(), password);
       // On success, the App component will change the view.
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred during registration.");
+      const rawMessage = err instanceof Error ? err.message : "An unknown error occurred during registration.";
+      if (rawMessage.includes('Missing required environment variables')) {
+          setError("Application Configuration Error: The backend database is not connected. Please contact the administrator to resolve this issue.");
+      } else {
+          setError(rawMessage);
+      }
     } finally {
       setIsLoading(false);
     }

@@ -45,7 +45,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: The 'props' property is inherited from React.Component. Directly access 'children' via 'this.props.children' to render child components.
+    // FIX: Correctly access 'props' via 'this.props' in a class component.
     return this.props.children;
   }
 }

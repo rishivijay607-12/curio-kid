@@ -33,7 +33,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onNavigateToRegister
       await onLogin(username.trim(), password.trim());
       // On success, the App component will change the view.
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      const rawMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+      if (rawMessage.includes('Missing required environment variables')) {
+          setError("Application Configuration Error: The backend database is not connected. Please contact the administrator to resolve this issue.");
+      } else {
+          setError(rawMessage);
+      }
     } finally {
       setIsLoading(false);
     }
