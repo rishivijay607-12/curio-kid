@@ -1,37 +1,58 @@
+
 import type { QuizScore, User, UserProfile } from '../types';
 
-// --- localStorage Keys ---
-const USERS_KEY = 'curiosity_users';
-const PROFILES_KEY = 'curiosity_profiles';
-const SCORES_KEY = 'curiosity_scores';
+// Custom error for API responses, consistent with other services.
+export class ApiError extends Error {
+    public status: number;
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+    }
+}
+
+// --- localStorage Key for client-side session management ---
 const CURRENT_USER_KEY = 'curiosity_current_user';
 
-// --- Helper Functions for localStorage ---
-const getStoredData = <T>(key: string, defaultValue: T): T => {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : defaultValue;
-    } catch (e) {
-        console.warn(`Could not read from localStorage key "${key}":`, e);
-        return defaultValue;
-    }
-};
+// --- Helper function to call our secure serverless user DB ---
+async function callUserApi<T>(action: string, params: object, user?: User | null): Promise<T> {
+    const response = await fetch('/api/user-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, params, user }), // Pass user for admin auth
+    });
 
-const setStoredData = (key: string, data: any): void => {
-    try {
-        localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-        console.warn(`Could not write to localStorage key "${key}":`, e);
+    // We attempt to parse JSON on both success and error, as our API should return it.
+    const responseData = await response.json().catch(() => {
+        // If JSON parsing fails, create a generic error object
+        return { error: `Server returned a non-JSON response with status ${response.status}` };
+    });
+
+    if (!response.ok) {
+        const errorMessage = responseData.error || `Server Error: ${response.status}`;
+        throw new ApiError(errorMessage, response.status);
     }
-};
+    
+    return responseData as T;
+}
 
 // --- Local Session Management ---
 const saveCurrentUser = (user: User) => {
-    setStoredData(CURRENT_USER_KEY, user);
+    try {
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    } catch (e) {
+        console.warn(`Could not write to localStorage key "${CURRENT_USER_KEY}":`, e);
+    }
 };
 
 export const getCurrentUser = (): User | null => {
-    return getStoredData<User | null>(CURRENT_USER_KEY, null);
+    try {
+        const item = localStorage.getItem(CURRENT_USER_KEY);
+        return item ? JSON.parse(item) : null;
+    } catch (e) {
+        console.warn(`Could not read from localStorage key "${CURRENT_USER_KEY}":`, e);
+        return null;
+    }
 };
 
 export const logout = (): void => {
@@ -42,165 +63,54 @@ export const logout = (): void => {
     }
 };
 
-// --- Profile Creation ---
-const createProfile = (username: string): UserProfile => {
-    const profiles = getStoredData<Record<string, UserProfile>>(PROFILES_KEY, {});
-    if (profiles[username]) {
-        return profiles[username];
-    }
-    const newProfile: UserProfile = {
-        quizzesCompleted: 0,
-        totalScore: 0,
-        currentStreak: 0,
-        lastQuizDate: null,
-    };
-    profiles[username] = newProfile;
-    setStoredData(PROFILES_KEY, profiles);
-    return newProfile;
-};
 
-
-// --- Auth Functions (Now Local) ---
+// --- Auth Functions (Now hitting the API) ---
 export const register = async (username: string, password: string): Promise<User> => {
-    const users = getStoredData<Record<string, any>>(USERS_KEY, {});
+    // Call the API to create the user account in the central DB.
+    await callUserApi('register', { username, password });
     
-    if (!username || !password) throw new Error("Username and password are required.");
-    if (password.length < 6) throw new Error("Password must be at least 6 characters long.");
-    if (username.toLowerCase() === 'rishi') throw new Error("This username is reserved.");
-    if (users[username]) {
-        throw new Error("Username already exists.");
-    }
-    
-    // NOTE: Storing password in plaintext is acceptable for a localStorage-based demo/offline app.
-    // Do NOT do this in a real production app with a backend.
-    users[username] = { username, password, isAdmin: false };
-    setStoredData(USERS_KEY, users);
-    
-    createProfile(username);
-    
-    // Automatically log in after registration
+    // After successful registration, log the user in to create a local session.
+    // This is cleaner as `login` is the single source of truth for session creation.
     return login(username, password);
 };
 
 export const login = async (username: string, password: string): Promise<User> => {
-    const users = getStoredData<Record<string, any>>(USERS_KEY, {});
-    
-    // Initialize admin user if it doesn't exist
-    if (!users['Rishi']) {
-        users['Rishi'] = { username: 'Rishi', password: '134679', isAdmin: true };
-        setStoredData(USERS_KEY, users);
-        createProfile('Rishi');
-    }
-
-    const storedUser = users[username];
-
-    if (!storedUser || storedUser.password !== password) {
-        throw new Error("Invalid username or password.");
-    }
-
-    const userToReturn: User = {
-        username: storedUser.username,
-        isAdmin: storedUser.isAdmin,
-    };
-    
-    saveCurrentUser(userToReturn);
-    return userToReturn;
+    const user = await callUserApi<User>('login', { username, password });
+    saveCurrentUser(user); // Save session locally after successful login from API
+    return user;
 };
 
-// --- Data Functions (Now Local) ---
-export const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
-    const allScores = getStoredData<QuizScore[]>(SCORES_KEY, []);
-    const newScore: QuizScore = {
-        username,
-        score,
-        total,
-        date: new Date().toISOString(),
-        percentage: total > 0 ? Math.round((score / total) * 100) : 0,
-    };
-    allScores.push(newScore);
-    setStoredData(SCORES_KEY, allScores);
-
-    // Update profile stats
-    const profiles = getStoredData<Record<string, UserProfile>>(PROFILES_KEY, {});
-    const profile = profiles[username];
-    if (profile) {
-        profile.quizzesCompleted += 1;
-        profile.totalScore += score;
-
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
-        if(lastQuizDay) lastQuizDay.setHours(0, 0, 0, 0);
-
-        if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
-            const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-            profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
-            profile.lastQuizDate = today.toISOString();
-        }
-        setStoredData(PROFILES_KEY, profiles);
-    }
+// --- Data Functions (Now hitting the API) ---
+export const addQuizScore = async (username:string, score: number, total: number): Promise<void> => {
+    // The username is sufficient for the API to identify the profile.
+    return callUserApi('addQuizScore', { username, score, total });
 };
 
 export const getLeaderboard = async (): Promise<QuizScore[]> => {
-    const allScores = getStoredData<QuizScore[]>(SCORES_KEY, []);
-    
-    // Get the best score for each user
-    const bestScores: { [username: string]: QuizScore } = {};
-    for (const score of allScores) {
-        if (!bestScores[score.username] || score.percentage > bestScores[score.username].percentage) {
-            bestScores[score.username] = score;
-        }
-    }
-    
-    const leaderboard = Object.values(bestScores);
-    leaderboard.sort((a, b) => b.percentage - a.percentage || b.score - a.score);
-    return leaderboard.slice(0, 20);
+    return callUserApi('getLeaderboard', {});
 };
 
 export const getProfile = async (username: string): Promise<UserProfile> => {
-    const profiles = getStoredData<Record<string, UserProfile>>(PROFILES_KEY, {});
-    if (!profiles[username]) {
-        return createProfile(username);
-    }
-    return profiles[username];
+    return callUserApi('getProfile', { username });
 };
 
-// --- Admin Functions (Now Local) ---
+// --- Admin Functions (Now hitting the API with authentication) ---
 export const getAllUsers = async (): Promise<{ username: string }[]> => {
-    const users = getStoredData<Record<string, any>>(USERS_KEY, {});
-    return Object.values(users).map(u => ({ username: u.username }));
+    return callUserApi('getAllUsers', {}, getCurrentUser());
 };
 
 export const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
-    return getStoredData<Record<string, UserProfile>>(PROFILES_KEY, {});
+    return callUserApi('getAllProfiles', {}, getCurrentUser());
 };
 
 export const getAllScores = async (): Promise<QuizScore[]> => {
-    return getStoredData<QuizScore[]>(SCORES_KEY, []);
+    return callUserApi('getAllScores', {}, getCurrentUser());
 };
 
 export const deleteUser = async (usernameToDelete: string): Promise<void> => {
-    if (usernameToDelete === 'Rishi') throw new Error("Cannot delete the admin account.");
-
-    const users = getStoredData<Record<string, any>>(USERS_KEY, {});
-    delete users[usernameToDelete];
-    setStoredData(USERS_KEY, users);
-
-    const profiles = getStoredData<Record<string, UserProfile>>(PROFILES_KEY, {});
-    delete profiles[usernameToDelete];
-    setStoredData(PROFILES_KEY, profiles);
-
-    let scores = getStoredData<QuizScore[]>(SCORES_KEY, []);
-    scores = scores.filter(s => s.username !== usernameToDelete);
-    setStoredData(SCORES_KEY, scores);
+    return callUserApi('deleteUser', { usernameToDelete }, getCurrentUser());
 };
 
 export const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
-    if (username === 'Rishi') throw new Error("Admin password cannot be changed from the panel.");
-    if (!newPassword || newPassword.length < 6) throw new Error("Password must be at least 6 characters.");
-    
-    const users = getStoredData<Record<string, any>>(USERS_KEY, {});
-    if (!users[username]) throw new Error("User not found.");
-    
-    users[username].password = newPassword;
-    setStoredData(USERS_KEY, users);
+    return callUserApi('editUserPassword', { username, newPassword }, getCurrentUser());
 };
