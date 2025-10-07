@@ -8,9 +8,7 @@
   },
   "private": true,
   "dependencies": {
-    "@google/genai": "^0.14.0",
-    "@vercel/kv": "^2.0.0",
-    "bcryptjs": "^2.4.3"
+    "@google/genai": "^0.14.0"
   },
   "devDependencies": {
     "@netlify/functions": "^2.6.0",
