@@ -45,8 +45,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // FIX: The success case must return the children from within the render method.
-    // In a class component, props are accessed on the instance via `this.props`.
+    // FIX: Correctly access props on a class component instance using `this.props`.
     return this.props.children;
   }
 }
