@@ -1,5 +1,6 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import type { KV } from '@vercel/kv';
 import bcrypt from 'bcryptjs';
 import type { QuizScore, User, UserProfile } from '../types';
 
@@ -18,25 +19,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
+    
+    // Gracefully handle missing KV environment variables
+    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+        console.error('[USER_DB_FATAL] Vercel KV environment variables (KV_REST_API_URL, KV_REST_API_TOKEN) are not set.');
+        return res.status(500).json({
+            error: "Configuration Error: The application's user database is not connected. Please ask the administrator to link a Vercel KV store to this project."
+        });
+    }
+
     const { action, params, user: clientUser } = req.body;
 
     try {
-        await initializeAdmin(); // Ensure admin user exists
+        // Lazily import 'kv' only after checking for env vars
+        const { kv } = await import('@vercel/kv');
+        
+        await initializeAdmin(kv); // Ensure admin user exists
 
         let result;
         switch (action) {
-            case 'register': result = await register(params); break;
-            case 'login': result = await login(params); break;
-            case 'getProfile': result = await getProfile(params); break;
-            case 'addQuizScore': result = await addQuizScore(params); break;
-            case 'getLeaderboard': result = await getLeaderboard(); break;
+            case 'register': result = await register(kv, params); break;
+            case 'login': result = await login(kv, params); break;
+            case 'getProfile': result = await getProfile(kv, params); break;
+            case 'addQuizScore': result = await addQuizScore(kv, params); break;
+            case 'getLeaderboard': result = await getLeaderboard(kv); break;
             
             // Admin actions - require verification
-            case 'getAllUsers': await verifyAdmin(clientUser); result = await getAllUsers(); break;
-            case 'getAllProfiles': await verifyAdmin(clientUser); result = await getAllProfiles(); break;
-            case 'getAllScores': await verifyAdmin(clientUser); result = await getAllScores(); break;
-            case 'deleteUser': await verifyAdmin(clientUser); result = await deleteUser(params); break;
-            case 'editUserPassword': await verifyAdmin(clientUser); result = await editUserPassword(params); break;
+            case 'getAllUsers': await verifyAdmin(kv, clientUser); result = await getAllUsers(kv); break;
+            case 'getAllProfiles': await verifyAdmin(kv, clientUser); result = await getAllProfiles(kv); break;
+            case 'getAllScores': await verifyAdmin(kv, clientUser); result = await getAllScores(kv); break;
+            case 'deleteUser': await verifyAdmin(kv, clientUser); result = await deleteUser(kv, params); break;
+            case 'editUserPassword': await verifyAdmin(kv, clientUser); result = await editUserPassword(kv, params); break;
             
             default: throw new ApiError('Invalid action specified', 400);
         }
@@ -50,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 // --- User Management ---
-const createProfile = async (username: string): Promise<UserProfile> => {
+const createProfile = async (kv: KV, username: string): Promise<UserProfile> => {
     const key = `profiles:${username}`;
     const existingProfile: UserProfile | null = await kv.get(key);
     if (existingProfile) return existingProfile;
@@ -65,7 +78,7 @@ const createProfile = async (username: string): Promise<UserProfile> => {
     return newProfile;
 };
 
-const register = async ({ username, password }: any): Promise<User> => {
+const register = async (kv: KV, { username, password }: any): Promise<User> => {
     if (!username || !password) throw new ApiError("Username and password are required.", 400);
     if (password.length < 6) throw new ApiError("Password must be at least 6 characters long.", 400);
     if (username.toLowerCase() === 'rishi') throw new ApiError("This username is reserved.", 400);
@@ -81,12 +94,12 @@ const register = async ({ username, password }: any): Promise<User> => {
     const userWithPassword = { ...newUser, password: hashedPassword };
 
     await kv.set(key, userWithPassword);
-    await createProfile(username);
+    await createProfile(kv, username);
 
     return newUser; // Return user object without password
 };
 
-const login = async ({ username, password }: any): Promise<User> => {
+const login = async (kv: KV, { username, password }: any): Promise<User> => {
     if (!username || !password) throw new ApiError("Username and password are required.", 400);
 
     const key = `users:${username}`;
@@ -107,7 +120,7 @@ const login = async ({ username, password }: any): Promise<User> => {
 
 
 // --- Data Management ---
-const addQuizScore = async ({ username, score, total }: any): Promise<void> => {
+const addQuizScore = async (kv: KV, { username, score, total }: any): Promise<void> => {
     const scores: QuizScore[] = await kv.get('scores') || [];
     const newScore: QuizScore = {
         username,
@@ -146,13 +159,13 @@ const addQuizScore = async ({ username, score, total }: any): Promise<void> => {
     }
 };
 
-const getProfile = async ({ username }: any): Promise<UserProfile> => {
+const getProfile = async (kv: KV, { username }: any): Promise<UserProfile> => {
     const profile: UserProfile | null = await kv.get(`profiles:${username}`);
-    if (!profile) return createProfile(username);
+    if (!profile) return createProfile(kv, username);
     return profile;
 };
 
-const getLeaderboard = async (): Promise<QuizScore[]> => {
+const getLeaderboard = async (kv: KV): Promise<QuizScore[]> => {
     const scores: QuizScore[] = await kv.get('scores') || [];
     scores.sort((a, b) => b.percentage - a.percentage || b.score - a.score);
     return scores.slice(0, 20);
@@ -160,22 +173,22 @@ const getLeaderboard = async (): Promise<QuizScore[]> => {
 
 
 // --- Admin ---
-const initializeAdmin = async () => {
+const initializeAdmin = async (kv: KV) => {
     const adminUser: User | null = await kv.get('users:Rishi');
     if (!adminUser) {
         const hashedPassword = await bcrypt.hash('134679', 10);
         await kv.set('users:Rishi', { username: 'Rishi', isAdmin: true, password: hashedPassword });
-        await createProfile('Rishi');
+        await createProfile(kv, 'Rishi');
     }
 };
 
-const verifyAdmin = async (clientUser: User | null) => {
+const verifyAdmin = async (kv: KV, clientUser: User | null) => {
     if (!clientUser || !clientUser.username) throw new ApiError("Authentication required.", 401);
     const storedUser: User | null = await kv.get(`users:${clientUser.username}`);
     if (!storedUser || !storedUser.isAdmin) throw new ApiError("Forbidden: Admin access required.", 403);
 };
 
-const getAllUsers = async (): Promise<{ username: string }[]> => {
+const getAllUsers = async (kv: KV): Promise<{ username: string }[]> => {
     const userKeys = [];
     for await (const key of kv.scanIterator({ match: 'users:*' })) {
         userKeys.push(key);
@@ -184,7 +197,7 @@ const getAllUsers = async (): Promise<{ username: string }[]> => {
     return users.map(u => ({ username: u.username }));
 };
 
-const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
+const getAllProfiles = async (kv: KV): Promise<Record<string, UserProfile>> => {
     const profileKeys: string[] = [];
     for await (const key of kv.scanIterator({ match: 'profiles:*' })) {
         profileKeys.push(key);
@@ -200,11 +213,11 @@ const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
     return profileMap;
 };
 
-const getAllScores = async (): Promise<QuizScore[]> => {
+const getAllScores = async (kv: KV): Promise<QuizScore[]> => {
     return await kv.get('scores') || [];
 };
 
-const deleteUser = async ({ usernameToDelete }: any): Promise<void> => {
+const deleteUser = async (kv: KV, { usernameToDelete }: any): Promise<void> => {
     if (usernameToDelete === 'Rishi') throw new ApiError("Cannot delete the admin account.", 403);
     await kv.del(`users:${usernameToDelete}`);
     await kv.del(`profiles:${usernameToDelete}`);
@@ -213,7 +226,7 @@ const deleteUser = async ({ usernameToDelete }: any): Promise<void> => {
     await kv.set('scores', updatedScores);
 };
 
-const editUserPassword = async ({ username, newPassword }: any): Promise<void> => {
+const editUserPassword = async (kv: KV, { username, newPassword }: any): Promise<void> => {
     if (username === 'Rishi') throw new ApiError("Admin password cannot be changed from the panel.", 403);
     if (!newPassword || newPassword.length < 6) throw new ApiError("Password must be at least 6 characters.", 400);
 
