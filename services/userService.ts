@@ -1,263 +1,103 @@
 import type { QuizScore, User, UserProfile } from '../types';
 
-const USERS_KEY = 'curiosity_users';
-const PROFILES_KEY = 'curiosity_profiles';
-const SCORES_KEY = 'curiosity_scores';
 const CURRENT_USER_KEY = 'curiosity_current_user';
 
-// --- Storage Availability Check ---
-const isStorageAvailable = (): boolean => {
+class ApiError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ApiError';
+    }
+}
+
+// --- API Helper ---
+const callDbApi = async <T>(action: string, params: object = {}): Promise<T> => {
+    const currentUser = getCurrentUser(); // Get user from local storage for auth
+    const response = await fetch('/api/user-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, params, user: currentUser }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new ApiError(data.error || `Server error: ${response.status}`);
+    }
+
+    return data as T;
+};
+
+// --- Local Session Management ---
+const saveCurrentUser = (user: User) => {
     try {
-        const testKey = '__curiosity_storage_test__';
-        localStorage.setItem(testKey, testKey);
-        localStorage.removeItem(testKey);
-        return true;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     } catch (e) {
-        console.warn("localStorage is not available. User data will not be saved.");
-        return false;
+        console.warn("Could not save user session to localStorage.");
     }
-};
-const storageAvailable = isStorageAvailable();
-
-
-// --- Helper Functions ---
-const getFromStorage = <T>(key: string, defaultValue: T): T => {
-  if (!storageAvailable) return defaultValue;
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (e) {
-    console.error(`Failed to parse ${key} from localStorage`, e);
-    return defaultValue;
-  }
-};
-
-const saveToStorage = (key: string, value: any) => {
-  if (!storageAvailable) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error(`Failed to save ${key} to localStorage`, e);
-  }
-};
-
-const removeFromStorage = (key: string) => {
-    if (!storageAvailable) return;
-    try {
-        localStorage.removeItem(key);
-    } catch (e) {
-        console.error(`Failed to remove ${key} from localStorage`, e);
-    }
-};
-
-// --- Profile Management ---
-const createProfile = async (username: string): Promise<UserProfile> => {
-    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
-    if (profiles[username]) {
-        return profiles[username]; // Profile already exists
-    }
-    const newProfile: UserProfile = {
-        quizzesCompleted: 0,
-        totalScore: 0,
-        currentStreak: 0,
-        lastQuizDate: null,
-    };
-    profiles[username] = newProfile;
-    saveToStorage(PROFILES_KEY, profiles);
-    return newProfile;
-}
-
-export const getProfile = async (username: string): Promise<UserProfile> => {
-    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
-    if (!profiles[username]) {
-        return createProfile(username);
-    }
-    return profiles[username];
-}
-
-export const updateProfile = async (username: string, updatedProfile: UserProfile): Promise<UserProfile> => {
-    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
-    profiles[username] = updatedProfile;
-    saveToStorage(PROFILES_KEY, profiles);
-    return updatedProfile;
-}
-
-// --- Admin Account Initialization ---
-const initializeAdmin = () => {
-    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-    if (!users['Rishi']) {
-        users['Rishi'] = '134679'; // In a real app, hash the password!
-        saveToStorage(USERS_KEY, users);
-        createProfile('Rishi');
-    }
-};
-
-// Safely run initialization only if storage is available
-if (storageAvailable) {
-    try {
-        initializeAdmin();
-    } catch(e) {
-        console.error("Critical error during admin initialization:", e);
-    }
-}
-
-
-// --- Auth Management ---
-export const register = async (username: string, password: string): Promise<User> => {
-  if (!storageAvailable) {
-      throw new Error("User registration is disabled because browser storage is not accessible.");
-  }
-  if (username.toLowerCase() === 'rishi') {
-    throw new Error("This username is reserved.");
-  }
-  const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-  if (users[username]) {
-    throw new Error("Username already exists.");
-  }
-  users[username] = password; // In a real app, hash the password!
-  saveToStorage(USERS_KEY, users);
-  await createProfile(username);
-  return { username, isAdmin: false };
-};
-
-export const login = async (username: string, password: string): Promise<User> => {
-  if (!storageAvailable) {
-      throw new Error("Login is disabled because browser storage is not accessible.");
-  }
-  const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-  if (!users[username] || users[username] !== password) {
-    throw new Error("Invalid username or password.");
-  }
-  const isAdmin = username === 'Rishi' && password === '134679';
-  const user = { username, isAdmin };
-  saveToStorage(CURRENT_USER_KEY, user);
-  return user;
-};
-
-export const logout = (): void => {
-  removeFromStorage(CURRENT_USER_KEY);
 };
 
 export const getCurrentUser = (): User | null => {
-  return getFromStorage<User | null>(CURRENT_USER_KEY, null);
+    try {
+        const item = localStorage.getItem(CURRENT_USER_KEY);
+        return item ? JSON.parse(item) : null;
+    } catch (e) {
+        console.warn("Could not read user session from localStorage.");
+        return null;
+    }
 };
 
-
-// --- Leaderboard/Score Management ---
-export const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
-    if (!storageAvailable) return; // Silently fail if storage is off
-    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
-    
-    const newScore: QuizScore = {
-      username,
-      score,
-      total,
-      date: new Date().toISOString(),
-      percentage: total > 0 ? Math.round((score / total) * 100) : 0,
-    };
-
-    // Keep only the user's best score
-    const userScores = scores.filter(s => s.username === username);
-    const otherScores = scores.filter(s => s.username !== username);
-    
-    if (userScores.length > 0) {
-        const bestScore = userScores.reduce((best, current) => current.percentage > best.percentage ? current : best);
-        if (newScore.percentage > bestScore.percentage) {
-            saveToStorage(SCORES_KEY, [...otherScores, newScore]);
-        }
-    } else {
-         scores.push(newScore);
-         saveToStorage(SCORES_KEY, scores);
+export const logout = (): void => {
+    try {
+        localStorage.removeItem(CURRENT_USER_KEY);
+    } catch (e) {
+        console.warn("Could not clear user session from localStorage.");
     }
-
-    // Update user profile stats
-    const profile = await getProfile(username);
-    profile.quizzesCompleted += 1;
-    profile.totalScore += score;
-    
-    // Streak logic
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
-    if(lastQuizDay) {
-        lastQuizDay.setHours(0, 0, 0, 0);
-    }
-   
-    if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
-
-        if (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) {
-            profile.currentStreak += 1;
-        } else {
-            profile.currentStreak = 1;
-        }
-        profile.lastQuizDate = today.toISOString();
-    }
-    
-    await updateProfile(username, profile);
 };
 
-export const getLeaderboard = async (): Promise<QuizScore[]> => {
-    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
-    // Sort scores by percentage desc, then score desc
-    scores.sort((a, b) => {
-      if (b.percentage !== a.percentage) {
-        return b.percentage - a.percentage;
-      }
-      return b.score - a.score;
-    });
-    return scores.slice(0, 20); // Return top 20
+// --- Auth Functions ---
+export const register = async (username: string, password: string): Promise<User> => {
+    const user = await callDbApi<User>('register', { username, password });
+    // After successful registration, log the user in to create a session
+    await login(username, password);
+    return user;
 };
 
+export const login = async (username: string, password: string): Promise<User> => {
+    const user = await callDbApi<User>('login', { username, password });
+    saveCurrentUser(user);
+    return user;
+};
+
+// --- Data Functions ---
+export const addQuizScore = (username: string, score: number, total: number): Promise<void> => {
+    return callDbApi('addQuizScore', { username, score, total });
+};
+
+export const getLeaderboard = (): Promise<QuizScore[]> => {
+    return callDbApi<QuizScore[]>('getLeaderboard');
+};
+
+export const getProfile = (username: string): Promise<UserProfile> => {
+    return callDbApi<UserProfile>('getProfile', { username });
+};
 
 // --- Admin Functions ---
-export const getAllUsers = async (): Promise<{username: string}[]> => {
-    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-    return Object.keys(users).map(username => ({ username }));
+export const getAllUsers = (): Promise<{ username: string }[]> => {
+    return callDbApi<{ username: string }[]>('getAllUsers');
 };
 
-export const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
-    return getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
+export const getAllProfiles = (): Promise<Record<string, UserProfile>> => {
+    return callDbApi<Record<string, UserProfile>>('getAllProfiles');
 };
 
-export const getAllScores = async (): Promise<QuizScore[]> => {
-    return getFromStorage<QuizScore[]>(SCORES_KEY, []);
+export const getAllScores = (): Promise<QuizScore[]> => {
+    return callDbApi<QuizScore[]>('getAllScores');
 };
 
-export const deleteUser = async (usernameToDelete: string): Promise<void> => {
-    if (!storageAvailable) throw new Error("Storage not available.");
-    if (usernameToDelete === 'Rishi') {
-        throw new Error("Cannot delete the admin account.");
-    }
-
-    const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-    delete users[usernameToDelete];
-    saveToStorage(USERS_KEY, users);
-
-    const profiles = getFromStorage<Record<string, UserProfile>>(PROFILES_KEY, {});
-    delete profiles[usernameToDelete];
-    saveToStorage(PROFILES_KEY, profiles);
-
-    const scores = getFromStorage<QuizScore[]>(SCORES_KEY, []);
-    const updatedScores = scores.filter(score => score.username !== usernameToDelete);
-    saveToStorage(SCORES_KEY, updatedScores);
+export const deleteUser = (usernameToDelete: string): Promise<void> => {
+    return callDbApi('deleteUser', { usernameToDelete });
 };
 
-export const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
-    if (!storageAvailable) throw new Error("Storage not available.");
-    if (username === 'Rishi') {
-        throw new Error("Cannot change the admin password from the panel.");
-    }
-    if (newPassword && newPassword.length >= 6) {
-        const users = getFromStorage<Record<string, string>>(USERS_KEY, {});
-        if(users[username]) {
-            users[username] = newPassword;
-            saveToStorage(USERS_KEY, users);
-        } else {
-            throw new Error("User not found.");
-        }
-    } else {
-        throw new Error("Password must be at least 6 characters long.");
-    }
+export const editUserPassword = (username: string, newPassword?: string): Promise<void> => {
+    return callDbApi('editUserPassword', { username, newPassword });
 };
