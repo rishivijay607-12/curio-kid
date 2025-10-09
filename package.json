@@ -10,7 +10,8 @@
   "private": true,
   "dependencies": {
     "@google/genai": "^0.14.0",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^2.4.3",
+    "@vercel/kv": "^1.0.1"
   },
   "devDependencies": {
     "@netlify/functions": "^2.6.0",
