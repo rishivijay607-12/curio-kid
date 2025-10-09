@@ -225,7 +225,12 @@ const getAllUsers = async (): Promise<{ username: string }[]> => {
     const userKeys = await kv.keys('user:*');
     if (userKeys.length === 0) return [];
     const users = await kv.mget<StoredUser[]>(...userKeys);
-    // FIX: Filter out potential null values from mget before mapping to prevent runtime errors.
+    
+    // FIX: Check if the entire mget result is null, which can happen.
+    if (!users) {
+        return [];
+    }
+
     return users.filter((u): u is StoredUser => u !== null).map(u => ({ username: u.username }));
 };
 
@@ -233,10 +238,15 @@ const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
     const profileKeys = await kv.keys('profile:*');
      if (profileKeys.length === 0) return {};
     const profiles = await kv.mget<UserProfile[]>(...profileKeys);
+    
+    // FIX: Check if the entire mget result is null.
+    if (!profiles) {
+        return {};
+    }
+
     const profileMap: Record<string, UserProfile> = {};
     profileKeys.forEach((key, index) => {
         const profile = profiles[index];
-        // FIX: Ensure profile is not null before adding to the map to keep data clean.
         if (profile) {
             const username = key.replace('profile:', '');
             profileMap[username] = profile;
@@ -249,7 +259,13 @@ const getAllScores = async (): Promise<QuizScore[]> => {
     const scoreKeys = await kv.keys('score:*');
     if(scoreKeys.length === 0) return [];
     const scores = await kv.mget<QuizScore[]>(...scoreKeys);
-    return scores.filter(Boolean); // Filter out any nulls if keys were deleted
+    
+    // FIX: Check if the entire mget result is null.
+    if (!scores) {
+        return [];
+    }
+
+    return scores.filter((score): score is QuizScore => score !== null);
 };
 
 const deleteUser = async (usernameToDelete: string): Promise<void> => {
