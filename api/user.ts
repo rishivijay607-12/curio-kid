@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { kv } from '@vercel/kv';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import type { QuizScore, User, UserProfile } from '../types';
 
 // More specific type for stored user data, including password hash
