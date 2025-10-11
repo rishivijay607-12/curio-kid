@@ -154,19 +154,25 @@ const register = async (username: string, password: string): Promise<User> => {
 };
 
 const login = async (username: string, password: string): Promise<User> => {
-    // FIX: Add robust validation for incoming parameters to prevent crashes from invalid data types.
     if (!username || typeof username !== 'string' || !password || typeof password !== 'string') {
-        // Use 401 to avoid user enumeration.
         throw new ApiError("Invalid username or password.", 401);
     }
 
     const storedUser = await kv.get<StoredUser>(`user:${username}`);
-    // Check for user existence and a valid password hash to prevent crashes on malformed data.
     if (!storedUser || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
         throw new ApiError("Invalid username or password.", 401);
     }
+    
+    let isPasswordValid = false;
+    try {
+        isPasswordValid = await bcrypt.compare(password, storedUser.passwordHash);
+    } catch (compareError) {
+        console.error(`[Bcrypt Error] Password comparison failed for user "${username}". This could be due to an invalid hash format in the database.`, compareError);
+        // An error during comparison means the password is not valid.
+        // We log the error on the server but return a standard auth error to the client.
+        throw new ApiError("Invalid username or password.", 401);
+    }
 
-    const isPasswordValid = await bcrypt.compare(password, storedUser.passwordHash);
     if (!isPasswordValid) {
         throw new ApiError("Invalid username or password.", 401);
     }
