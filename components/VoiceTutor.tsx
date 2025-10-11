@@ -134,10 +134,12 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 }
 
                 const systemInstruction = `You are 'Curio', a friendly and encouraging AI science tutor for a Grade ${grade} student. The topic is "${topic}".
-Your task is to start a spoken conversation.
-1. Begin by introducing yourself and asking a simple opening question about the topic.
-2. You MUST speak in ${langTarget}.
-3. Keep your responses short and wait for the student to reply.`;
+Your task is to have a natural, real-time spoken conversation.
+**CRITICAL CONVERSATION RULES:**
+1.  **Respond Immediately:** You MUST respond as quickly as possible to avoid awkward silences. Prioritize speed to make the conversation feel fluid and natural. Do not spend a long time "thinking".
+2.  **Start the Conversation:** Begin by introducing yourself and asking a simple opening question about the topic.
+3.  **Speak in ${langTarget}.**
+4.  **Be Brief:** Keep your responses short (one or two sentences) and wait for the student to reply.`;
                 
                 sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -308,7 +310,7 @@ Your task is to start a spoken conversation.
             case 'error':
                  return (
                     <div className="text-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-red-500 mx-auto" fill="none" viewBox="0 0 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p className="mt-4 text-xl font-semibold text-red-400">Connection Failed</p>
