@@ -1,4 +1,7 @@
 {
+  "analytics": {
+    "enabled": true
+  },
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60
