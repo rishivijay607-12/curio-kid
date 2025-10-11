@@ -150,7 +150,10 @@ const register = async (username: string, password: string): Promise<User> => {
 
 const login = async (username: string, password: string): Promise<User> => {
     const storedUser = await kv.get<StoredUser>(`user:${username}`);
-    if (!storedUser) {
+    // Add robust check for user existence AND a valid password hash.
+    // This prevents a server crash if the user record is malformed (e.g., missing passwordHash).
+    if (!storedUser || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
+        // For security, give the same error for non-existent user or malformed record.
         throw new ApiError("Invalid username or password.", 401);
     }
 
@@ -239,7 +242,6 @@ const getAllUsers = async (): Promise<{ username: string }[]> => {
     if (userKeys.length === 0) return [];
     const users = await kv.mget<StoredUser[]>(...userKeys);
     
-    // FIX: Check if the entire mget result is null, which can happen.
     if (!users) {
         return [];
     }
@@ -252,7 +254,6 @@ const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
      if (profileKeys.length === 0) return {};
     const profiles = await kv.mget<UserProfile[]>(...profileKeys);
     
-    // FIX: Check if the entire mget result is null.
     if (!profiles) {
         return {};
     }
@@ -273,7 +274,6 @@ const getAllScores = async (): Promise<QuizScore[]> => {
     if(scoreKeys.length === 0) return [];
     const scores = await kv.mget<QuizScore[]>(...scoreKeys);
     
-    // FIX: Check if the entire mget result is null.
     if (!scores) {
         return [];
     }
