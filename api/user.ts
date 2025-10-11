@@ -1,16 +1,28 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@vercel/kv';
+import { createClient, VercelKV } from '@vercel/kv';
 import * as bcrypt from 'bcryptjs';
 import type { QuizScore, User, UserProfile } from '../types';
 
-// --- Manual KV Client Initialization ---
-// This makes the app resilient to Vercel's automatic environment variable injection failing.
-// It will now explicitly use the variables provided by the Redis integration.
-const kv = createClient({
-    url: process.env.REDIS_URL,
-    token: process.env.REDIS_TOKEN,
-});
+let kv: VercelKV | null = null;
+
+// --- KV Client Getter ---
+// Lazily initializes the client to prevent crashes on module load if env vars are missing.
+const getKvClient = (): VercelKV => {
+    if (kv) {
+        return kv;
+    }
+    // This check is now robust because it's called within the handler's lifecycle.
+    if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) {
+        // This specific error message will be caught by the main handler and shown to the user.
+        throw new Error('Database is not configured correctly on the server. Please contact the administrator.');
+    }
+    kv = createClient({
+        url: process.env.REDIS_URL,
+        token: process.env.REDIS_TOKEN,
+    });
+    return kv;
+};
 
 
 // More specific type for stored user data, including password hash
@@ -32,7 +44,8 @@ class ApiError extends Error {
 const initializeAdmin = async () => {
     try {
         const adminUsername = 'Rishi';
-        const adminExists = await kv.exists(`user:${adminUsername}`);
+        const kvClient = getKvClient();
+        const adminExists = await kvClient.exists(`user:${adminUsername}`);
         if (!adminExists) {
             const passwordHash = await bcrypt.hash('134679', 10);
             const adminUser: StoredUser = { username: adminUsername, isAdmin: true, passwordHash };
@@ -43,8 +56,8 @@ const initializeAdmin = async () => {
                 lastQuizDate: null,
             };
             await Promise.all([
-                kv.set(`user:${adminUsername}`, adminUser),
-                kv.set(`profile:${adminUsername}`, adminProfile)
+                kvClient.set(`user:${adminUsername}`, adminUser),
+                kvClient.set(`profile:${adminUsername}`, adminProfile)
             ]);
             console.log('Admin user "Rishi" created in KV store.');
         }
@@ -56,6 +69,7 @@ const initializeAdmin = async () => {
     }
 };
 
+// We call this, but errors are caught so it doesn't crash the app on boot if config is missing.
 initializeAdmin().catch(console.error);
 
 
@@ -63,10 +77,6 @@ initializeAdmin().catch(console.error);
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
-    }
-
-    if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) {
-        return res.status(500).json({ error: 'Database is not configured correctly on the server. Please contact the administrator.' });
     }
 
     const { action, params } = req.body;
@@ -126,13 +136,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         let userMessage = 'An internal server error occurred.';
         if (error instanceof Error) {
-            const lowerCaseMessage = error.message.toLowerCase();
-            if (lowerCaseMessage.includes('kv_rest_api_url') || lowerCaseMessage.includes('kv_rest_api_token') || lowerCaseMessage.includes('redis_url')) {
-                 userMessage = 'Database is not configured correctly on the server. Please contact the administrator.';
-            } else if (error.message.includes('Unauthorized')) {
-                userMessage = 'Authentication with the database failed. This could be an invalid token.';
-            } else if (lowerCaseMessage.includes('fetch') || lowerCaseMessage.includes('connect')) {
-                userMessage = 'Could not connect to the user database. A network issue may be preventing server communication.';
+            // The specific error from getKvClient will be caught here
+            if (error.message.includes('Database is not configured correctly')) {
+                userMessage = error.message;
             }
         }
         
@@ -151,7 +157,8 @@ const register = async (username: string, password: string): Promise<User> => {
         throw new ApiError("Password must be at least 6 characters long.", 400);
     }
     
-    const userExists = await kv.exists(`user:${username}`);
+    const kvClient = getKvClient();
+    const userExists = await kvClient.exists(`user:${username}`);
     if (userExists) {
         throw new ApiError("Username already exists.", 409);
     }
@@ -166,8 +173,8 @@ const register = async (username: string, password: string): Promise<User> => {
     };
 
     await Promise.all([
-        kv.set(`user:${username}`, newUser),
-        kv.set(`profile:${username}`, newProfile)
+        kvClient.set(`user:${username}`, newUser),
+        kvClient.set(`profile:${username}`, newProfile)
     ]);
 
     const { passwordHash: _, ...userToReturn } = newUser;
@@ -179,7 +186,8 @@ const login = async (username: string, password: string): Promise<User> => {
         throw new ApiError("Invalid username or password.", 401);
     }
 
-    const storedUser = await kv.get<StoredUser>(`user:${username}`);
+    const kvClient = getKvClient();
+    const storedUser = await kvClient.get<StoredUser>(`user:${username}`);
     if (!storedUser || typeof storedUser !== 'object' || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
         throw new ApiError("Invalid username or password.", 401);
     }
@@ -201,6 +209,7 @@ const login = async (username: string, password: string): Promise<User> => {
 };
 
 const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
+    const kvClient = getKvClient();
     const newScore: QuizScore = {
         username,
         score,
@@ -208,10 +217,10 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         date: new Date().toISOString(),
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
-    await kv.zadd('scores', { score: newScore.percentage, member: `${username}:${newScore.date}` });
-    await kv.set(`score:${username}:${newScore.date}`, newScore); 
+    await kvClient.zadd('scores', { score: newScore.percentage, member: `${username}:${newScore.date}` });
+    await kvClient.set(`score:${username}:${newScore.date}`, newScore); 
 
-    const profile = await kv.get<UserProfile>(`profile:${username}`);
+    const profile = await kvClient.get<UserProfile>(`profile:${username}`);
     if (profile) {
         profile.quizzesCompleted += 1;
         profile.totalScore += score;
@@ -225,12 +234,13 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
             profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
             profile.lastQuizDate = today.toISOString();
         }
-        await kv.set(`profile:${username}`, profile);
+        await kvClient.set(`profile:${username}`, profile);
     }
 };
 
 const getProfile = async (username: string): Promise<UserProfile> => {
-    const profile = await kv.get<UserProfile>(`profile:${username}`);
+    const kvClient = getKvClient();
+    const profile = await kvClient.get<UserProfile>(`profile:${username}`);
     if (!profile) {
         throw new ApiError("Profile not found.", 404);
     }
@@ -238,10 +248,11 @@ const getProfile = async (username: string): Promise<UserProfile> => {
 };
 
 const getLeaderboard = async (): Promise<QuizScore[]> => {
-    const scoreKeys = await kv.zrevrange('scores', 0, 100); 
+    const kvClient = getKvClient();
+    const scoreKeys = await kvClient.zrevrange('scores', 0, 100); 
     if (scoreKeys.length === 0) return [];
 
-    const allScores: (QuizScore | null)[] = await kv.mget(...scoreKeys.map(key => `score:${key}`));
+    const allScores: (QuizScore | null)[] = await kvClient.mget(...scoreKeys.map(key => `score:${key}`));
     
     const bestScores: { [username: string]: QuizScore } = {};
     for (const score of allScores) {
@@ -263,16 +274,18 @@ const verifyAdmin = async (currentUser: User | null) => {
     if (!currentUser?.username) {
         throw new ApiError("Authentication required.", 401);
     }
-    const user = await kv.get<StoredUser>(`user:${currentUser.username}`);
+    const kvClient = getKvClient();
+    const user = await kvClient.get<StoredUser>(`user:${currentUser.username}`);
     if (!user || !user.isAdmin) {
         throw new ApiError("Forbidden: Admin access required.", 403);
     }
 };
 
 const getAllUsers = async (): Promise<{ username: string }[]> => {
-    const userKeys = await kv.keys('user:*');
+    const kvClient = getKvClient();
+    const userKeys = await kvClient.keys('user:*');
     if (userKeys.length === 0) return [];
-    const users = await kv.mget<StoredUser[]>(...userKeys);
+    const users = await kvClient.mget<StoredUser[]>(...userKeys);
     
     if (!users) {
         return [];
@@ -282,9 +295,10 @@ const getAllUsers = async (): Promise<{ username: string }[]> => {
 };
 
 const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
-    const profileKeys = await kv.keys('profile:*');
+    const kvClient = getKvClient();
+    const profileKeys = await kvClient.keys('profile:*');
      if (profileKeys.length === 0) return {};
-    const profiles = await kv.mget<UserProfile[]>(...profileKeys);
+    const profiles = await kvClient.mget<UserProfile[]>(...profileKeys);
     
     if (!profiles) {
         return {};
@@ -302,9 +316,10 @@ const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
 };
 
 const getAllScores = async (): Promise<QuizScore[]> => {
-    const scoreKeys = await kv.keys('score:*');
+    const kvClient = getKvClient();
+    const scoreKeys = await kvClient.keys('score:*');
     if(scoreKeys.length === 0) return [];
-    const scores = await kv.mget<QuizScore[]>(...scoreKeys);
+    const scores = await kvClient.mget<QuizScore[]>(...scoreKeys);
     
     if (!scores) {
         return [];
@@ -316,23 +331,25 @@ const getAllScores = async (): Promise<QuizScore[]> => {
 const deleteUser = async (usernameToDelete: string): Promise<void> => {
     if (usernameToDelete === 'Rishi') throw new ApiError("Cannot delete the admin account.", 403);
     
-    await kv.del(`user:${usernameToDelete}`, `profile:${usernameToDelete}`);
+    const kvClient = getKvClient();
+    await kvClient.del(`user:${usernameToDelete}`, `profile:${usernameToDelete}`);
     
-    const scoreKeys = await kv.keys(`score:${usernameToDelete}:*`);
-    if(scoreKeys.length > 0) await kv.del(...scoreKeys);
+    const scoreKeys = await kvClient.keys(`score:${usernameToDelete}:*`);
+    if(scoreKeys.length > 0) await kvClient.del(...scoreKeys);
 
-    const scoreMembers = await kv.zrange('scores', 0, -1);
+    const scoreMembers = await kvClient.zrange('scores', 0, -1);
     const userScoreMembers = scoreMembers.filter(member => typeof member === 'string' && member.startsWith(`${usernameToDelete}:`));
-    if(userScoreMembers.length > 0) await kv.zrem('scores', ...userScoreMembers);
+    if(userScoreMembers.length > 0) await kvClient.zrem('scores', ...userScoreMembers);
 };
 
 const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
     if (username === 'Rishi') throw new ApiError("Admin password cannot be changed from the panel.", 403);
     if (!newPassword || newPassword.length < 6) throw new ApiError("Password must be at least 6 characters.", 400);
 
-    const user = await kv.get<StoredUser>(`user:${username}`);
+    const kvClient = getKvClient();
+    const user = await kvClient.get<StoredUser>(`user:${username}`);
     if (!user) throw new ApiError("User not found.", 404);
 
     user.passwordHash = await bcrypt.hash(newPassword, 10);
-    await kv.set(`user:${username}`, user);
+    await kvClient.set(`user:${username}`, user);
 };
