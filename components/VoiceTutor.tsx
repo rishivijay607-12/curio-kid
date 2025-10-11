@@ -128,26 +128,16 @@ const VoiceTutor: React.FC<VoiceTutorProps> = ({ grade, topic, language, onEndSe
                 const outputNode = outputAudioContextRef.current.createGain();
                 outputNode.connect(outputAudioContextRef.current.destination);
                 
-                let langInstruction = "Engage the student in a spoken conversation in clear and simple English.";
-                switch (language) {
-                    case 'English+Tamil':
-                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Tamil (Tanglish).";
-                        break;
-                    case 'English+Malayalam':
-                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Malayalam (Manglish).";
-                        break;
-                    case 'English+Hindi':
-                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Hindi (Hinglish).";
-                        break;
-                    case 'English+Telugu':
-                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Telugu (Tenglish).";
-                        break;
-                    case 'English+Kannada':
-                        langInstruction = "Engage the student in a spoken conversation in a mix of English and Kannada (Kanglish).";
-                        break;
+                let langTarget = 'clear and simple English';
+                if (language !== 'English') {
+                    langTarget = `a friendly mix of English and ${language.split('+')[1]}`;
                 }
 
-                let systemInstruction = `You are a friendly, patient, and encouraging AI science tutor named 'Curio' for a Grade ${grade} student. The current topic is "${topic}". ${langInstruction} Ask questions, explain concepts clearly, and guide them through the topic.`;
+                const systemInstruction = `You are 'Curio', a friendly and encouraging AI science tutor for a Grade ${grade} student. The topic is "${topic}".
+Your task is to start a spoken conversation.
+1. Begin by introducing yourself and asking a simple opening question about the topic.
+2. You MUST speak in ${langTarget}.
+3. Keep your responses short and wait for the student to reply.`;
                 
                 sessionPromiseRef.current = live.connect({
                     model: 'gemini-2.5-flash-native-audio-preview-09-2025',
