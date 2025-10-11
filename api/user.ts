@@ -100,8 +100,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error instanceof ApiError) {
             return res.status(error.status).json({ error: error.message });
         }
+        
+        // Log the detailed error for server-side debugging
         console.error(`[USER_API_ERROR] Action: "${action}" failed:`, error);
-        return res.status(500).json({ error: 'An internal server error occurred.' });
+
+        // Provide a more helpful, but still safe, error message to the client
+        let userMessage = 'An internal server error occurred.';
+        if (error instanceof Error && error.message.includes('Unauthorized')) {
+            // This suggests the KV_REST_API_TOKEN is wrong or missing.
+            userMessage = 'Authentication with the database failed. This is a server configuration issue.';
+        } else if (error instanceof Error && (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('connect'))) {
+            // This is a strong indicator of a network or connection problem to the KV store.
+            userMessage = 'Could not connect to the user database. Please ensure the server is configured correctly.';
+        }
+        
+        return res.status(500).json({ error: userMessage });
     }
 }
 
