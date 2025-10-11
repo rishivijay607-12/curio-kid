@@ -1,27 +1,26 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, VercelKV } from '@vercel/kv';
+import { createClient, RedisClientType } from 'redis';
 import * as bcrypt from 'bcryptjs';
 import type { QuizScore, User, UserProfile } from '../types';
 
-let kv: VercelKV | null = null;
+let redisClient: RedisClientType | null = null;
 
-// --- KV Client Getter ---
-// Lazily initializes the client to prevent crashes on module load if env vars are missing.
-const getKvClient = (): VercelKV => {
-    if (kv) {
-        return kv;
+// --- Redis Client Getter ---
+// Lazily initializes the client to ensure it's created only when needed.
+const getRedisClient = async (): Promise<RedisClientType> => {
+    if (redisClient && redisClient.isOpen) {
+        return redisClient;
     }
-    // This check is now robust because it's called within the handler's lifecycle.
-    if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) {
-        // This specific error message will be caught by the main handler and shown to the user.
-        throw new Error('Database is not configured correctly on the server. Please contact the administrator.');
+    if (!process.env.REDIS_URL) {
+        throw new Error('Database is not configured correctly on the server. The REDIS_URL environment variable is missing.');
     }
-    kv = createClient({
+    redisClient = createClient({
         url: process.env.REDIS_URL,
-        token: process.env.REDIS_TOKEN,
     });
-    return kv;
+    redisClient.on('error', (err) => console.error('Redis Client Error', err));
+    await redisClient.connect();
+    return redisClient;
 };
 
 
@@ -40,12 +39,12 @@ class ApiError extends Error {
     }
 }
 
-// --- Initialize Admin Account in KV ---
+// --- Initialize Admin Account in Redis ---
 const initializeAdmin = async () => {
     try {
         const adminUsername = 'Rishi';
-        const kvClient = getKvClient();
-        const adminExists = await kvClient.exists(`user:${adminUsername}`);
+        const client = await getRedisClient();
+        const adminExists = await client.exists(`user:${adminUsername}`);
         if (!adminExists) {
             const passwordHash = await bcrypt.hash('134679', 10);
             const adminUser: StoredUser = { username: adminUsername, isAdmin: true, passwordHash };
@@ -56,20 +55,18 @@ const initializeAdmin = async () => {
                 lastQuizDate: null,
             };
             await Promise.all([
-                kvClient.set(`user:${adminUsername}`, adminUser),
-                kvClient.set(`profile:${adminUsername}`, adminProfile)
+                client.set(`user:${adminUsername}`, JSON.stringify(adminUser)),
+                client.set(`profile:${adminUsername}`, JSON.stringify(adminProfile))
             ]);
-            console.log('Admin user "Rishi" created in KV store.');
+            console.log('Admin user "Rishi" created in Redis store.');
         }
     } catch (e) {
-        // Suppress initialization errors if DB isn't configured yet during build.
-        if (process.env.NODE_ENV !== 'development') {
-            console.warn('Could not initialize admin user, KV store might not be configured yet.');
+         if (process.env.NODE_ENV !== 'development') {
+            console.warn('Could not initialize admin user, Redis store might not be configured yet.', e);
         }
     }
 };
 
-// We call this, but errors are caught so it doesn't crash the app on boot if config is missing.
 initializeAdmin().catch(console.error);
 
 
@@ -136,7 +133,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         let userMessage = 'An internal server error occurred.';
         if (error instanceof Error) {
-            // The specific error from getKvClient will be caught here
             if (error.message.includes('Database is not configured correctly')) {
                 userMessage = error.message;
             }
@@ -157,8 +153,8 @@ const register = async (username: string, password: string): Promise<User> => {
         throw new ApiError("Password must be at least 6 characters long.", 400);
     }
     
-    const kvClient = getKvClient();
-    const userExists = await kvClient.exists(`user:${username}`);
+    const client = await getRedisClient();
+    const userExists = await client.exists(`user:${username}`);
     if (userExists) {
         throw new ApiError("Username already exists.", 409);
     }
@@ -173,8 +169,8 @@ const register = async (username: string, password: string): Promise<User> => {
     };
 
     await Promise.all([
-        kvClient.set(`user:${username}`, newUser),
-        kvClient.set(`profile:${username}`, newProfile)
+        client.set(`user:${username}`, JSON.stringify(newUser)),
+        client.set(`profile:${username}`, JSON.stringify(newProfile))
     ]);
 
     const { passwordHash: _, ...userToReturn } = newUser;
@@ -186,9 +182,14 @@ const login = async (username: string, password: string): Promise<User> => {
         throw new ApiError("Invalid username or password.", 401);
     }
 
-    const kvClient = getKvClient();
-    const storedUser = await kvClient.get<StoredUser>(`user:${username}`);
-    if (!storedUser || typeof storedUser !== 'object' || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
+    const client = await getRedisClient();
+    const userJson = await client.get(`user:${username}`);
+    if (!userJson) {
+         throw new ApiError("Invalid username or password.", 401);
+    }
+
+    const storedUser: StoredUser = JSON.parse(userJson);
+    if (typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
         throw new ApiError("Invalid username or password.", 401);
     }
     
@@ -196,7 +197,7 @@ const login = async (username: string, password: string): Promise<User> => {
     try {
         isPasswordValid = await bcrypt.compare(password, storedUser.passwordHash);
     } catch (compareError) {
-        console.error(`[Bcrypt Error] Password comparison failed for user "${username}". This could be due to an invalid hash format in the database.`, compareError);
+        console.error(`[Bcrypt Error] Password comparison failed for user "${username}".`, compareError);
         throw new ApiError("Invalid username or password.", 401);
     }
 
@@ -209,7 +210,7 @@ const login = async (username: string, password: string): Promise<User> => {
 };
 
 const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
-    const kvClient = getKvClient();
+    const client = await getRedisClient();
     const newScore: QuizScore = {
         username,
         score,
@@ -217,11 +218,14 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         date: new Date().toISOString(),
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
-    await kvClient.zadd('scores', { score: newScore.percentage, member: `${username}:${newScore.date}` });
-    await kvClient.set(`score:${username}:${newScore.date}`, newScore); 
+    
+    const scoreKey = `score:${username}:${newScore.date}`;
+    await client.zAdd('scores', { score: newScore.percentage, value: scoreKey });
+    await client.set(scoreKey, JSON.stringify(newScore));
 
-    const profile = await kvClient.get<UserProfile>(`profile:${username}`);
-    if (profile) {
+    const profileJson = await client.get(`profile:${username}`);
+    if (profileJson) {
+        const profile: UserProfile = JSON.parse(profileJson);
         profile.quizzesCompleted += 1;
         profile.totalScore += score;
         
@@ -234,32 +238,31 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
             profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
             profile.lastQuizDate = today.toISOString();
         }
-        await kvClient.set(`profile:${username}`, profile);
+        await client.set(`profile:${username}`, JSON.stringify(profile));
     }
 };
 
 const getProfile = async (username: string): Promise<UserProfile> => {
-    const kvClient = getKvClient();
-    const profile = await kvClient.get<UserProfile>(`profile:${username}`);
-    if (!profile) {
+    const client = await getRedisClient();
+    const profileJson = await client.get(`profile:${username}`);
+    if (!profileJson) {
         throw new ApiError("Profile not found.", 404);
     }
-    return profile;
+    return JSON.parse(profileJson);
 };
 
 const getLeaderboard = async (): Promise<QuizScore[]> => {
-    const kvClient = getKvClient();
-    const scoreKeys = await kvClient.zrevrange('scores', 0, 100); 
+    const client = await getRedisClient();
+    const scoreKeys = await client.zRange('scores', 0, 100, { REV: true });
     if (scoreKeys.length === 0) return [];
-
-    const allScores: (QuizScore | null)[] = await kvClient.mget(...scoreKeys.map(key => `score:${key}`));
     
+    const scoreJsonArray = await client.mGet(scoreKeys);
+    const allScores: QuizScore[] = scoreJsonArray.filter(s => s).map(s => JSON.parse(s!));
+
     const bestScores: { [username: string]: QuizScore } = {};
     for (const score of allScores) {
-        if(score){
-             if (!bestScores[score.username] || score.percentage > bestScores[score.username].percentage) {
-                bestScores[score.username] = score;
-            }
+        if (!bestScores[score.username] || score.percentage > bestScores[score.username].percentage) {
+            bestScores[score.username] = score;
         }
     }
     
@@ -274,35 +277,33 @@ const verifyAdmin = async (currentUser: User | null) => {
     if (!currentUser?.username) {
         throw new ApiError("Authentication required.", 401);
     }
-    const kvClient = getKvClient();
-    const user = await kvClient.get<StoredUser>(`user:${currentUser.username}`);
-    if (!user || !user.isAdmin) {
+    const client = await getRedisClient();
+    const userJson = await client.get(`user:${currentUser.username}`);
+    if (!userJson) throw new ApiError("Forbidden: Admin access required.", 403);
+
+    const user: StoredUser = JSON.parse(userJson);
+    if (!user.isAdmin) {
         throw new ApiError("Forbidden: Admin access required.", 403);
     }
 };
 
 const getAllUsers = async (): Promise<{ username: string }[]> => {
-    const kvClient = getKvClient();
-    const userKeys = await kvClient.keys('user:*');
+    const client = await getRedisClient();
+    const userKeys = await client.keys('user:*');
     if (userKeys.length === 0) return [];
-    const users = await kvClient.mget<StoredUser[]>(...userKeys);
-    
-    if (!users) {
-        return [];
-    }
 
-    return users.filter((u): u is StoredUser => u !== null).map(u => ({ username: u.username }));
+    const userJsonArray = await client.mGet(userKeys);
+    const users: StoredUser[] = userJsonArray.filter(u => u).map(u => JSON.parse(u!));
+    return users.map(u => ({ username: u.username }));
 };
 
 const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
-    const kvClient = getKvClient();
-    const profileKeys = await kvClient.keys('profile:*');
-     if (profileKeys.length === 0) return {};
-    const profiles = await kvClient.mget<UserProfile[]>(...profileKeys);
+    const client = await getRedisClient();
+    const profileKeys = await client.keys('profile:*');
+    if (profileKeys.length === 0) return {};
     
-    if (!profiles) {
-        return {};
-    }
+    const profileJsonArray = await client.mGet(profileKeys);
+    const profiles: UserProfile[] = profileJsonArray.filter(p => p).map(p => JSON.parse(p!));
 
     const profileMap: Record<string, UserProfile> = {};
     profileKeys.forEach((key, index) => {
@@ -316,40 +317,36 @@ const getAllProfiles = async (): Promise<Record<string, UserProfile>> => {
 };
 
 const getAllScores = async (): Promise<QuizScore[]> => {
-    const kvClient = getKvClient();
-    const scoreKeys = await kvClient.keys('score:*');
+    const client = await getRedisClient();
+    const scoreKeys = await client.keys('score:*');
     if(scoreKeys.length === 0) return [];
-    const scores = await kvClient.mget<QuizScore[]>(...scoreKeys);
     
-    if (!scores) {
-        return [];
-    }
-
-    return scores.filter((score): score is QuizScore => score !== null);
+    const scoreJsonArray = await client.mGet(scoreKeys);
+    return scoreJsonArray.filter(s => s).map(s => JSON.parse(s!));
 };
 
 const deleteUser = async (usernameToDelete: string): Promise<void> => {
     if (usernameToDelete === 'Rishi') throw new ApiError("Cannot delete the admin account.", 403);
     
-    const kvClient = getKvClient();
-    await kvClient.del(`user:${usernameToDelete}`, `profile:${usernameToDelete}`);
+    const client = await getRedisClient();
+    const scoreKeys = await client.keys(`score:${usernameToDelete}:*`);
+    const keysToDelete = [`user:${usernameToDelete}`, `profile:${usernameToDelete}`, ...scoreKeys];
+    await client.del(keysToDelete);
     
-    const scoreKeys = await kvClient.keys(`score:${usernameToDelete}:*`);
-    if(scoreKeys.length > 0) await kvClient.del(...scoreKeys);
-
-    const scoreMembers = await kvClient.zrange('scores', 0, -1);
-    const userScoreMembers = scoreMembers.filter(member => typeof member === 'string' && member.startsWith(`${usernameToDelete}:`));
-    if(userScoreMembers.length > 0) await kvClient.zrem('scores', ...userScoreMembers);
+    const scoreMembers = await client.zRange('scores', 0, -1);
+    const userScoreMembers = scoreMembers.filter(member => member.startsWith(`${usernameToDelete}:`));
+    if(userScoreMembers.length > 0) await client.zRem('scores', userScoreMembers);
 };
 
 const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
     if (username === 'Rishi') throw new ApiError("Admin password cannot be changed from the panel.", 403);
     if (!newPassword || newPassword.length < 6) throw new ApiError("Password must be at least 6 characters.", 400);
 
-    const kvClient = getKvClient();
-    const user = await kvClient.get<StoredUser>(`user:${username}`);
-    if (!user) throw new ApiError("User not found.", 404);
+    const client = await getRedisClient();
+    const userJson = await client.get(`user:${username}`);
+    if (!userJson) throw new ApiError("User not found.", 404);
 
+    const user: StoredUser = JSON.parse(userJson);
     user.passwordHash = await bcrypt.hash(newPassword, 10);
-    await kvClient.set(`user:${username}`, user);
+    await client.set(`user:${username}`, JSON.stringify(user));
 };
