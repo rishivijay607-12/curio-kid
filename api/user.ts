@@ -1,8 +1,17 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import * as bcrypt from 'bcryptjs';
 import type { QuizScore, User, UserProfile } from '../types';
+
+// --- Manual KV Client Initialization ---
+// This makes the app resilient to Vercel's automatic environment variable injection failing.
+// It will now explicitly use the variables provided by the Redis integration.
+const kv = createClient({
+    url: process.env.REDIS_URL,
+    token: process.env.REDIS_TOKEN,
+});
+
 
 // More specific type for stored user data, including password hash
 interface StoredUser extends User {
@@ -21,22 +30,29 @@ class ApiError extends Error {
 
 // --- Initialize Admin Account in KV ---
 const initializeAdmin = async () => {
-    const adminUsername = 'Rishi';
-    const adminExists = await kv.exists(`user:${adminUsername}`);
-    if (!adminExists) {
-        const passwordHash = await bcrypt.hash('134679', 10);
-        const adminUser: StoredUser = { username: adminUsername, isAdmin: true, passwordHash };
-        const adminProfile: UserProfile = {
-            quizzesCompleted: 0,
-            totalScore: 0,
-            currentStreak: 0,
-            lastQuizDate: null,
-        };
-        await Promise.all([
-            kv.set(`user:${adminUsername}`, adminUser),
-            kv.set(`profile:${adminUsername}`, adminProfile)
-        ]);
-        console.log('Admin user "Rishi" created in KV store.');
+    try {
+        const adminUsername = 'Rishi';
+        const adminExists = await kv.exists(`user:${adminUsername}`);
+        if (!adminExists) {
+            const passwordHash = await bcrypt.hash('134679', 10);
+            const adminUser: StoredUser = { username: adminUsername, isAdmin: true, passwordHash };
+            const adminProfile: UserProfile = {
+                quizzesCompleted: 0,
+                totalScore: 0,
+                currentStreak: 0,
+                lastQuizDate: null,
+            };
+            await Promise.all([
+                kv.set(`user:${adminUsername}`, adminUser),
+                kv.set(`profile:${adminUsername}`, adminProfile)
+            ]);
+            console.log('Admin user "Rishi" created in KV store.');
+        }
+    } catch (e) {
+        // Suppress initialization errors if DB isn't configured yet during build.
+        if (process.env.NODE_ENV !== 'development') {
+            console.warn('Could not initialize admin user, KV store might not be configured yet.');
+        }
     }
 };
 
@@ -47,6 +63,10 @@ initializeAdmin().catch(console.error);
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+
+    if (!process.env.REDIS_URL || !process.env.REDIS_TOKEN) {
+        return res.status(500).json({ error: 'Database is not configured correctly on the server. Please contact the administrator.' });
     }
 
     const { action, params } = req.body;
@@ -107,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let userMessage = 'An internal server error occurred.';
         if (error instanceof Error) {
             const lowerCaseMessage = error.message.toLowerCase();
-            if (lowerCaseMessage.includes('kv_rest_api_url') || lowerCaseMessage.includes('kv_rest_api_token')) {
+            if (lowerCaseMessage.includes('kv_rest_api_url') || lowerCaseMessage.includes('kv_rest_api_token') || lowerCaseMessage.includes('redis_url')) {
                  userMessage = 'Database is not configured correctly on the server. Please contact the administrator.';
             } else if (error.message.includes('Unauthorized')) {
                 userMessage = 'Authentication with the database failed. This could be an invalid token.';
