@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { kv } from '@vercel/kv';
 import * as bcrypt from 'bcryptjs';
@@ -122,8 +123,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 // --- Service Functions (Server-Side) ---
 
 const register = async (username: string, password: string): Promise<User> => {
-    if (!username || !password) throw new ApiError("Username and password are required.", 400);
-    if (password.length < 6) throw new ApiError("Password must be at least 6 characters long.", 400);
+    if (!username || typeof username !== 'string' || !password || typeof password !== 'string') {
+        throw new ApiError("Username and password must be non-empty strings.", 400);
+    }
+    if (password.length < 6) {
+        throw new ApiError("Password must be at least 6 characters long.", 400);
+    }
     
     const userExists = await kv.exists(`user:${username}`);
     if (userExists) {
@@ -149,11 +154,15 @@ const register = async (username: string, password: string): Promise<User> => {
 };
 
 const login = async (username: string, password: string): Promise<User> => {
+    // FIX: Add robust validation for incoming parameters to prevent crashes from invalid data types.
+    if (!username || typeof username !== 'string' || !password || typeof password !== 'string') {
+        // Use 401 to avoid user enumeration.
+        throw new ApiError("Invalid username or password.", 401);
+    }
+
     const storedUser = await kv.get<StoredUser>(`user:${username}`);
-    // Add robust check for user existence AND a valid password hash.
-    // This prevents a server crash if the user record is malformed (e.g., missing passwordHash).
+    // Check for user existence and a valid password hash to prevent crashes on malformed data.
     if (!storedUser || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
-        // For security, give the same error for non-existent user or malformed record.
         throw new ApiError("Invalid username or password.", 401);
     }
 
