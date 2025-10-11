@@ -55,7 +55,7 @@ export const register = async (username: string, password: string): Promise<User
 
 export const login = async (username: string, password: string): Promise<User> => {
     const user = await callUserApi<User>('login', { username, password });
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    // Side-effect removed from here and moved to App.tsx for consistency
     return user;
 };
 

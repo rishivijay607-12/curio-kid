@@ -143,12 +143,14 @@ const App: React.FC = () => {
 
     const handleLogin = async (username: string, password: string) => {
         const user = await login(username, password);
+        localStorage.setItem('curiosity_current_user', JSON.stringify(user));
         handleUserLoggedIn(user);
         return true;
     };
     
     const handleRegister = async (username: string, password: string) => {
         const user = await register(username, password);
+        localStorage.setItem('curiosity_current_user', JSON.stringify(user));
         handleUserLoggedIn(user);
         return true;
     };

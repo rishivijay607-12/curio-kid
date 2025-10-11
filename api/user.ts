@@ -102,17 +102,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(error.status).json({ error: error.message });
         }
         
-        // Log the detailed error for server-side debugging
         console.error(`[USER_API_ERROR] Action: "${action}" failed:`, error);
 
-        // Provide a more helpful, but still safe, error message to the client
         let userMessage = 'An internal server error occurred.';
-        if (error instanceof Error && error.message.includes('Unauthorized')) {
-            // This suggests the KV_REST_API_TOKEN is wrong or missing.
-            userMessage = 'Authentication with the database failed. This is a server configuration issue.';
-        } else if (error instanceof Error && (error.message.toLowerCase().includes('fetch') || error.message.toLowerCase().includes('connect'))) {
-            // This is a strong indicator of a network or connection problem to the KV store.
-            userMessage = 'Could not connect to the user database. Please ensure the server is configured correctly.';
+        if (error instanceof Error) {
+            const lowerCaseMessage = error.message.toLowerCase();
+            if (lowerCaseMessage.includes('kv_rest_api_url') || lowerCaseMessage.includes('kv_rest_api_token')) {
+                 userMessage = 'Database is not configured correctly on the server. Please contact the administrator.';
+            } else if (error.message.includes('Unauthorized')) {
+                userMessage = 'Authentication with the database failed. This could be an invalid token.';
+            } else if (lowerCaseMessage.includes('fetch') || lowerCaseMessage.includes('connect')) {
+                userMessage = 'Could not connect to the user database. A network issue may be preventing server communication.';
+            }
         }
         
         return res.status(500).json({ error: userMessage });
@@ -159,7 +160,7 @@ const login = async (username: string, password: string): Promise<User> => {
     }
 
     const storedUser = await kv.get<StoredUser>(`user:${username}`);
-    if (!storedUser || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
+    if (!storedUser || typeof storedUser !== 'object' || typeof storedUser.passwordHash !== 'string' || !storedUser.passwordHash) {
         throw new ApiError("Invalid username or password.", 401);
     }
     
@@ -168,8 +169,6 @@ const login = async (username: string, password: string): Promise<User> => {
         isPasswordValid = await bcrypt.compare(password, storedUser.passwordHash);
     } catch (compareError) {
         console.error(`[Bcrypt Error] Password comparison failed for user "${username}". This could be due to an invalid hash format in the database.`, compareError);
-        // An error during comparison means the password is not valid.
-        // We log the error on the server but return a standard auth error to the client.
         throw new ApiError("Invalid username or password.", 401);
     }
 
@@ -189,10 +188,8 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         date: new Date().toISOString(),
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
-    // Scores are stored in a sorted set by percentage for easy leaderboard fetching.
-    // The member is a unique string to prevent overwrites.
     await kv.zadd('scores', { score: newScore.percentage, member: `${username}:${newScore.date}` });
-    await kv.set(`score:${username}:${newScore.date}`, newScore); // Store full score object
+    await kv.set(`score:${username}:${newScore.date}`, newScore); 
 
     const profile = await kv.get<UserProfile>(`profile:${username}`);
     if (profile) {
@@ -221,7 +218,7 @@ const getProfile = async (username: string): Promise<UserProfile> => {
 };
 
 const getLeaderboard = async (): Promise<QuizScore[]> => {
-    const scoreKeys = await kv.zrevrange('scores', 0, 100); // Get top 100 score keys
+    const scoreKeys = await kv.zrevrange('scores', 0, 100); 
     if (scoreKeys.length === 0) return [];
 
     const allScores: (QuizScore | null)[] = await kv.mget(...scoreKeys.map(key => `score:${key}`));
@@ -301,7 +298,6 @@ const deleteUser = async (usernameToDelete: string): Promise<void> => {
     
     await kv.del(`user:${usernameToDelete}`, `profile:${usernameToDelete}`);
     
-    // This is less efficient but necessary for KV without complex querying
     const scoreKeys = await kv.keys(`score:${usernameToDelete}:*`);
     if(scoreKeys.length > 0) await kv.del(...scoreKeys);
 
