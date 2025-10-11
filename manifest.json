@@ -1,0 +1,16 @@
+{
+  "name": "The Book of Curiosity",
+  "short_name": "Curio Kid",
+  "description": "An interactive science quiz for Grades 6-10. AI generates an endless stream of questions, turning the school science curriculum into an exciting adventure.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
