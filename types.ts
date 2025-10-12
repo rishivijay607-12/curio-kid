@@ -18,7 +18,21 @@ export type AppMode =
   | 'science_fair_buddy'
   | 'voice_tutor'
   | 'leaderboard'
-  | 'profile';
+  | 'profile'
+  | 'science_game'
+  | 'science_game_selection'
+  | 'game_element_match'
+  | 'game_lab_safety'
+  | 'game_planet_lineup'
+  | 'game_state_of_matter'
+  | 'game_scientific_method'
+  | 'game_food_chain'
+  | 'game_invention_timeline'
+  | 'game_scientist_match'
+  | 'game_science_riddles'
+  | 'game_animal_kingdom'
+  | 'game_lab_tool_match'
+  | 'game_anatomy_quiz';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -112,4 +126,10 @@ export interface GenerationLogEntry {
     title: string;
     status: GenerationStatus;
     error?: string;
+}
+
+export interface ScienceRiddle {
+    riddle: string;
+    options: string[];
+    answer: string;
 }

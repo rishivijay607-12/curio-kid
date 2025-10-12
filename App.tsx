@@ -52,6 +52,20 @@ import HomeScreen from './components/HomeScreen.tsx';
 import AdminPanel from './components/AdminPanel.tsx';
 import LoadingSpinner from './components/LoadingSpinner.tsx';
 import ErrorScreen from './components/ErrorScreen.tsx'; // Import new error screen
+import GameSelectionScreen from './components/GameSelectionScreen.tsx';
+import ElementMatchGame from './components/ElementMatchGame.tsx';
+import LabSafetyGame from './components/LabSafetyGame.tsx';
+import PlanetLineupGame from './components/PlanetLineupGame.tsx';
+import StateOfMatterGame from './components/StateOfMatterGame.tsx';
+import ScientificMethodGame from './components/ScientificMethodGame.tsx';
+import FoodChainGame from './components/FoodChainGame.tsx';
+import InventionTimelineGame from './components/InventionTimelineGame.tsx';
+import ScientistMatchGame from './components/ScientistMatchGame.tsx';
+import ScienceRiddlesGame from './components/ScienceRiddlesGame.tsx';
+import AnimalKingdomGame from './components/AnimalKingdomGame.tsx';
+import LabToolMatchGame from './components/LabToolMatchGame.tsx';
+import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
+
 // ApiKeyInstructions is no longer needed
 
 
@@ -195,12 +209,19 @@ const App: React.FC = () => {
             setGameState('science_fair_buddy');
         } else if (mode === 'chat_with_history') {
             setGameState('HISTORICAL_SCIENTIST_SELECTION');
+        } else if (mode === 'science_game') {
+            setGameState('science_game_selection');
         } else {
             // All other features start by selecting a grade.
             setGameState('GRADE_SELECTION');
         }
     };
     
+    const handleGameSelect = (gameMode: AppMode) => {
+        setAppMode(gameMode);
+        setGameState(gameMode); // e.g., gameState becomes 'game_element_match'
+    };
+
     const handleShowLeaderboard = () => setGameState('LEADERBOARD');
     const handleGoToAdminPanel = () => setGameState('ADMIN_PANEL');
     
@@ -470,6 +491,21 @@ const App: React.FC = () => {
 
             case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
             case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
+            
+            // Game States
+            case 'science_game_selection': return <GameSelectionScreen onGameSelect={handleGameSelect} />;
+            case 'game_element_match': return <ElementMatchGame onEnd={resetToHome} />;
+            case 'game_lab_safety': return <LabSafetyGame onEnd={resetToHome} />;
+            case 'game_planet_lineup': return <PlanetLineupGame onEnd={resetToHome} />;
+            case 'game_state_of_matter': return <StateOfMatterGame onEnd={resetToHome} />;
+            case 'game_scientific_method': return <ScientificMethodGame onEnd={resetToHome} />;
+            case 'game_food_chain': return <FoodChainGame onEnd={resetToHome} />;
+            case 'game_invention_timeline': return <InventionTimelineGame onEnd={resetToHome} />;
+            case 'game_scientist_match': return <ScientistMatchGame onEnd={resetToHome} />;
+            case 'game_science_riddles': return <ScienceRiddlesGame onEnd={resetToHome} />;
+            case 'game_animal_kingdom': return <AnimalKingdomGame onEnd={resetToHome} />;
+            case 'game_lab_tool_match': return <LabToolMatchGame onEnd={resetToHome} />;
+            case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={resetToHome} />;
 
             default: return <ErrorScreen errorCode={404} errorMessage={`The application state "${gameState}" does not exist.`} onGoHome={resetToHome} />;
         }

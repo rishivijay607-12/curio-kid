@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -50,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'generateScientistGreeting': result = await generateScientistGreeting(ai, params); break;
             case 'getHistoricalChatResponse': result = await getHistoricalChatResponse(ai, params); break;
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
+            case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -358,4 +359,26 @@ const analyzeGenerationFailure = async (ai: GoogleGenAI, { errorMessage }: any):
         config: { safetySettings },
     });
     return response.text;
+};
+
+const generateScienceRiddle = async (ai: GoogleGenAI): Promise<ScienceRiddle> => {
+    const prompt = `Create one clever science riddle for a middle school student. The riddle should be about a common scientific concept, object, or phenomenon. Provide the riddle itself, one correct answer, and three plausible but incorrect options.`;
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+            safetySettings,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    riddle: { type: Type.STRING },
+                    options: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    answer: { type: Type.STRING }
+                },
+                required: ['riddle', 'options', 'answer']
+            },
+        },
+    });
+    return JSON.parse(response.text) as ScienceRiddle;
 };

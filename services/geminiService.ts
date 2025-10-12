@@ -3,7 +3,7 @@
 
 
 import { GoogleGenAI } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
 export class ApiError extends Error {
@@ -99,6 +99,11 @@ export const getHistoricalChatResponse = (scientist: Scientist, history: ChatMes
 export const analyzeGenerationFailure = (errorMessage: string): Promise<string> => {
     return callApi('analyzeGenerationFailure', { errorMessage });
 };
+
+export const generateScienceRiddle = (): Promise<ScienceRiddle> => {
+    return callApi('generateScienceRiddle', {});
+};
+
 
 // --- SPECIAL CASE for Voice Tutor ---
 // The 'live' service establishes a direct WebSocket connection and MUST be initialized on the client.
