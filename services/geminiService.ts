@@ -106,12 +106,13 @@ export const generateSudokuPuzzle = (difficulty: Difficulty): Promise<SudokuPuzz
     return callApi('generateSudokuPuzzle', { difficulty });
 };
 
+// FIX: Add generateEducationalVideo and checkVideoOperationStatus to call the API proxy.
 export const generateEducationalVideo = (topic: string, grade: Grade, duration: number): Promise<{ operationId: string }> => {
-    return callApi('generateVideo', { topic, grade, duration });
+    return callApi('generateEducationalVideo', { topic, grade, duration });
 };
 
-export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired', videoUrl?: string }> => {
-    return callApi('getVideoStatus', { operationId });
+export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired'; videoUrl?: string }> => {
+    return callApi('checkVideoOperationStatus', { operationId });
 };
 
 

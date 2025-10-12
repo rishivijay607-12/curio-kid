@@ -66,8 +66,6 @@ import AnimalKingdomGame from './components/AnimalKingdomGame.tsx';
 import LabToolMatchGame from './components/LabToolMatchGame.tsx';
 import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
 import TicTacToeGame from './components/TicTacToeGame.tsx';
-import DurationSelector from './components/DurationSelector.tsx';
-import VideoGenerator from './components/VideoGenerator.tsx';
 
 // ApiKeyInstructions is no longer needed
 
@@ -108,7 +106,6 @@ const App: React.FC = () => {
     const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
     const [quizLength, setQuizLength] = useState<number | null>(null);
     const [timerDuration, setTimerDuration] = useState<number | null>(null);
-    const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const [language, setLanguage] = useState<Language | null>(null);
     const [selectedScientist, setSelectedScientist] = useState<Scientist | null>(null);
     const [userScienceFairTopic, setUserScienceFairTopic] = useState<string>('');
@@ -152,7 +149,6 @@ const App: React.FC = () => {
         setDifficulty(null);
         setQuizLength(null);
         setTimerDuration(null);
-        setVideoDuration(null);
         setLanguage(null);
         setError(null);
         setErrorDetails(null);
@@ -458,7 +454,6 @@ const App: React.FC = () => {
                 else if (appMode === 'flashcards') handleFlashcardsTopicSelect(t);
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
-                else if (appMode === 'video_generator') setGameState('DURATION_SELECTION');
                 else setGameState('DIFFICULTY_SELECTION');
             }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} isSolverSetup={['doubt_solver', 'voice_tutor'].includes(appMode)} />;
             
@@ -497,9 +492,6 @@ const App: React.FC = () => {
 
             case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
             case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
-            
-            case 'DURATION_SELECTION': return <DurationSelector onDurationSelect={d => { setVideoDuration(d); setGameState('VIDEO_GENERATOR_RUNNING'); }} />;
-            case 'VIDEO_GENERATOR_RUNNING': return <VideoGenerator grade={grade!} topic={topic!} duration={videoDuration!} onRestart={resetToHome} />;
             
             // Game States
             case 'science_game_selection': return <GameSelectionScreen onGameSelect={handleGameSelect} />;

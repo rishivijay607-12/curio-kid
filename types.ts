@@ -33,8 +33,7 @@ export type AppMode =
   | 'game_animal_kingdom'
   | 'game_lab_tool_match'
   | 'game_anatomy_quiz'
-  | 'game_tic_tac_toe'
-  | 'video_generator';
+  | 'game_tic_tac_toe';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 

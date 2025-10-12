@@ -69,8 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
             case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
             case 'generateSudokuPuzzle': result = await generateSudokuPuzzle(ai, params); break;
-            case 'generateVideo': result = await generateVideo(ai, params); break;
-            case 'getVideoStatus': result = await getVideoStatus(ai, params); break;
+            // FIX: Add cases for video generation.
+            case 'generateEducationalVideo': result = await generateEducationalVideo(ai, params); break;
+            case 'checkVideoOperationStatus': result = await checkVideoOperationStatus(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -436,42 +437,55 @@ Provide the response in JSON format with three fields:
     return JSON.parse(response.text) as SudokuPuzzle;
 };
 
-const generateVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
-    const prompt = `Create a short, engaging, and visually interesting educational video for a Grade ${grade} student about "${topic}". The video should be approximately ${duration} seconds long, with no spoken words, just instrumental background music.`;
-    
-    let operation = await ai.models.generateVideos({
-      model: 'veo-2.0-generate-001',
-      prompt: prompt,
-      // FIX: The 'videoLengthSeconds' property is not valid for the generateVideos config. The duration is specified in the prompt.
-      config: {
-        numberOfVideos: 1,
-      }
+// FIX: Add functions for video generation.
+const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
+    const prompt = `Create a short, engaging educational video for a Grade ${grade} student.
+Topic: "${topic}".
+The video should be approximately ${duration} seconds long.
+It should be visually appealing, simple to understand, and scientifically accurate for the grade level.
+Start with a catchy title screen. Use clear narration and graphics.`;
+
+    const operation = await ai.models.generateVideos({
+        model: 'veo-2.0-generate-001',
+        prompt: prompt,
+        config: {
+            numberOfVideos: 1
+        }
     });
-
+    
     const operationId = generateUniqueId();
-    const client = await getRedisClient();
-    await client.set(`video-op:${operationId}`, JSON.stringify(operation), { EX: 3600 }); // 1 hour expiry
-
+    const redis = await getRedisClient();
+    // Store the operation object, which is needed for polling, with a 1-hour TTL.
+    await redis.set(`video_op:${operationId}`, JSON.stringify(operation), { 'EX': 3600 });
+    
     return { operationId };
 };
 
-const getVideoStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string; videoUrl?: string }> => {
-    const client = await getRedisClient();
-    const operationJson = await client.get(`video-op:${operationId}`);
-    if (!operationJson) {
-        return { status: 'expired' };
+const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string; videoUrl?: string }> => {
+    if (!operationId) {
+        throw new Error("operationId is required.");
     }
 
-    let storedOperation = JSON.parse(operationJson);
-    let updatedOperation = await ai.operations.getVideosOperation({ operation: storedOperation });
+    const redis = await getRedisClient();
+    const storedOperationJson = await redis.get(`video_op:${operationId}`);
+    if (!storedOperationJson) {
+        return { status: 'expired' }; // Operation not found or expired
+    }
     
-    await client.set(`video-op:${operationId}`, JSON.stringify(updatedOperation), { EX: 3600 });
+    let operation = JSON.parse(storedOperationJson);
+    
+    operation = await ai.operations.getVideosOperation({ operation });
 
-    if (updatedOperation.done) {
-        if (updatedOperation.error) {
-             return { status: 'failed' };
+    // Update the operation in Redis for the next poll
+    await redis.set(`video_op:${operationId}`, JSON.stringify(operation), { 'EX': 3600 });
+
+    if (operation.done) {
+        if (operation.response?.generatedVideos?.[0]?.video?.uri) {
+            return { status: 'complete', videoUrl: operation.response.generatedVideos[0].video.uri };
+        } else {
+            console.error("Video operation done but no video URI found:", operation);
+            return { status: 'failed' };
         }
-        return { status: 'complete', videoUrl: updatedOperation.response?.generatedVideos?.[0]?.video?.uri };
     } else {
         return { status: 'in-progress' };
     }
