@@ -40,7 +40,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
         <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-300">
           Leaderboard
         </h1>
-        <p className="text-slate-400 mt-2">Top 20 Curious Minds</p>
+        <p className="text-slate-400 mt-2">Top 20 Curious Minds, ranked by total score.</p>
       </div>
 
       <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl shadow-2xl p-6">
@@ -61,9 +61,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
                 <tr>
                   <th className="p-3">Rank</th>
                   <th className="p-3">Player</th>
-                  <th className="p-3 text-center">Score</th>
-                  <th className="p-3 text-center">Percentage</th>
-                  <th className="p-3 hidden sm:table-cell">Date</th>
+                  <th className="p-3 text-center">Total Score</th>
+                  <th className="p-3 text-center">Overall Accuracy</th>
+                  <th className="p-3 hidden sm:table-cell">Last Activity</th>
                 </tr>
               </thead>
               <tbody>
@@ -74,7 +74,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onBack, currentUser }) => {
                   >
                     <td className={`p-3 font-bold text-lg ${getRankColor(index)}`}>#{index + 1}</td>
                     <td className="p-3 font-medium text-slate-100">{score.username}</td>
-                    <td className="p-3 text-center text-slate-200">{score.score} / {score.total}</td>
+                    <td className="p-3 text-center text-slate-200">{score.score}</td>
                     <td className="p-3 text-center font-semibold text-cyan-400">{score.percentage}%</td>
                     <td className="p-3 text-slate-400 hidden sm:table-cell">
                       {new Date(score.date).toLocaleDateString()}

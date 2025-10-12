@@ -3,7 +3,7 @@
 
 
 import { GoogleGenAI } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
 export class ApiError extends Error {
@@ -58,6 +58,10 @@ export const generateWorksheet = (topic: string, grade: Grade, difficulty: Diffi
 
 export const generateNotes = (topic: string, grade: Grade): Promise<NoteSection[]> => {
     return callApi('generateNotes', { topic, grade });
+};
+
+export const generateFlashcards = (topic: string, grade: Grade): Promise<Flashcard[]> => {
+    return callApi('generateFlashcards', { topic, grade });
 };
 
 export const getChatResponse = (grade: Grade, history: ChatMessage[], language: Language, topic: string): Promise<string> => {

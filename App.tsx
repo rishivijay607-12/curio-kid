@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile } from './types.ts';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard } from './types.ts';
 // No longer need to import API_KEY here
 
 // Service Imports
@@ -8,6 +8,7 @@ import {
     generateQuizQuestions,
     generateWorksheet,
     generateNotes,
+    generateFlashcards,
     generateGreeting,
     getChatResponse,
     generateTextForMode,
@@ -32,6 +33,7 @@ import ScoreScreen from './components/ScoreScreen.tsx';
 import WorksheetCountSelector from './components/WorksheetCountSelector.tsx';
 import Worksheet from './components/Worksheet.tsx';
 import Notes from './components/Notes.tsx';
+import Flashcards from './components/Flashcards.tsx';
 import LanguageSelector from './components/LanguageSelector.tsx';
 import DoubtSolver from './components/DoubtSolver.tsx';
 import GenerativeText from './components/GenerativeText.tsx';
@@ -100,6 +102,7 @@ const App: React.FC = () => {
     const [lastScore, setLastScore] = useState(0);
     const [worksheetQuestions, setWorksheetQuestions] = useState<QuizQuestion[]>([]);
     const [notes, setNotes] = useState<NoteSection[]>([]);
+    const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
     const [generativeTextResult, setGenerativeTextResult] = useState<GenerativeTextResult | null>(null);
     const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
@@ -137,6 +140,7 @@ const App: React.FC = () => {
         setIsLoading(false);
         setWorksheetQuestions([]);
         setNotes([]);
+        setFlashcards([]);
         setChatHistory([]);
         setGenerativeTextResult(null);
         setScienceLensResult(null);
@@ -278,6 +282,22 @@ const App: React.FC = () => {
             setGameState('NOTES_DISPLAY');
         } catch (err) { CATCH_BLOCK(err); }
     };
+
+    // Flashcards Flow
+    const handleFlashcardsTopicSelect = async (selectedTopic: string) => {
+        if (!grade) return;
+        setTopic(selectedTopic);
+        setIsLoading(true);
+        setError(null);
+        try {
+            const flashcardData = await generateFlashcards(selectedTopic, grade);
+            if (flashcardData.length === 0) {
+                throw new Error("The AI failed to generate any flashcards for this topic.");
+            }
+            setFlashcards(flashcardData);
+            setGameState('FLASHCARDS_DISPLAY');
+        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
+    };
     
     // Chat & Tutor Flows
     const handleStartChat = async (selectedTopic: string, selectedLanguage: Language) => {
@@ -409,6 +429,7 @@ const App: React.FC = () => {
             case 'TOPIC_SELECTION': return <TopicSelector onTopicSelect={(t) => {
                 setTopic(t);
                 if (appMode === 'notes') handleNotesTopicSelect(t);
+                else if (appMode === 'flashcards') handleFlashcardsTopicSelect(t);
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
                 else setGameState('DIFFICULTY_SELECTION');
@@ -427,6 +448,7 @@ const App: React.FC = () => {
             
             case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('DIFFICULTY_SELECTION')} grade={grade!} topic={topic!} />;
             case 'NOTES_DISPLAY': return <Notes notes={notes} onRestart={resetToHome} grade={grade!} topic={topic!} />;
+            case 'FLASHCARDS_DISPLAY': return <Flashcards flashcards={flashcards} onRestart={resetToHome} grade={grade!} topic={topic!} />;
            
             case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={lang => {
                 setLanguage(lang);

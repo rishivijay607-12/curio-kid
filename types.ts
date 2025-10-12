@@ -6,6 +6,7 @@ export type AppMode =
   | 'quiz'
   | 'worksheet'
   | 'notes'
+  | 'flashcards'
   | 'doubt_solver'
   | 'chat_with_history'
   | 'concept_deep_dive'
