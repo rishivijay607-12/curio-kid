@@ -1,8 +1,5 @@
-
-
-
-
 import { GoogleGenAI } from '@google/genai';
+// FIX: Import SudokuPuzzle type.
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
@@ -104,8 +101,17 @@ export const generateScienceRiddle = (): Promise<ScienceRiddle> => {
     return callApi('generateScienceRiddle', {});
 };
 
+// FIX: Add generateSudokuPuzzle function to call the API proxy.
 export const generateSudokuPuzzle = (difficulty: Difficulty): Promise<SudokuPuzzle> => {
     return callApi('generateSudokuPuzzle', { difficulty });
+};
+
+export const generateEducationalVideo = (topic: string, grade: Grade, duration: number): Promise<{ operationId: string }> => {
+    return callApi('generateVideo', { topic, grade, duration });
+};
+
+export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired', videoUrl?: string }> => {
+    return callApi('getVideoStatus', { operationId });
 };
 
 

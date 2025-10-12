@@ -1,15 +1,33 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
+import { createClient, RedisClientType } from 'redis';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+let redisClient: RedisClientType | null = null;
+
+const getRedisClient = async (): Promise<RedisClientType> => {
+    if (redisClient && redisClient.isOpen) {
+        return redisClient;
+    }
+    if (!process.env.REDIS_URL) {
+        throw new Error('Database is not configured correctly on the server. The REDIS_URL environment variable is missing.');
+    }
+    redisClient = createClient({
+        url: process.env.REDIS_URL,
+    });
+    redisClient.on('error', (err) => console.error('Redis Client Error', err));
+    await redisClient.connect();
+    return redisClient;
+};
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
     
-    // Fail fast: Check for the API key and initialize the AI client first.
     if (!process.env.API_KEY) {
         console.error('[GEMINI_PROXY_FATAL] The API_KEY environment variable is not set on the server.');
         return res.status(500).json({ error: "Configuration Error: The AI service API key is MISSING on the server. Please contact the administrator." });
@@ -17,7 +35,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     let ai: GoogleGenAI;
     try {
-        // Initialize using the environment variable directly as per guidelines.
         ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     } catch (initError) {
         console.error('[GEMINI_PROXY_FATAL] Failed to initialize GoogleGenAI. The API key might be invalid.', initError);
@@ -52,6 +69,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
             case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
             case 'generateSudokuPuzzle': result = await generateSudokuPuzzle(ai, params); break;
+            case 'generateVideo': result = await generateVideo(ai, params); break;
+            case 'getVideoStatus': result = await getVideoStatus(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -385,13 +404,11 @@ const generateScienceRiddle = async (ai: GoogleGenAI): Promise<ScienceRiddle> =>
 };
 
 const generateSudokuPuzzle = async (ai: GoogleGenAI, { difficulty }: any): Promise<SudokuPuzzle> => {
-    const prompt = `You are a Sudoku puzzle generator.
-    Create a standard 9x9 Sudoku puzzle with a unique solution. The difficulty must be **${difficulty}**.
-    Provide two things in your response:
-    1. 'puzzle': The unsolved 9x9 grid, where empty cells are represented by the number 0.
-    2. 'solution': The fully solved 9x9 grid.
-
-    Ensure the puzzle is solvable and matches the requested difficulty level.`;
+    const prompt = `Generate a new Sudoku puzzle with a unique solution. The difficulty should be "${difficulty}".
+Provide the response in JSON format with three fields:
+1. "puzzle": A 9x9 array representing the board with some empty cells (use 0 for empty cells).
+2. "solution": A 9x9 array representing the completed board.
+3. "difficulty": A string confirming the difficulty ("${difficulty}").`;
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -409,11 +426,53 @@ const generateSudokuPuzzle = async (ai: GoogleGenAI, { difficulty }: any): Promi
                     solution: {
                         type: Type.ARRAY,
                         items: { type: Type.ARRAY, items: { type: Type.INTEGER } }
-                    }
+                    },
+                    difficulty: { type: Type.STRING }
                 },
-                required: ['puzzle', 'solution']
+                required: ['puzzle', 'solution', 'difficulty']
             },
         },
     });
     return JSON.parse(response.text) as SudokuPuzzle;
+};
+
+const generateVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
+    const prompt = `Create a short, engaging, and visually interesting educational video for a Grade ${grade} student about "${topic}". The video should be approximately ${duration} seconds long, with no spoken words, just instrumental background music.`;
+    
+    let operation = await ai.models.generateVideos({
+      model: 'veo-2.0-generate-001',
+      prompt: prompt,
+      // FIX: The 'videoLengthSeconds' property is not valid for the generateVideos config. The duration is specified in the prompt.
+      config: {
+        numberOfVideos: 1,
+      }
+    });
+
+    const operationId = generateUniqueId();
+    const client = await getRedisClient();
+    await client.set(`video-op:${operationId}`, JSON.stringify(operation), { EX: 3600 }); // 1 hour expiry
+
+    return { operationId };
+};
+
+const getVideoStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string; videoUrl?: string }> => {
+    const client = await getRedisClient();
+    const operationJson = await client.get(`video-op:${operationId}`);
+    if (!operationJson) {
+        return { status: 'expired' };
+    }
+
+    let storedOperation = JSON.parse(operationJson);
+    let updatedOperation = await ai.operations.getVideosOperation({ operation: storedOperation });
+    
+    await client.set(`video-op:${operationId}`, JSON.stringify(updatedOperation), { EX: 3600 });
+
+    if (updatedOperation.done) {
+        if (updatedOperation.error) {
+             return { status: 'failed' };
+        }
+        return { status: 'complete', videoUrl: updatedOperation.response?.generatedVideos?.[0]?.video?.uri };
+    } else {
+        return { status: 'in-progress' };
+    }
 };

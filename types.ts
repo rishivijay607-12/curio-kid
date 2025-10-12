@@ -34,7 +34,7 @@ export type AppMode =
   | 'game_lab_tool_match'
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
-  | 'game_sudoku';
+  | 'video_generator';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -136,10 +136,11 @@ export interface ScienceRiddle {
     answer: string;
 }
 
-export type TicTacToeBoard = ( 'X' | 'O' | null )[];
-export type SudokuBoard = number[][];
-
+// FIX: Add SudokuPuzzle type definition.
 export interface SudokuPuzzle {
-    puzzle: SudokuBoard;
-    solution: SudokuBoard;
+    puzzle: number[][];
+    solution: number[][];
+    difficulty: Difficulty;
 }
+
+export type TicTacToeBoard = ( 'X' | 'O' | null )[];
