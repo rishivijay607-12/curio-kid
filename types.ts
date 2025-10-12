@@ -32,7 +32,9 @@ export type AppMode =
   | 'game_science_riddles'
   | 'game_animal_kingdom'
   | 'game_lab_tool_match'
-  | 'game_anatomy_quiz';
+  | 'game_anatomy_quiz'
+  | 'game_tic_tac_toe'
+  | 'game_sudoku';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -132,4 +134,12 @@ export interface ScienceRiddle {
     riddle: string;
     options: string[];
     answer: string;
+}
+
+export type TicTacToeBoard = ( 'X' | 'O' | null )[];
+export type SudokuBoard = number[][];
+
+export interface SudokuPuzzle {
+    puzzle: SudokuBoard;
+    solution: SudokuBoard;
 }

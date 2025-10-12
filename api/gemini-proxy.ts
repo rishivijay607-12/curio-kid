@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -51,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'getHistoricalChatResponse': result = await getHistoricalChatResponse(ai, params); break;
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
             case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
+            case 'generateSudokuPuzzle': result = await generateSudokuPuzzle(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -381,4 +382,38 @@ const generateScienceRiddle = async (ai: GoogleGenAI): Promise<ScienceRiddle> =>
         },
     });
     return JSON.parse(response.text) as ScienceRiddle;
+};
+
+const generateSudokuPuzzle = async (ai: GoogleGenAI, { difficulty }: any): Promise<SudokuPuzzle> => {
+    const prompt = `You are a Sudoku puzzle generator.
+    Create a standard 9x9 Sudoku puzzle with a unique solution. The difficulty must be **${difficulty}**.
+    Provide two things in your response:
+    1. 'puzzle': The unsolved 9x9 grid, where empty cells are represented by the number 0.
+    2. 'solution': The fully solved 9x9 grid.
+
+    Ensure the puzzle is solvable and matches the requested difficulty level.`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+            safetySettings,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    puzzle: {
+                        type: Type.ARRAY,
+                        items: { type: Type.ARRAY, items: { type: Type.INTEGER } }
+                    },
+                    solution: {
+                        type: Type.ARRAY,
+                        items: { type: Type.ARRAY, items: { type: Type.INTEGER } }
+                    }
+                },
+                required: ['puzzle', 'solution']
+            },
+        },
+    });
+    return JSON.parse(response.text) as SudokuPuzzle;
 };

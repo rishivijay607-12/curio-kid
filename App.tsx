@@ -65,6 +65,8 @@ import ScienceRiddlesGame from './components/ScienceRiddlesGame.tsx';
 import AnimalKingdomGame from './components/AnimalKingdomGame.tsx';
 import LabToolMatchGame from './components/LabToolMatchGame.tsx';
 import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
+import TicTacToeGame from './components/TicTacToeGame.tsx';
+import SudokuGame from './components/SudokuGame.tsx';
 
 // ApiKeyInstructions is no longer needed
 
@@ -506,6 +508,9 @@ const App: React.FC = () => {
             case 'game_animal_kingdom': return <AnimalKingdomGame onEnd={resetToHome} />;
             case 'game_lab_tool_match': return <LabToolMatchGame onEnd={resetToHome} />;
             case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={resetToHome} />;
+            case 'game_tic_tac_toe': return <TicTacToeGame onEnd={resetToHome} />;
+            case 'game_sudoku': return <SudokuGame onEnd={resetToHome} />;
+
 
             default: return <ErrorScreen errorCode={404} errorMessage={`The application state "${gameState}" does not exist.`} onGoHome={resetToHome} />;
         }

@@ -18,6 +18,9 @@ const IconRiddle: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" class
 const IconAnimalKingdom: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /><path d="M10.875 10.875c.375-.375.375-1.035 0-1.41a.563.563 0 01.8 0l2.625 2.625a.563.563 0 010 .8l-2.625 2.625a.563.563 0 01-.8 0c-.375-.375-.375-1.035 0-1.41zM14.25 14.25c.375.375 1.035.375 1.41 0a.563.563 0 000-.8L13.03 10.825a.563.563 0 00-.8 0c-.375.375-.375 1.035 0 1.41z" /></svg>;
 const IconLabTool: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.092 1.21-.138 2.43-.138 3.662a4.006 4.006 0 004.006 4.006h7.228a4.006 4.006 0 004.006-4.006zM14.25 12a2.25 2.25 0 10-4.5 0 2.25 2.25 0 004.5 0z" /></svg>;
 const IconAnatomy: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5c-1.336 0-2.613.264-3.805.753a10.46 10.46 0 00-4.42 4.42A10.46 10.46 0 003 13.5c0 1.336.264 2.613.753 3.805a10.46 10.46 0 004.42 4.42c1.192.49 2.47.753 3.805.753s2.613-.264 3.805-.753a10.46 10.46 0 004.42-4.42c.49-1.192.753-2.47.753-3.805s-.264-2.613-.753-3.805a10.46 10.46 0 00-4.42-4.42A10.46 10.46 0 0012 4.5z" /><path d="M12 7.5a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5z" /></svg>;
+const IconTicTacToe: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h18M21 15l-6-6m0 0l-6 6" /></svg>;
+const IconSudoku: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /><path d="M15.5 15.5L18.5 18.5M6.5 6.5L9.5 9.5" /></svg>;
+
 
 const games = [
     { mode: 'game_element_match' as AppMode, title: 'Element Match-Up', description: 'Match the chemical symbol to its correct element name.', icon: <IconElementMatch /> },
@@ -32,6 +35,8 @@ const games = [
     { mode: 'game_animal_kingdom' as AppMode, title: 'Animal Kingdom', description: 'Classify animals into mammals, birds, reptiles, and more.', icon: <IconAnimalKingdom /> },
     { mode: 'game_lab_tool_match' as AppMode, title: 'Lab Tool Tussle', description: 'Match the laboratory instrument to its correct function.', icon: <IconLabTool /> },
     { mode: 'game_anatomy_quiz' as AppMode, title: 'Anatomy Adventure', description: 'Answer quick questions about the human body.', icon: <IconAnatomy /> },
+    { mode: 'game_tic_tac_toe' as AppMode, title: 'AI Tic-Tac-Toe', description: 'Play a classic game against an AI opponent with varying difficulty.', icon: <IconTicTacToe /> },
+    { mode: 'game_sudoku' as AppMode, title: 'AI Sudoku', description: 'Challenge yourself with AI-generated Sudoku puzzles for all skill levels.', icon: <IconSudoku /> },
 ];
 
 const GameCard: React.FC<{ title: string; description: string; mode: AppMode; onSelect: (mode: AppMode) => void; icon: React.ReactNode; }> = ({ title, description, mode, onSelect, icon }) => (

@@ -3,7 +3,7 @@
 
 
 import { GoogleGenAI } from '@google/genai';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
 export class ApiError extends Error {
@@ -102,6 +102,10 @@ export const analyzeGenerationFailure = (errorMessage: string): Promise<string> 
 
 export const generateScienceRiddle = (): Promise<ScienceRiddle> => {
     return callApi('generateScienceRiddle', {});
+};
+
+export const generateSudokuPuzzle = (difficulty: Difficulty): Promise<SudokuPuzzle> => {
+    return callApi('generateSudokuPuzzle', { difficulty });
 };
 
 
