@@ -29,15 +29,6 @@ interface StoredUser extends User {
     passwordHash: string;
 }
 
-// Type for storing aggregated user stats for leaderboard calculation
-interface UserAggregateStats {
-    totalScore: number;
-    totalQuestions: number;
-    quizCount: number;
-    lastQuizDate: string;
-}
-
-
 // Custom error for API logic
 class ApiError extends Error {
     public status: number;
@@ -60,6 +51,7 @@ const initializeAdmin = async () => {
             const adminProfile: UserProfile = {
                 quizzesCompleted: 0,
                 totalScore: 0,
+                totalQuestionsAttempted: 0,
                 currentStreak: 0,
                 lastQuizDate: null,
             };
@@ -173,6 +165,7 @@ const register = async (username: string, password: string): Promise<User> => {
     const newProfile: UserProfile = {
         quizzesCompleted: 0,
         totalScore: 0,
+        totalQuestionsAttempted: 0,
         currentStreak: 0,
         lastQuizDate: null,
     };
@@ -220,56 +213,54 @@ const login = async (username: string, password: string): Promise<User> => {
 
 const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
     const client = await getRedisClient();
-    const newScore: QuizScore = {
+
+    // Store individual score record for history/admin purposes
+    const newScoreRecord: QuizScore = {
         username,
         score,
         total,
         date: new Date().toISOString(),
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
-    
-    // Store individual score record, needed for admin panel and detailed history in future
-    const scoreKey = `score:${username}:${newScore.date}`;
-    await client.set(scoreKey, JSON.stringify(newScore));
+    const scoreKey = `score:${username}:${newScoreRecord.date}`;
+    await client.set(scoreKey, JSON.stringify(newScoreRecord));
 
-    // Update user's main profile (for streak, stats on profile page, etc.)
+    // Update user's main profile for cumulative stats
     const profileJson = await client.get(`profile:${username}`);
-    if (profileJson) {
-        const profile: UserProfile = JSON.parse(profileJson);
-        profile.quizzesCompleted += 1;
-        profile.totalScore += score;
-        
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
-        if(lastQuizDay) lastQuizDay.setHours(0, 0, 0, 0);
-
-        if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
-            const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-            profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
-            profile.lastQuizDate = today.toISOString();
-        }
-        await client.set(`profile:${username}`, JSON.stringify(profile));
+    if (!profileJson) {
+        // This case handles a user whose profile might have been deleted but they are still logged in.
+        const newProfile: UserProfile = {
+            quizzesCompleted: 1,
+            totalScore: score,
+            totalQuestionsAttempted: total,
+            currentStreak: 1,
+            lastQuizDate: new Date().toISOString(),
+        };
+        await client.set(`profile:${username}`, JSON.stringify(newProfile));
+        await client.zAdd('leaderboard_cumulative', { score: newProfile.totalScore, value: username });
+        return;
     }
-
-    // Update aggregate stats for leaderboard calculation
-    const aggStatsKey = `agg_stats:${username}`;
-    const aggStatsJson = await client.get(aggStatsKey);
-    const aggStats: UserAggregateStats = aggStatsJson ? JSON.parse(aggStatsJson) : { totalScore: 0, totalQuestions: 0, quizCount: 0, lastQuizDate: '1970-01-01T00:00:00.000Z' };
     
-    aggStats.totalScore += score;
-    aggStats.totalQuestions += total;
-    aggStats.quizCount += 1;
-    aggStats.lastQuizDate = newScore.date;
+    const profile: UserProfile = JSON.parse(profileJson);
+    profile.quizzesCompleted += 1;
+    profile.totalScore += score;
+    // Safely add to totalQuestionsAttempted, initializing if it doesn't exist on older profiles
+    profile.totalQuestionsAttempted = (profile.totalQuestionsAttempted || 0) + total;
+    
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
+    if (lastQuizDay) lastQuizDay.setHours(0, 0, 0, 0);
 
-    await client.set(aggStatsKey, JSON.stringify(aggStats));
+    if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
+        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+        profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
+        profile.lastQuizDate = today.toISOString();
+    }
+    await client.set(`profile:${username}`, JSON.stringify(profile));
 
-    // Calculate the new average percentage based on ALL quizzes
-    const newAvgPercentage = aggStats.totalQuestions > 0 ? (aggStats.totalScore / aggStats.totalQuestions) * 100 : 0;
-
-    // Update the leaderboard sorted set with the user's new average percentage
-    await client.zAdd('leaderboard_avg', { score: newAvgPercentage, value: username });
+    // Update the new cumulative leaderboard, ranked by total correct answers.
+    await client.zAdd('leaderboard_cumulative', { score: profile.totalScore, value: username });
 };
-
 
 const getProfile = async (username: string): Promise<UserProfile> => {
     const client = await getRedisClient();
@@ -282,43 +273,32 @@ const getProfile = async (username: string): Promise<UserProfile> => {
 
 const getLeaderboard = async (): Promise<QuizScore[]> => {
     const client = await getRedisClient();
-    // Get top 20 usernames from the sorted set based on average performance
-    const usernames = await client.zRange('leaderboard_avg', 0, 19, { REV: true });
+    // Get top 20 usernames from the cumulative leaderboard, ranked by total correct answers.
+    const usernames = await client.zRange('leaderboard_cumulative', 0, 19, { REV: true });
     if (usernames.length === 0) return [];
 
-    // Get aggregate stats for each top user
-    const aggStatsKeys = usernames.map(u => `agg_stats:${u}`);
-    const aggStatsJsonArray = await client.mGet(aggStatsKeys);
-
+    const profileKeys = usernames.map(u => `profile:${u}`);
+    const profileJsonArray = await client.mGet(profileKeys);
+    
     const leaderboard: QuizScore[] = [];
 
-    for (let i = 0; i < usernames.length; i++) {
-        const username = usernames[i];
-        const aggStatsJson = aggStatsJsonArray[i];
+    profileJsonArray.forEach((json, index) => {
+        if (json) {
+            const profile: UserProfile = JSON.parse(json);
+            const username = usernames[index];
+            
+            const totalAttempted = profile.totalQuestionsAttempted || 0;
 
-        if (aggStatsJson) {
-            const stats: UserAggregateStats = JSON.parse(aggStatsJson);
-            const percentage = stats.totalQuestions > 0 ? Math.round((stats.totalScore / stats.totalQuestions) * 100) : 0;
-
-            // Format aggregate data into the QuizScore structure for the frontend
             leaderboard.push({
                 username: username,
-                score: stats.totalScore, // Total score across all quizzes
-                total: stats.totalQuestions, // Total questions attempted
-                percentage: percentage, // Overall average percentage
-                date: stats.lastQuizDate, // Date of the last quiz
+                score: profile.totalScore,
+                total: totalAttempted,
+                percentage: totalAttempted > 0 ? Math.round((profile.totalScore / totalAttempted) * 100) : 0,
+                date: profile.lastQuizDate || new Date(0).toISOString(),
             });
         }
-    }
-
-    // The list is mostly sorted by the Redis query, but this ensures correct tie-breaking.
-    leaderboard.sort((a, b) => {
-        if (b.percentage !== a.percentage) {
-            return b.percentage - a.percentage;
-        }
-        return b.score - a.score; // Tie-breaker: higher total score wins
     });
-
+    
     return leaderboard;
 };
 
@@ -381,24 +361,46 @@ const deleteUser = async (usernameToDelete: string): Promise<void> => {
     if (usernameToDelete === 'Rishi') throw new ApiError("Cannot delete the admin account.", 403);
     
     const client = await getRedisClient();
-    const scoreKeys = await client.keys(`score:${usernameToDelete}:*`);
+    
+    // Use SCAN to safely find all score keys for the user without blocking the database,
+    // which is crucial for performance as the user base grows.
+    const scoreKeys: string[] = [];
+    let cursor = 0;
+    do {
+        const reply = await client.scan(cursor, {
+            MATCH: `score:${usernameToDelete}:*`,
+            COUNT: 100 // Process in batches of 100
+        });
+        cursor = reply.cursor;
+        scoreKeys.push(...reply.keys);
+    } while (cursor !== 0);
+
+    // Using a transaction to ensure all deletion operations succeed or fail together
+    const multi = client.multi();
+    
+    // Remove user from all relevant leaderboards
+    multi.zRem('leaderboard_cumulative', usernameToDelete);
+    multi.zRem('leaderboard_avg', usernameToDelete); // For legacy cleanup
+
+    // The old leaderboard stored individual score keys. Remove them if they exist.
+    if (scoreKeys.length > 0) {
+        multi.zRem('leaderboard_scores', scoreKeys);
+    }
+
+    // Prepare all user-related keys for deletion
     const keysToDelete = [
         `user:${usernameToDelete}`,
         `profile:${usernameToDelete}`,
-        `agg_stats:${usernameToDelete}`, // New key
+        `agg_stats:${usernameToDelete}`, // legacy
         ...scoreKeys
     ];
-    await client.del(keysToDelete);
     
-    // Remove from new leaderboard
-    await client.zRem('leaderboard_avg', usernameToDelete);
-
-    // Clean up from old leaderboard sorted set (for hygiene)
-    const scoreMembers = await client.zRange('scores', 0, -1);
-    const userScoreMembers = scoreMembers.filter(member => member.startsWith(`score:${usernameToDelete}:`));
-    if(userScoreMembers.length > 0) {
-        await client.zRem('scores', userScoreMembers);
+    if (keysToDelete.length > 0) {
+        multi.del(keysToDelete);
     }
+
+    // Execute the transaction
+    await multi.exec();
 };
 
 const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {

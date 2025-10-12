@@ -99,6 +99,7 @@ export interface User {
 export interface UserProfile {
     quizzesCompleted: number;
     totalScore: number;
+    totalQuestionsAttempted: number;
     currentStreak: number;
     lastQuizDate: string | null; // ISO date string
 }
