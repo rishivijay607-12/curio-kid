@@ -29,6 +29,15 @@ interface StoredUser extends User {
     passwordHash: string;
 }
 
+// Type for storing aggregated user stats for leaderboard calculation
+interface UserAggregateStats {
+    totalScore: number;
+    totalQuestions: number;
+    quizCount: number;
+    lastQuizDate: string;
+}
+
+
 // Custom error for API logic
 class ApiError extends Error {
     public status: number;
@@ -219,10 +228,11 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
     
+    // Store individual score record, needed for admin panel and detailed history in future
     const scoreKey = `score:${username}:${newScore.date}`;
-    await client.zAdd('scores', { score: newScore.percentage, value: scoreKey });
     await client.set(scoreKey, JSON.stringify(newScore));
 
+    // Update user's main profile (for streak, stats on profile page, etc.)
     const profileJson = await client.get(`profile:${username}`);
     if (profileJson) {
         const profile: UserProfile = JSON.parse(profileJson);
@@ -240,7 +250,26 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         }
         await client.set(`profile:${username}`, JSON.stringify(profile));
     }
+
+    // Update aggregate stats for leaderboard calculation
+    const aggStatsKey = `agg_stats:${username}`;
+    const aggStatsJson = await client.get(aggStatsKey);
+    const aggStats: UserAggregateStats = aggStatsJson ? JSON.parse(aggStatsJson) : { totalScore: 0, totalQuestions: 0, quizCount: 0, lastQuizDate: '1970-01-01T00:00:00.000Z' };
+    
+    aggStats.totalScore += score;
+    aggStats.totalQuestions += total;
+    aggStats.quizCount += 1;
+    aggStats.lastQuizDate = newScore.date;
+
+    await client.set(aggStatsKey, JSON.stringify(aggStats));
+
+    // Calculate the new average percentage based on ALL quizzes
+    const newAvgPercentage = aggStats.totalQuestions > 0 ? (aggStats.totalScore / aggStats.totalQuestions) * 100 : 0;
+
+    // Update the leaderboard sorted set with the user's new average percentage
+    await client.zAdd('leaderboard_avg', { score: newAvgPercentage, value: username });
 };
+
 
 const getProfile = async (username: string): Promise<UserProfile> => {
     const client = await getRedisClient();
@@ -253,23 +282,46 @@ const getProfile = async (username: string): Promise<UserProfile> => {
 
 const getLeaderboard = async (): Promise<QuizScore[]> => {
     const client = await getRedisClient();
-    const scoreKeys = await client.zRange('scores', 0, 100, { REV: true });
-    if (scoreKeys.length === 0) return [];
-    
-    const scoreJsonArray = await client.mGet(scoreKeys);
-    const allScores: QuizScore[] = scoreJsonArray.filter(s => s).map(s => JSON.parse(s!));
+    // Get top 20 usernames from the sorted set based on average performance
+    const usernames = await client.zRange('leaderboard_avg', 0, 19, { REV: true });
+    if (usernames.length === 0) return [];
 
-    const bestScores: { [username: string]: QuizScore } = {};
-    for (const score of allScores) {
-        if (!bestScores[score.username] || score.percentage > bestScores[score.username].percentage) {
-            bestScores[score.username] = score;
+    // Get aggregate stats for each top user
+    const aggStatsKeys = usernames.map(u => `agg_stats:${u}`);
+    const aggStatsJsonArray = await client.mGet(aggStatsKeys);
+
+    const leaderboard: QuizScore[] = [];
+
+    for (let i = 0; i < usernames.length; i++) {
+        const username = usernames[i];
+        const aggStatsJson = aggStatsJsonArray[i];
+
+        if (aggStatsJson) {
+            const stats: UserAggregateStats = JSON.parse(aggStatsJson);
+            const percentage = stats.totalQuestions > 0 ? Math.round((stats.totalScore / stats.totalQuestions) * 100) : 0;
+
+            // Format aggregate data into the QuizScore structure for the frontend
+            leaderboard.push({
+                username: username,
+                score: stats.totalScore, // Total score across all quizzes
+                total: stats.totalQuestions, // Total questions attempted
+                percentage: percentage, // Overall average percentage
+                date: stats.lastQuizDate, // Date of the last quiz
+            });
         }
     }
-    
-    const leaderboard = Object.values(bestScores);
-    leaderboard.sort((a, b) => b.percentage - a.percentage || b.score - a.score);
-    return leaderboard.slice(0, 20);
+
+    // The list is mostly sorted by the Redis query, but this ensures correct tie-breaking.
+    leaderboard.sort((a, b) => {
+        if (b.percentage !== a.percentage) {
+            return b.percentage - a.percentage;
+        }
+        return b.score - a.score; // Tie-breaker: higher total score wins
+    });
+
+    return leaderboard;
 };
+
 
 // --- Admin Functions (Server-Side) ---
 
@@ -330,12 +382,23 @@ const deleteUser = async (usernameToDelete: string): Promise<void> => {
     
     const client = await getRedisClient();
     const scoreKeys = await client.keys(`score:${usernameToDelete}:*`);
-    const keysToDelete = [`user:${usernameToDelete}`, `profile:${usernameToDelete}`, ...scoreKeys];
+    const keysToDelete = [
+        `user:${usernameToDelete}`,
+        `profile:${usernameToDelete}`,
+        `agg_stats:${usernameToDelete}`, // New key
+        ...scoreKeys
+    ];
     await client.del(keysToDelete);
     
+    // Remove from new leaderboard
+    await client.zRem('leaderboard_avg', usernameToDelete);
+
+    // Clean up from old leaderboard sorted set (for hygiene)
     const scoreMembers = await client.zRange('scores', 0, -1);
-    const userScoreMembers = scoreMembers.filter(member => member.startsWith(`${usernameToDelete}:`));
-    if(userScoreMembers.length > 0) await client.zRem('scores', userScoreMembers);
+    const userScoreMembers = scoreMembers.filter(member => member.startsWith(`score:${usernameToDelete}:`));
+    if(userScoreMembers.length > 0) {
+        await client.zRem('scores', userScoreMembers);
+    }
 };
 
 const editUserPassword = async (username: string, newPassword?: string): Promise<void> => {
