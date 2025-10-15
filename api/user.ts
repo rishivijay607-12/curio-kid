@@ -214,7 +214,59 @@ const login = async (username: string, password: string): Promise<User> => {
 const addQuizScore = async (username: string, score: number, total: number): Promise<void> => {
     const client = await getRedisClient();
 
-    // Store individual score record for history/admin purposes
+    // First, fetch the current profile to update it.
+    const profileJson = await client.get(`profile:${username}`);
+    let profile: UserProfile;
+
+    if (!profileJson) {
+        // If no profile exists, create a new one. This handles cases for users who might
+        // exist but whose profile data was somehow lost.
+        profile = {
+            quizzesCompleted: 1,
+            totalScore: score,
+            totalQuestionsAttempted: total,
+            currentStreak: 1,
+            lastQuizDate: new Date().toISOString(),
+        };
+    } else {
+        // If profile exists, parse and update it.
+        profile = JSON.parse(profileJson);
+        
+        // Ensure properties exist before incrementing to prevent NaN errors from old data structures.
+        profile.quizzesCompleted = (profile.quizzesCompleted || 0) + 1;
+        profile.totalScore = (profile.totalScore || 0) + score;
+        profile.totalQuestionsAttempted = (profile.totalQuestionsAttempted || 0) + total;
+        
+        // --- Streak Logic ---
+        const today = new Date(); 
+        today.setHours(0, 0, 0, 0);
+        
+        const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
+        if (lastQuizDay) {
+            lastQuizDay.setHours(0, 0, 0, 0);
+        }
+
+        if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            
+            const isConsecutiveDay = lastQuizDay && lastQuizDay.getTime() === yesterday.getTime();
+            profile.currentStreak = isConsecutiveDay ? (profile.currentStreak || 0) + 1 : 1;
+            profile.lastQuizDate = today.toISOString();
+        }
+    }
+
+    // Use a transaction (MULTI/EXEC) to ensure all related writes succeed or fail together.
+    const multi = client.multi();
+    
+    // 1. Save the updated profile.
+    multi.set(`profile:${username}`, JSON.stringify(profile));
+
+    // 2. Update the user's score in the cumulative leaderboard.
+    // zAdd will add the user if they don't exist, or update their score if they do.
+    multi.zAdd('leaderboard_cumulative', { score: profile.totalScore, value: username });
+
+    // 3. Store the individual score record for history/admin purposes.
     const newScoreRecord: QuizScore = {
         username,
         score,
@@ -223,44 +275,12 @@ const addQuizScore = async (username: string, score: number, total: number): Pro
         percentage: total > 0 ? Math.round((score / total) * 100) : 0,
     };
     const scoreKey = `score:${username}:${newScoreRecord.date}`;
-    await client.set(scoreKey, JSON.stringify(newScoreRecord));
-
-    // Update user's main profile for cumulative stats
-    const profileJson = await client.get(`profile:${username}`);
-    if (!profileJson) {
-        // This case handles a user whose profile might have been deleted but they are still logged in.
-        const newProfile: UserProfile = {
-            quizzesCompleted: 1,
-            totalScore: score,
-            totalQuestionsAttempted: total,
-            currentStreak: 1,
-            lastQuizDate: new Date().toISOString(),
-        };
-        await client.set(`profile:${username}`, JSON.stringify(newProfile));
-        await client.zAdd('leaderboard_cumulative', { score: newProfile.totalScore, value: username });
-        return;
-    }
+    multi.set(scoreKey, JSON.stringify(newScoreRecord));
     
-    const profile: UserProfile = JSON.parse(profileJson);
-    profile.quizzesCompleted += 1;
-    profile.totalScore += score;
-    // Safely add to totalQuestionsAttempted, initializing if it doesn't exist on older profiles
-    profile.totalQuestionsAttempted = (profile.totalQuestionsAttempted || 0) + total;
-    
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const lastQuizDay = profile.lastQuizDate ? new Date(profile.lastQuizDate) : null;
-    if (lastQuizDay) lastQuizDay.setHours(0, 0, 0, 0);
-
-    if (!lastQuizDay || lastQuizDay.getTime() < today.getTime()) {
-        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
-        profile.currentStreak = (lastQuizDay && lastQuizDay.getTime() === yesterday.getTime()) ? profile.currentStreak + 1 : 1;
-        profile.lastQuizDate = today.toISOString();
-    }
-    await client.set(`profile:${username}`, JSON.stringify(profile));
-
-    // Update the new cumulative leaderboard, ranked by total correct answers.
-    await client.zAdd('leaderboard_cumulative', { score: profile.totalScore, value: username });
+    // Execute all queued commands atomically.
+    await multi.exec();
 };
+
 
 const getProfile = async (username: string): Promise<UserProfile> => {
     const client = await getRedisClient();
