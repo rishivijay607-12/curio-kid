@@ -108,6 +108,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                         <table className="w-full text-left min-w-[700px]">
                             <thead className="text-sm text-slate-400 uppercase border-b border-slate-700">
                                 <tr>
+                                    <th className="p-3">#</th>
                                     <th className="p-3">Username</th>
                                     <th className="p-3 text-center">Quizzes</th>
                                     <th className="p-3 text-center">Total Score</th>
@@ -116,10 +117,10 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {userData.map(user => (
+                                {userData.map((user, index) => (
                                     <tr key={user.username} className="border-b border-slate-800 last:border-b-0">
                                         {editingUser === user.username ? (
-                                            <td colSpan={5} className="p-2">
+                                            <td colSpan={6} className="p-2">
                                                 <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(user.username); }} className="flex items-center gap-2 md:gap-4 p-2 bg-slate-800/50 rounded-lg">
                                                     <span className="font-medium text-slate-100 flex-shrink-0">{user.username}</span>
                                                     <input 
@@ -136,6 +137,7 @@ const AdminPanel: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                             </td>
                                         ) : (
                                             <>
+                                                <td className="p-3 font-mono text-slate-400">{index + 1}</td>
                                                 <td className="p-3 font-medium text-slate-100">{user.username} {user.username === 'Rishi' && <span className="text-xs text-cyan-400 ml-2">(Admin)</span>}</td>
                                                 <td className="p-3 text-center text-slate-200">{user.profile?.quizzesCompleted ?? 0}</td>
                                                 <td className="p-3 text-center text-slate-200">{user.profile?.totalScore ?? 0}</td>
