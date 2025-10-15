@@ -115,6 +115,7 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null); // Keep for simple component-level errors
     const [errorDetails, setErrorDetails] = useState<{ code: number; message: string } | null>(null); // For global errors
     const [lastScore, setLastScore] = useState(0);
+    const [lastQuizActualLength, setLastQuizActualLength] = useState(0);
     const [worksheetQuestions, setWorksheetQuestions] = useState<QuizQuestion[]>([]);
     const [notes, setNotes] = useState<NoteSection[]>([]);
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
@@ -269,6 +270,7 @@ const App: React.FC = () => {
     // Quiz Flow
     const handleQuizEnd = async (finalScore: number, totalQuestions: number) => {
         setLastScore(finalScore);
+        setLastQuizActualLength(totalQuestions);
         if (currentUser && totalQuestions) {
             try {
                 await addQuizScore(currentUser.username, finalScore, totalQuestions);
@@ -466,7 +468,7 @@ const App: React.FC = () => {
             
             case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setGameState('QUIZ_RUNNING'); }} />;
             case 'QUIZ_RUNNING': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={handleQuizEnd} />;
-            case 'SCORE_SCREEN': return <ScoreScreen score={lastScore} onRestart={() => setGameState('DIFFICULTY_SELECTION')} quizLength={quizLength!} />;
+            case 'SCORE_SCREEN': return <ScoreScreen score={lastScore} onRestart={() => setGameState('DIFFICULTY_SELECTION')} quizLength={lastQuizActualLength} />;
             
             case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('DIFFICULTY_SELECTION')} grade={grade!} topic={topic!} />;
             case 'NOTES_DISPLAY': return <Notes notes={notes} onRestart={resetToHome} grade={grade!} topic={topic!} />;
