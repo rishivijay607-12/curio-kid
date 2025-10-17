@@ -10,13 +10,18 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Switched to class field initialization for state. The constructor-based
-  // approach was causing "property does not exist" type errors, likely due to a
-  // tooling or configuration issue. This more direct approach resolves the problem.
-  public state: State = {
-    hasError: false,
-    error: undefined,
-  };
+  // FIX: Reverted to a standard constructor for state initialization.
+  // The class field initialization was causing `this.props` to be undefined,
+  // likely due to a build configuration issue (`useDefineForClassFields`).
+  // The constructor ensures `super(props)` is called before state is set,
+  // resolving the error.
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: undefined,
+    };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };

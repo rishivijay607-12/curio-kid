@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard } from './types.ts';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MultiplayerRoom, MysteryState } from './types.ts';
 // No longer need to import API_KEY here
 
 // Service Imports
@@ -19,8 +19,11 @@ import {
     getHistoricalChatResponse,
     live, // Import the live service directly
     getClientSideApiKey,
+    generateMysteryStart,
+    continueMystery,
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
+import * as multiplayerService from './services/multiplayerService.ts';
 
 // Component Imports
 import GradeSelector from './components/GradeSelector.tsx';
@@ -66,6 +69,11 @@ import AnimalKingdomGame from './components/AnimalKingdomGame.tsx';
 import LabToolMatchGame from './components/LabToolMatchGame.tsx';
 import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
 import TicTacToeGame from './components/TicTacToeGame.tsx';
+import MultiplayerHomeScreen from './components/MultiplayerHomeScreen.tsx';
+import MultiplayerLobby from './components/MultiplayerLobby.tsx';
+import MultiplayerQuiz from './components/MultiplayerQuiz.tsx';
+import MultiplayerFinalScore from './components/MultiplayerFinalScore.tsx';
+import MysteryOfScienceGame from './components/MysteryOfScienceGame.tsx';
 
 // ApiKeyInstructions is no longer needed
 
@@ -109,6 +117,7 @@ const App: React.FC = () => {
     const [language, setLanguage] = useState<Language | null>(null);
     const [selectedScientist, setSelectedScientist] = useState<Scientist | null>(null);
     const [userScienceFairTopic, setUserScienceFairTopic] = useState<string>('');
+    const [multiplayerRoom, setMultiplayerRoom] = useState<MultiplayerRoom | null>(null);
 
     // Data & UI State
     const [isLoading, setIsLoading] = useState(false);
@@ -124,6 +133,7 @@ const App: React.FC = () => {
     const [scienceLensResult, setScienceLensResult] = useState<string | null>(null);
     const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
     const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
+    const [mysteryState, setMysteryState] = useState<MysteryState | null>(null);
     
     // --- Effects ---
     useEffect(() => {
@@ -164,6 +174,8 @@ const App: React.FC = () => {
         setSelectedScienceFairIdea(null);
         setSelectedScientist(null);
         setUserProfile(null);
+        setMultiplayerRoom(null);
+        setMysteryState(null);
     }, []);
 
     const resetToHome = useCallback(() => {
@@ -205,12 +217,13 @@ const App: React.FC = () => {
         setAppMode(mode);
         
         // Features that do not require grade/topic selection
-        if (['science_lens', 'science_fair_buddy', 'chat_with_history', 'science_game'].includes(mode)) {
+        if (['science_lens', 'science_fair_buddy', 'chat_with_history', 'science_game', 'multiplayer_quiz'].includes(mode)) {
             const stateMap: Record<string, string> = {
                 'science_lens': 'science_lens',
                 'science_fair_buddy': 'science_fair_buddy',
                 'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION',
                 'science_game': 'science_game_selection',
+                'multiplayer_quiz': 'MULTIPLAYER_HOME',
             };
             setGameState(stateMap[mode]);
         } else {
@@ -385,6 +398,69 @@ const App: React.FC = () => {
         } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
     };
 
+    // Multiplayer Flow
+    const handleCreateMultiplayerRoom = async () => {
+        if (!grade || !topic || !difficulty || !quizLength || !currentUser) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            const room = await multiplayerService.createRoom({ grade, topic, difficulty, quizLength }, currentUser.username);
+            setMultiplayerRoom(room);
+            setGameState('MULTIPLAYER_LOBBY');
+        } catch (err) {
+            CATCH_BLOCK(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleJoinMultiplayerRoom = async (roomId: string) => {
+        if (!currentUser) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            const room = await multiplayerService.joinRoom(roomId, currentUser.username);
+            setMultiplayerRoom(room);
+            setGameState('MULTIPLAYER_LOBBY');
+        } catch (err) {
+             CATCH_BLOCK(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Mystery of Science Flow
+    const handleStartMystery = async (selectedTopic: string) => {
+        if (!grade) return;
+        setTopic(selectedTopic);
+        setIsLoading(true);
+        setError(null);
+        try {
+            const initialState = await generateMysteryStart(selectedTopic, grade);
+            setMysteryState(initialState);
+            setGameState('MYSTERY_OF_SCIENCE_GAME');
+        } catch (err) {
+            CATCH_BLOCK(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMysteryChoice = async (choice: string) => {
+        if (!grade || !topic || !mysteryState) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            const nextState = await continueMystery(topic, grade, mysteryState.story, choice);
+            setMysteryState(nextState);
+        } catch (err) {
+            CATCH_BLOCK(err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+
     // Other Generative Features
     const handleGenerateText = async (userInput: string) => {
         setIsLoading(true);
@@ -454,6 +530,7 @@ const App: React.FC = () => {
                 setTopic(t);
                 if (appMode === 'notes') handleNotesTopicSelect(t);
                 else if (appMode === 'flashcards') handleFlashcardsTopicSelect(t);
+                else if (appMode === 'mystery_of_science') handleStartMystery(t);
                 else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
                 else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
                 else setGameState('DIFFICULTY_SELECTION');
@@ -463,6 +540,7 @@ const App: React.FC = () => {
             
             case 'COUNT_SELECTION':
                 if (appMode === 'quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); setGameState('TIMER_SELECTION'); }} />;
+                if (appMode === 'multiplayer_quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); handleCreateMultiplayerRoom(); }} />;
                 if (appMode === 'worksheet') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} />;
                 return null;
             
@@ -495,6 +573,15 @@ const App: React.FC = () => {
             case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
             case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
             
+            // Multiplayer States
+            case 'MULTIPLAYER_HOME': return <MultiplayerHomeScreen onJoin={handleJoinMultiplayerRoom} onCreate={() => setGameState('GRADE_SELECTION')} isLoading={isLoading} error={error} />;
+            case 'MULTIPLAYER_LOBBY': return <MultiplayerLobby room={multiplayerRoom!} currentUser={currentUser!} onStateChange={setMultiplayerRoom} onStartGame={() => setGameState('MULTIPLAYER_GAME')} />;
+            case 'MULTIPLAYER_GAME': return <MultiplayerQuiz room={multiplayerRoom!} currentUser={currentUser!} onGameEnd={(finalRoomState) => { setMultiplayerRoom(finalRoomState); setGameState('MULTIPLAYER_FINAL_SCORE'); }} />;
+            case 'MULTIPLAYER_FINAL_SCORE': return <MultiplayerFinalScore room={multiplayerRoom!} onPlayAgain={resetToHome} />;
+
+            // Mystery of Science
+            case 'MYSTERY_OF_SCIENCE_GAME': return <MysteryOfScienceGame mystery={mysteryState!} onChoiceSelect={handleMysteryChoice} isLoading={isLoading} onRestart={resetToHome} grade={grade!} topic={topic!} />;
+
             // Game States
             case 'science_game_selection': return <GameSelectionScreen onGameSelect={handleGameSelect} />;
             case 'game_element_match': return <ElementMatchGame onEnd={resetToHome} />;

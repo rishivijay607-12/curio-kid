@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import { createClient, RedisClientType } from 'redis';
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle, MysteryState } from '../types.ts';
 
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -72,6 +72,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // FIX: Add cases for video generation.
             case 'generateEducationalVideo': result = await generateEducationalVideo(ai, params); break;
             case 'checkVideoOperationStatus': result = await checkVideoOperationStatus(ai, params); break;
+            case 'generateMysteryStart': result = await generateMysteryStart(ai, params); break;
+            case 'continueMystery': result = await continueMystery(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -489,4 +491,50 @@ const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any):
     } else {
         return { status: 'in-progress' };
     }
+};
+
+const mysterySchema = {
+    type: Type.OBJECT,
+    properties: {
+        story: { type: Type.STRING },
+        choices: { type: Type.ARRAY, items: { type: Type.STRING } },
+        isEnd: { type: Type.BOOLEAN }
+    },
+    required: ['story', 'choices', 'isEnd']
+};
+
+const generateMysteryStart = async (ai: GoogleGenAI, { topic, grade }: any): Promise<MysteryState> => {
+    const prompt = `You are a master storyteller and science educator. Create the beginning of a 'choose your own adventure' mystery story for a Grade ${grade} student. The story must be based on concepts from the chapter "${topic}".
+    Present a compelling mystery and end with 2-3 short, distinct choices for the player to make. The choices must require scientific reasoning based on the chapter's concepts.
+    Return a JSON object with 'story' (the narrative text), 'choices' (an array of choice strings), and 'isEnd' (which must be false for the start).`;
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+            safetySettings,
+            responseMimeType: "application/json",
+            responseSchema: mysterySchema,
+        },
+    });
+    return JSON.parse(response.text) as MysteryState;
+};
+
+const continueMystery = async (ai: GoogleGenAI, { topic, grade, currentStory, choice }: any): Promise<MysteryState> => {
+    const prompt = `You are continuing a 'choose your own adventure' science mystery for a Grade ${grade} student. The chapter is "${topic}".
+    Here is the story so far: "${currentStory}".
+    The player has just made this choice: "${choice}".
+    
+    Continue the story based on their choice. The story should advance the mystery and end with 2-3 new scientific choices.
+    If the mystery is solved, the player has found the correct path, or the player reaches a logical dead end, make this the final part of the story.
+    If it is the end, set 'isEnd' to true and make the 'choices' array empty. Otherwise, set 'isEnd' to false and provide new choices.`;
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+            safetySettings,
+            responseMimeType: "application/json",
+            responseSchema: mysterySchema,
+        },
+    });
+    return JSON.parse(response.text) as MysteryState;
 };

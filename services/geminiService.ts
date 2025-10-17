@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 // FIX: Import SudokuPuzzle type.
-import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle } from '../types.ts';
+import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle, MysteryState } from '../types.ts';
 
 // Define a custom error class to hold the status code for better error handling in the UI
 export class ApiError extends Error {
@@ -113,6 +113,14 @@ export const generateEducationalVideo = (topic: string, grade: Grade, duration: 
 
 export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired'; videoUrl?: string }> => {
     return callApi('checkVideoOperationStatus', { operationId });
+};
+
+export const generateMysteryStart = (topic: string, grade: Grade): Promise<MysteryState> => {
+    return callApi('generateMysteryStart', { topic, grade });
+};
+
+export const continueMystery = (topic: string, grade: Grade, currentStory: string, choice: string): Promise<MysteryState> => {
+    return callApi('continueMystery', { topic, grade, currentStory, choice });
 };
 
 

@@ -33,7 +33,9 @@ export type AppMode =
   | 'game_animal_kingdom'
   | 'game_lab_tool_match'
   | 'game_anatomy_quiz'
-  | 'game_tic_tac_toe';
+  | 'game_tic_tac_toe'
+  | 'multiplayer_quiz'
+  | 'mystery_of_science'; // New mode
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -143,3 +145,29 @@ export interface SudokuPuzzle {
 }
 
 export type TicTacToeBoard = ( 'X' | 'O' | null )[];
+
+// --- Multiplayer Types ---
+export interface PlayerScore {
+    username: string;
+    score: number;
+}
+export interface MultiplayerRoom {
+  roomId: string;
+  host: string;
+  grade: Grade;
+  topic: string;
+  difficulty: Difficulty;
+  quizLength: number;
+  status: 'lobby' | 'in-progress' | 'finished';
+  players: string[];
+  questions: QuizQuestion[];
+  currentQuestionIndex: number;
+  scores: PlayerScore[];
+}
+
+// New type for the Mystery game
+export interface MysteryState {
+  story: string;
+  choices: string[];
+  isEnd: boolean;
+}
