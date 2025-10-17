@@ -288,7 +288,6 @@ const App: React.FC = () => {
         } else if (gameState === 'GENERATING_WORKSHEET' && topic && grade && difficulty && quizLength) {
             handleApiCall(() => generateWorksheet(topic, grade, difficulty, quizLength), (data) => { setWorksheetQuestions(data); setGameState('WORKSHEET_DISPLAY'); });
         } else if (gameState === 'GENERATING_GREETING' && (topic || selectedScientist)) {
-            // FIX: The handleApiCall function expects a function that returns a Promise, but it was being passed a Promise directly. Wrapped the API call in an arrow function to match the expected signature.
             const apiCall = () => appMode === 'chat_with_history' ? generateScientistGreeting(selectedScientist!) : generateGreeting(grade!, language!, topic!);
             handleApiCall(apiCall, (greeting) => {
                 setChatHistory([{ role: 'model', parts: [{ text: greeting }] }]);
@@ -318,17 +317,31 @@ const App: React.FC = () => {
         switch (gameState) {
             case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={() => setGameState('profile')} onShowLeaderboard={() => setGameState('leaderboard')} onGoToAdminPanel={() => setGameState('admin_panel')} />;
             case 'GRADE_SELECTION': return <GradeSelector onGradeSelect={handleGradeSelect} appMode={appMode} isSolverSetup={false} isLoading={false} error={null} />;
-            case 'TOPIC_SELECTION': return <TopicSelector onTopicSelect={handleTopicSelect} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} />;
+            
+            case 'TOPIC_SELECTION':
+            case 'GENERATING_NOTES':
+            case 'GENERATING_FLASHCARDS':
+            case 'GENERATING_MYSTERY':
+                return <TopicSelector onTopicSelect={handleTopicSelect} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} />;
+
             case 'DIFFICULTY_SELECTION': return <DifficultySelector onDifficultySelect={handleDifficultySelect} />;
             case 'QUESTION_COUNT_SELECTION': return <QuestionCountSelector onQuestionCountSelect={handleQuestionCountSelect} />;
             case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={handleTimerSelect} />;
             case 'QUIZ': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={handleQuizEnd} />;
             case 'SCORE': return <ScoreScreen score={lastScore} onRestart={() => setGameState('TOPIC_SELECTION')} quizLength={lastQuizActualLength} />;
-            case 'WORKSHEET_COUNT_SELECTION': return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} />;
+            
+            case 'WORKSHEET_COUNT_SELECTION':
+            case 'GENERATING_WORKSHEET':
+                return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} />;
+
             case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
             case 'NOTES_DISPLAY': return <Notes notes={notes} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
             case 'FLASHCARDS_DISPLAY': return <Flashcards flashcards={flashcards} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
-            case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={handleLanguageSelect} title="AI Doubt Solver" grade={grade!} topic={topic!} isLoading={isLoading} error={error} />;
+            
+            case 'LANGUAGE_SELECTION':
+            case 'GENERATING_GREETING':
+                return <LanguageSelector onLanguageSelect={handleLanguageSelect} title="AI Doubt Solver" grade={grade!} topic={topic!} isLoading={isLoading} error={error} />;
+            
             case 'DOUBT_SOLVER': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={handleCancelGeneration} />;
             case 'VOICE_TUTOR': return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
             case 'GENERATIVE_TEXT_INPUT': return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerativeText} isLoading={isLoading} result={generativeTextResult} error={error} />;
