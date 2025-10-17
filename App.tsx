@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MultiplayerRoom, MysteryState } from './types.ts';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MysteryState } from './types.ts';
 // No longer need to import API_KEY here
 
 // Service Imports
@@ -23,7 +23,6 @@ import {
     continueMystery,
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
-import * as multiplayerService from './services/multiplayerService.ts';
 
 // Component Imports
 import GradeSelector from './components/GradeSelector.tsx';
@@ -69,10 +68,6 @@ import AnimalKingdomGame from './components/AnimalKingdomGame.tsx';
 import LabToolMatchGame from './components/LabToolMatchGame.tsx';
 import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
 import TicTacToeGame from './components/TicTacToeGame.tsx';
-import MultiplayerHomeScreen from './components/MultiplayerHomeScreen.tsx';
-import MultiplayerLobby from './components/MultiplayerLobby.tsx';
-import MultiplayerQuiz from './components/MultiplayerQuiz.tsx';
-import MultiplayerFinalScore from './components/MultiplayerFinalScore.tsx';
 import MysteryOfScienceGame from './components/MysteryOfScienceGame.tsx';
 
 // ApiKeyInstructions is no longer needed
@@ -117,7 +112,6 @@ const App: React.FC = () => {
     const [language, setLanguage] = useState<Language | null>(null);
     const [selectedScientist, setSelectedScientist] = useState<Scientist | null>(null);
     const [userScienceFairTopic, setUserScienceFairTopic] = useState<string>('');
-    const [multiplayerRoom, setMultiplayerRoom] = useState<MultiplayerRoom | null>(null);
 
     // Data & UI State
     const [isLoading, setIsLoading] = useState(false);
@@ -174,7 +168,6 @@ const App: React.FC = () => {
         setSelectedScienceFairIdea(null);
         setSelectedScientist(null);
         setUserProfile(null);
-        setMultiplayerRoom(null);
         setMysteryState(null);
     }, []);
 
@@ -217,13 +210,12 @@ const App: React.FC = () => {
         setAppMode(mode);
         
         // Features that do not require grade/topic selection
-        if (['science_lens', 'science_fair_buddy', 'chat_with_history', 'science_game', 'multiplayer_quiz'].includes(mode)) {
+        if (['science_lens', 'science_fair_buddy', 'chat_with_history', 'science_game'].includes(mode)) {
             const stateMap: Record<string, string> = {
                 'science_lens': 'science_lens',
                 'science_fair_buddy': 'science_fair_buddy',
                 'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION',
                 'science_game': 'science_game_selection',
-                'multiplayer_quiz': 'MULTIPLAYER_HOME',
             };
             setGameState(stateMap[mode]);
         } else {
@@ -237,394 +229,4 @@ const App: React.FC = () => {
         setGameState(gameMode); // e.g., gameState becomes 'game_element_match'
     };
 
-    const handleShowLeaderboard = () => setGameState('LEADERBOARD');
-    const handleGoToAdminPanel = () => setGameState('ADMIN_PANEL');
-    
-    const handleShowProfile = async () => {
-        if (!currentUser) return;
-        setIsLoading(true);
-        try {
-            const profileData = await getProfile(currentUser.username);
-            setUserProfile(profileData);
-            setGameState('PROFILE_SCREEN');
-        } catch(err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Generic error handler to reduce repetition
-    const CATCH_BLOCK = (err: unknown) => {
-        setIsLoading(false);
-        let code = 500;
-        let message = "An unexpected error occurred. Please try again.";
-
-        if (err instanceof ApiError) {
-            message = err.message;
-            code = err.status;
-        } else if (err instanceof Error) {
-            message = err.message;
-        }
-        
-        console.error(`Caught error (Code: ${code}):`, message);
-
-        // For simple, non-critical errors, we might just set the local error state
-        // For critical errors (like 500), we show the global error screen.
-        if (code >= 500) {
-            setErrorDetails({ code, message });
-            setGameState('ERROR_SCREEN');
-        } else {
-            // Set local error for display on the current screen (e.g., TopicSelector)
-            setError(message);
-        }
-    };
-
-    // Quiz Flow
-    const handleQuizEnd = async (finalScore: number, totalQuestions: number) => {
-        setLastScore(finalScore);
-        setLastQuizActualLength(totalQuestions);
-        if (currentUser && totalQuestions) {
-            try {
-                await addQuizScore(currentUser.username, finalScore, totalQuestions);
-            } catch (err) {
-                console.error("Failed to save score or update profile:", err);
-                setError("There was an issue saving your score.");
-            }
-        }
-        setGameState('SCORE_SCREEN');
-    };
-    
-    // Worksheet Flow
-    const handleWorksheetCountSelect = async (count: number) => {
-        if (!topic || !grade || !difficulty) return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            const questions = await generateWorksheet(topic, grade, difficulty, count);
-            setWorksheetQuestions(questions);
-            setGameState('WORKSHEET_DISPLAY');
-        } catch (err) { CATCH_BLOCK(err); }
-    };
-
-    // Notes Flow
-    const handleNotesTopicSelect = async (selectedTopic: string) => {
-        if (!grade) return;
-        setTopic(selectedTopic);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const notesData = await generateNotes(selectedTopic, grade);
-            setNotes(notesData);
-            setGameState('NOTES_DISPLAY');
-        } catch (err) { CATCH_BLOCK(err); }
-    };
-
-    // Flashcards Flow
-    const handleFlashcardsTopicSelect = async (selectedTopic: string) => {
-        if (!grade) return;
-        setTopic(selectedTopic);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const flashcardData = await generateFlashcards(selectedTopic, grade);
-            if (flashcardData.length === 0) {
-                throw new Error("The AI failed to generate any flashcards for this topic.");
-            }
-            setFlashcards(flashcardData);
-            setGameState('FLASHCARDS_DISPLAY');
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-    
-    // Chat & Tutor Flows
-    const handleStartChat = async (selectedTopic: string, selectedLanguage: Language) => {
-        if (!grade) return;
-        setTopic(selectedTopic);
-        setLanguage(selectedLanguage);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const greeting = await generateGreeting(grade, selectedLanguage, selectedTopic);
-            const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
-            setChatHistory([greetingMessage]);
-            setGameState('DOUBT_SOLVER_SESSION');
-        } catch (err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    const handleSendMessage = async (message: string) => {
-        if (!grade || !topic || !language) return;
-        const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
-        const newHistory: ChatMessage[] = [...chatHistory, userMessage];
-        setChatHistory(newHistory);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const response = await getChatResponse(grade, newHistory, language, topic);
-            const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
-            setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-    
-    const handleScientistSelect = async (scientist: Scientist) => {
-        setSelectedScientist(scientist);
-        setGameState('HISTORICAL_CHAT_SESSION');
-        setIsLoading(true);
-        try {
-            const greeting = await generateScientistGreeting(scientist);
-            const greetingMessage: ChatMessage = { role: 'model', parts: [{ text: greeting }] };
-            setChatHistory([greetingMessage]);
-        } catch (err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleSendHistoricalMessage = async (message: string) => {
-        if (!selectedScientist) return;
-        const userMessage: ChatMessage = { role: 'user', parts: [{ text: message }] };
-        const newHistory: ChatMessage[] = [...chatHistory, userMessage];
-        setChatHistory(newHistory);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const response = await getHistoricalChatResponse(selectedScientist, newHistory);
-            const modelMessage: ChatMessage = { role: 'model', parts: [{ text: response }] };
-            setChatHistory(prev => [...prev, modelMessage]);
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-
-    // Multiplayer Flow
-    const handleCreateMultiplayerRoom = async () => {
-        if (!grade || !topic || !difficulty || !quizLength || !currentUser) return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            const room = await multiplayerService.createRoom({ grade, topic, difficulty, quizLength }, currentUser.username);
-            setMultiplayerRoom(room);
-            setGameState('MULTIPLAYER_LOBBY');
-        } catch (err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleJoinMultiplayerRoom = async (roomId: string) => {
-        if (!currentUser) return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            const room = await multiplayerService.joinRoom(roomId, currentUser.username);
-            setMultiplayerRoom(room);
-            setGameState('MULTIPLAYER_LOBBY');
-        } catch (err) {
-             CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Mystery of Science Flow
-    const handleStartMystery = async (selectedTopic: string) => {
-        if (!grade) return;
-        setTopic(selectedTopic);
-        setIsLoading(true);
-        setError(null);
-        try {
-            const initialState = await generateMysteryStart(selectedTopic, grade);
-            setMysteryState(initialState);
-            setGameState('MYSTERY_OF_SCIENCE_GAME');
-        } catch (err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleMysteryChoice = async (choice: string) => {
-        if (!grade || !topic || !mysteryState) return;
-        setIsLoading(true);
-        setError(null);
-        try {
-            const nextState = await continueMystery(topic, grade, mysteryState.story, choice);
-            setMysteryState(nextState);
-        } catch (err) {
-            CATCH_BLOCK(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-
-    // Other Generative Features
-    const handleGenerateText = async (userInput: string) => {
-        setIsLoading(true);
-        setError(null);
-        setGenerativeTextResult(null);
-        try {
-            const result = await generateTextForMode(appMode, userInput, grade ?? undefined, topic ?? undefined);
-            setGenerativeTextResult(result);
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-
-    const handleScienceLensGenerate = async (base64Image: string, mimeType: string, prompt: string) => {
-        setIsLoading(true);
-        setError(null);
-        setScienceLensResult(null);
-        try {
-            const result = await explainImageWithText(base64Image, mimeType, prompt);
-            setScienceLensResult(result);
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-    
-    const handleScienceFairIdeasGenerate = async (userInput: string) => {
-        setIsLoading(true);
-        setError(null);
-        setUserScienceFairTopic(userInput);
-        try {
-            const ideas = await generateScienceFairIdeas(userInput);
-            setScienceFairIdeas(ideas);
-            setGameState('SCIENCE_FAIR_IDEAS');
-        } catch (err) { CATCH_BLOCK(err); } finally { setIsLoading(false); }
-    };
-
-    const handleSelectScienceFairIdea = (idea: ScienceFairIdea) => {
-        setSelectedScienceFairIdea(idea);
-        setGameState('SCIENCE_FAIR_PLAN');
-    };
-
-    // --- Render Logic ---
-    const renderContent = () => {
-        if (gameState === 'initializing') {
-            return (
-                <div className="flex flex-col items-center justify-center">
-                    <LoadingSpinner />
-                </div>
-            );
-        }
-        
-        switch (gameState) {
-            case 'login': return <LoginScreen onLogin={handleLogin} onNavigateToRegister={() => setGameState('register')} />;
-            case 'register': return <RegistrationScreen onRegister={handleRegister} onNavigateToLogin={() => setGameState('login')} />;
-            
-            case 'home': return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={handleShowProfile} onShowLeaderboard={handleShowLeaderboard} onGoToAdminPanel={handleGoToAdminPanel} />;
-            case 'PROFILE_SCREEN': return <ProfileScreen userProfile={userProfile} isLoading={isLoading} username={currentUser?.username ?? ''} />;
-            case 'LEADERBOARD': return <Leaderboard currentUser={currentUser?.username ?? null} onBack={resetToHome} />;
-            case 'ADMIN_PANEL': return <AdminPanel onBack={resetToHome} />;
-
-            case 'ERROR_SCREEN': return <ErrorScreen errorCode={errorDetails?.code ?? 500} errorMessage={errorDetails?.message ?? 'An unknown error occurred.'} onGoHome={resetToHome} />;
-
-            case 'GRADE_SELECTION': return <GradeSelector 
-                onGradeSelect={grade => { setGrade(grade); setGameState('TOPIC_SELECTION'); }} 
-                appMode={appMode} 
-                isSolverSetup={['doubt_solver', 'voice_tutor'].includes(appMode)}
-                isLoading={isLoading}
-                error={error}
-            />;
-            case 'TOPIC_SELECTION': return <TopicSelector onTopicSelect={(t) => {
-                setTopic(t);
-                if (appMode === 'notes') handleNotesTopicSelect(t);
-                else if (appMode === 'flashcards') handleFlashcardsTopicSelect(t);
-                else if (appMode === 'mystery_of_science') handleStartMystery(t);
-                else if (appMode === 'doubt_solver' || appMode === 'voice_tutor') setGameState('LANGUAGE_SELECTION');
-                else if (['concept_deep_dive', 'virtual_lab', 'real_world_links', 'story_weaver', 'what_if'].includes(appMode)) setGameState('generative_text_input');
-                else setGameState('DIFFICULTY_SELECTION');
-            }} grade={grade!} isGenerating={isLoading} error={error} appMode={appMode} isSolverSetup={['doubt_solver', 'voice_tutor'].includes(appMode)} />;
-            
-            case 'DIFFICULTY_SELECTION': return <DifficultySelector onDifficultySelect={d => { setDifficulty(d); setGameState('COUNT_SELECTION'); }} />;
-            
-            case 'COUNT_SELECTION':
-                if (appMode === 'quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); setGameState('TIMER_SELECTION'); }} />;
-                if (appMode === 'multiplayer_quiz') return <QuestionCountSelector onQuestionCountSelect={c => { setQuizLength(c); handleCreateMultiplayerRoom(); }} />;
-                if (appMode === 'worksheet') return <WorksheetCountSelector onCountSelect={handleWorksheetCountSelect} isGenerating={isLoading} error={error} />;
-                return null;
-            
-            case 'TIMER_SELECTION': return <TimerSelector onTimerSelect={d => { setTimerDuration(d); setGameState('QUIZ_RUNNING'); }} />;
-            case 'QUIZ_RUNNING': return <Quiz topic={topic!} grade={grade!} difficulty={difficulty!} quizLength={quizLength!} timerDuration={timerDuration!} onQuizEnd={handleQuizEnd} />;
-            case 'SCORE_SCREEN': return <ScoreScreen score={lastScore} onRestart={() => setGameState('DIFFICULTY_SELECTION')} quizLength={lastQuizActualLength} />;
-            
-            case 'WORKSHEET_DISPLAY': return <Worksheet questions={worksheetQuestions} onRestart={() => setGameState('DIFFICULTY_SELECTION')} grade={grade!} topic={topic!} />;
-            case 'NOTES_DISPLAY': return <Notes notes={notes} onRestart={resetToHome} grade={grade!} topic={topic!} />;
-            case 'FLASHCARDS_DISPLAY': return <Flashcards flashcards={flashcards} onRestart={resetToHome} grade={grade!} topic={topic!} />;
-           
-            case 'LANGUAGE_SELECTION': return <LanguageSelector onLanguageSelect={lang => {
-                setLanguage(lang);
-                if(appMode === 'doubt_solver') handleStartChat(topic!, lang);
-                else setGameState('VOICE_TUTOR_SESSION');
-            }} title={appMode === 'voice_tutor' ? "AI Voice Tutor" : "AI Doubt Solver"} grade={grade!} topic={topic!} isLoading={isLoading} error={error} />;
-
-            case 'DOUBT_SOLVER_SESSION': return <DoubtSolver grade={grade!} topic={topic!} history={chatHistory} onSendMessage={handleSendMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
-            
-            case 'generative_text_input': return <GenerativeText appMode={appMode} grade={grade} topic={topic!} onGenerate={handleGenerateText} isLoading={isLoading} result={generativeTextResult} error={error} />;
-            
-            case 'science_lens': return <ScienceLens onGenerate={handleScienceLensGenerate} isLoading={isLoading} result={scienceLensResult} error={error} />;
-           
-            case 'science_fair_buddy': return <ScienceFairBuddy onGenerate={handleScienceFairIdeasGenerate} isLoading={isLoading} error={error} />;
-            case 'SCIENCE_FAIR_IDEAS': return <ScienceFairIdeas ideas={scienceFairIdeas} onSelect={handleSelectScienceFairIdea} userTopic={userScienceFairTopic} />;
-            case 'SCIENCE_FAIR_PLAN': return <ScienceFairPlan idea={selectedScienceFairIdea!} onRestart={resetToHome} />;
-
-            case 'VOICE_TUTOR_SESSION': return <VoiceTutor grade={grade!} topic={topic!} language={language!} onEndSession={resetToHome} />;
-
-            case 'HISTORICAL_SCIENTIST_SELECTION': return <ScientistSelector onScientistSelect={handleScientistSelect} />;
-            case 'HISTORICAL_CHAT_SESSION': return <HistoricalChat scientist={selectedScientist!} history={chatHistory} onSendMessage={handleSendHistoricalMessage} isLoading={isLoading} error={error} onCancelGeneration={() => setIsLoading(false)} />;
-            
-            // Multiplayer States
-            case 'MULTIPLAYER_HOME': return <MultiplayerHomeScreen onJoin={handleJoinMultiplayerRoom} onCreate={() => setGameState('GRADE_SELECTION')} isLoading={isLoading} error={error} />;
-            case 'MULTIPLAYER_LOBBY': return <MultiplayerLobby room={multiplayerRoom!} currentUser={currentUser!} onStateChange={setMultiplayerRoom} onStartGame={() => setGameState('MULTIPLAYER_GAME')} />;
-            case 'MULTIPLAYER_GAME': return <MultiplayerQuiz room={multiplayerRoom!} currentUser={currentUser!} onGameEnd={(finalRoomState) => { setMultiplayerRoom(finalRoomState); setGameState('MULTIPLAYER_FINAL_SCORE'); }} />;
-            case 'MULTIPLAYER_FINAL_SCORE': return <MultiplayerFinalScore room={multiplayerRoom!} onPlayAgain={resetToHome} />;
-
-            // Mystery of Science
-            case 'MYSTERY_OF_SCIENCE_GAME': return <MysteryOfScienceGame mystery={mysteryState!} onChoiceSelect={handleMysteryChoice} isLoading={isLoading} onRestart={resetToHome} grade={grade!} topic={topic!} />;
-
-            // Game States
-            case 'science_game_selection': return <GameSelectionScreen onGameSelect={handleGameSelect} />;
-            case 'game_element_match': return <ElementMatchGame onEnd={resetToHome} />;
-            case 'game_lab_safety': return <LabSafetyGame onEnd={resetToHome} />;
-            case 'game_planet_lineup': return <PlanetLineupGame onEnd={resetToHome} />;
-            case 'game_state_of_matter': return <StateOfMatterGame onEnd={resetToHome} />;
-            case 'game_scientific_method': return <ScientificMethodGame onEnd={resetToHome} />;
-            case 'game_food_chain': return <FoodChainGame onEnd={resetToHome} />;
-            case 'game_invention_timeline': return <InventionTimelineGame onEnd={resetToHome} />;
-            case 'game_scientist_match': return <ScientistMatchGame onEnd={resetToHome} />;
-            case 'game_science_riddles': return <ScienceRiddlesGame onEnd={resetToHome} />;
-            case 'game_animal_kingdom': return <AnimalKingdomGame onEnd={resetToHome} />;
-            case 'game_lab_tool_match': return <LabToolMatchGame onEnd={resetToHome} />;
-            case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={resetToHome} />;
-            case 'game_tic_tac_toe': return <TicTacToeGame onEnd={resetToHome} />;
-
-
-            default: return <ErrorScreen errorCode={404} errorMessage={`The application state "${gameState}" does not exist.`} onGoHome={resetToHome} />;
-        }
-    };
-    
-    const showHeader = !['login', 'register', 'initializing', 'ERROR_SCREEN'].includes(gameState);
-
-    return (
-        <main className="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col items-center p-4">
-            <div className="absolute inset-0 bg-grid-pattern [mask-image:linear-gradient(to_bottom,white_5%,transparent_90%)]"></div>
-            
-            {showHeader && (
-                <header className="w-full max-w-screen-2xl mx-auto flex justify-between items-center p-4 sticky top-0 z-50">
-                    <button onClick={resetToHome} aria-label="Home" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
-                        <IconHome />
-                    </button>
-                     <button onClick={handleLogout} aria-label="Logout" className="p-3 bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-full shadow-lg hover:bg-slate-800 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-slate-200" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    </button>
-                </header>
-            )}
-
-            <div className="relative z-10 w-full flex-grow flex items-center justify-center">
-                {renderContent()}
-            </div>
-        </main>
-    );
-};
-
-export default App;
+    const
