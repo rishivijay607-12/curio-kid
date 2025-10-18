@@ -192,17 +192,22 @@ const App: React.FC = () => {
     };
     
     // --- Auth & Setup Handlers ---
-    const handleLogin = (username: string, password: string) => handleApiCall(() => login(username, password), (user) => {
+    // FIX: Re-implement handleLogin to allow local error handling in the LoginScreen component.
+    // It now throws an error on failure, which is caught by the component's try-catch block.
+    const handleLogin = async (username: string, password: string) => {
+        const user = await login(username, password);
         localStorage.setItem('curiosity_current_user', JSON.stringify(user));
         setCurrentUser(user);
         setGameState('home');
-    });
+    };
     
-    const handleRegister = (username: string, password: string) => handleApiCall(() => register(username, password), (user) => {
+    // FIX: Re-implement handleRegister to allow local error handling in the RegistrationScreen component.
+    const handleRegister = async (username: string, password: string) => {
+        const user = await register(username, password);
         localStorage.setItem('curiosity_current_user', JSON.stringify(user));
         setCurrentUser(user);
         setGameState('home');
-    });
+    };
     
     const handleLogout = () => {
         logout();

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 
 interface LoginScreenProps {
-  onLogin: (username: string, password: string) => Promise<boolean>;
+  // FIX: Changed return type to Promise<void> to match the actual implementation.
+  // The component uses try/catch, so it doesn't need a boolean return value.
+  onLogin: (username: string, password: string) => Promise<void>;
   onNavigateToRegister: () => void;
 }
 
