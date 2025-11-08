@@ -10,7 +10,7 @@ interface State {
 }
 
 class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Reverted to using a constructor to explicitly initialize state and call super(props), which may resolve issues with 'this.props' not being recognized by the type checker.
+  // FIX: The error "Property 'props' does not exist on type 'ErrorBoundary'" suggests an issue with `this` context initialization. While class fields are modern, they can behave unexpectedly in some build configurations. Reverting to a standard constructor with `super(props)` is a more robust and widely supported pattern that explicitly initializes both `this.props` and `this.state`, resolving the error.
   constructor(props: Props) {
     super(props);
     this.state = {

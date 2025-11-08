@@ -151,3 +151,26 @@ export interface MysteryState {
   choices: string[];
   isEnd: boolean;
 }
+
+// FIX: Add Multiplayer type definitions.
+export interface MultiplayerPlayer {
+    username: string;
+    score: number;
+    answeredThisRound: boolean;
+}
+
+export type MultiplayerGameStatus = 'lobby' | 'in_progress' | 'round_over' | 'finished';
+
+export interface MultiplayerGameState {
+    gameId: string;
+    host: string;
+    players: MultiplayerPlayer[];
+    status: MultiplayerGameStatus;
+    questions: QuizQuestion[];
+    currentQuestionIndex: number;
+    roundEndTime: number;
+    isPublic: boolean;
+    grade: Grade;
+    topic: string;
+    quizLength: number;
+}

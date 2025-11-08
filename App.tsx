@@ -122,6 +122,7 @@ const App: React.FC = () => {
     const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
     const [mysteryState, setMysteryState] = useState<MysteryState | null>(null);
     const generationController = useRef<AbortController | null>(null);
+    
 
     // --- Effects ---
     useEffect(() => {
@@ -178,8 +179,8 @@ const App: React.FC = () => {
     };
 
     // --- Generic API Call Wrapper ---
-    const handleApiCall = async <T,>(apiCall: () => Promise<T>, onSuccess: (result: T) => void) => {
-        setIsLoading(true);
+    const handleApiCall = async <T,>(apiCall: () => Promise<T>, onSuccess: (result: T) => void, customLoading = true) => {
+        if (customLoading) setIsLoading(true);
         setError(null);
         try {
             const result = await apiCall();
@@ -187,13 +188,11 @@ const App: React.FC = () => {
         } catch (err) {
             handleGlobalError(err);
         } finally {
-            setIsLoading(false);
+            if (customLoading) setIsLoading(false);
         }
     };
     
     // --- Auth & Setup Handlers ---
-    // FIX: Re-implement handleLogin to allow local error handling in the LoginScreen component.
-    // It now throws an error on failure, which is caught by the component's try-catch block.
     const handleLogin = async (username: string, password: string) => {
         const user = await login(username, password);
         localStorage.setItem('curiosity_current_user', JSON.stringify(user));
@@ -201,7 +200,6 @@ const App: React.FC = () => {
         setGameState('home');
     };
     
-    // FIX: Re-implement handleRegister to allow local error handling in the RegistrationScreen component.
     const handleRegister = async (username: string, password: string) => {
         const user = await register(username, password);
         localStorage.setItem('curiosity_current_user', JSON.stringify(user));
@@ -222,7 +220,7 @@ const App: React.FC = () => {
         const directFeatures: Record<string, string> = {
             'science_lens': 'science_lens', 'science_fair_buddy': 'science_fair_buddy',
             'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION', 'science_game': 'science_game_selection',
-            'profile': 'profile', 'leaderboard': 'leaderboard', 'admin_panel': 'admin_panel'
+            'profile': 'profile', 'leaderboard': 'leaderboard', 'admin_panel': 'admin_panel',
         };
         if (directFeatures[mode]) {
             setGameState(directFeatures[mode]);
@@ -374,6 +372,7 @@ const App: React.FC = () => {
             case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={() => setGameState('science_game_selection')} />;
             case 'game_tic_tac_toe': return <TicTacToeGame onEnd={() => setGameState('science_game_selection')} />;
             case 'mystery_of_science': return <MysteryOfScienceGame mystery={mysteryState!} onChoiceSelect={handleMysteryChoice} isLoading={isLoading} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
+            
             default: return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={() => setGameState('profile')} onShowLeaderboard={() => setGameState('leaderboard')} onGoToAdminPanel={() => setGameState('admin_panel')} />;
         }
     };

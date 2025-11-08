@@ -4,31 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Book of Curiosity</title>
+
+  <!-- ✅ Google Search Console Verification -->
+  <meta name="google-site-verification" content="6uT2sOd6biRClhehMPR-4HotzQP_P3vIODzIXRUK92w" />
+
+  <!-- ✅ Basic SEO -->
+  <meta name="description" content="The Book of Curiosity — a space to explore knowledge, creativity, and imagination through thoughtful design and AI-powered content." />
+  <meta name="keywords" content="The Book of Curiosity, AI Studio, knowledge, creativity, learning, technology, Vercel website" />
+  <meta name="author" content="The Book of Curiosity Team" />
+
+  <!-- ✅ Open Graph (for social media sharing) -->
+  <meta property="og:title" content="The Book of Curiosity" />
+  <meta property="og:description" content="Explore knowledge, creativity, and technology — all in one digital book of curiosity." />
+  <meta property="og:image" content="https://your-vercel-domain.com/icon.svg" />
+  <meta property="og:url" content="https://your-vercel-domain.com" />
+  <meta property="og:type" content="website" />
+
+  <!-- ✅ Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="The Book of Curiosity" />
+  <meta name="twitter:description" content="Dive into the digital book of creativity and exploration." />
+  <meta name="twitter:image" content="https://your-vercel-domain.com/icon.svg" />
+
+  <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
-    /* Custom scrollbar for a better look */
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1e293b; /* slate-800 */
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #475569; /* slate-600 */
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #64748b; /* slate-500 */
-    }
-    /* Simple fade-in animation */
     @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-in {
-        animation: fadeIn 0.5s ease-out forwards;
+      animation: fadeIn 0.5s ease-out forwards;
     }
+
     /* Styles for printing */
     @media print {
       body {
@@ -44,60 +56,62 @@
         padding: 0 !important;
         margin: 0 !important;
       }
-       .worksheet-question, .worksheet-notes {
+      .worksheet-question, .worksheet-notes {
         page-break-inside: avoid;
       }
     }
+
     .bg-grid-pattern {
-        background-image: linear-gradient(rgba(30, 41, 59, 0.2) 1px, transparent 1px), linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
-        background-size: 2rem 2rem;
+      background-image: linear-gradient(rgba(30, 41, 59, 0.2) 1px, transparent 1px),
+                        linear-gradient(to right, rgba(30, 41, 59, 0.2) 1px, transparent 1px);
+      background-size: 2rem 2rem;
     }
   </style>
 
-  <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-BG53K7FPV0"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BG53K7FPV0"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-BG53K7FPV0');
+  </script>
 
-  gtag('config', 'G-BG53K7FPV0');
-</script>
-
-  <!-- This import map is critical for telling the browser where to find the code libraries -->
+  <!-- Import map for AI Studio and dependencies -->
   <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^18.3.1",
-    "react/": "https://aistudiocdn.com/react@^18.3.1/",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^18.3.1/",
-    "react/jsx-runtime": "https://aistudiocdn.com/react@^18.3.1/jsx-runtime",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0",
-    "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.3.24",
-    "@vercel/kv": "https://aistudiocdn.com/@vercel/kv@^3.0.0",
-    "bcryptjs": "https://aistudiocdn.com/bcryptjs@^3.0.2",
-    "redis": "https://aistudiocdn.com/redis@^5.8.3",
-    "node-fetch": "https://aistudiocdn.com/node-fetch@^3.3.2"
+  {
+    "imports": {
+      "react": "https://aistudiocdn.com/react@^18.3.1",
+      "react/": "https://aistudiocdn.com/react@^18.3.1/",
+      "react-dom/": "https://aistudiocdn.com/react-dom@^18.3.1/",
+      "react/jsx-runtime": "https://aistudiocdn.com/react@^18.3.1/jsx-runtime",
+      "@google/genai": "https://aistudiocdn.com/@google/genai@^0.14.0",
+      "@vercel/node": "https://aistudiocdn.com/@vercel/node@^5.3.24",
+      "@vercel/kv": "https://aistudiocdn.com/@vercel/kv@^3.0.0",
+      "bcryptjs": "https://aistudiocdn.com/bcryptjs@^3.0.2",
+      "redis": "https://aistudiocdn.com/redis@^5.8.3",
+      "node-fetch": "https://aistudiocdn.com/node-fetch@^3.3.2"
+    }
   }
-}
-</script>
-
+  </script>
 </head>
+
 <body class="bg-slate-950">
   <noscript>You need to enable JavaScript to run this app.</noscript>
+
   <div id="root">
-      <!-- Fallback loading screen in case of slow script loading or errors -->
-      <div class="flex flex-col items-center justify-center min-h-screen text-center text-slate-100 p-4">
-        <svg class="animate-spin h-12 w-12 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <h1 class="text-3xl font-bold mt-6">Loading The Book of Curiosity...</h1>
-        <p class="text-slate-400 mt-2">If this message persists, a script error may have occurred.</p>
+    <!-- Fallback loading screen -->
+    <div class="flex flex-col items-center justify-center min-h-screen text-center text-slate-100 p-4">
+      <svg class="animate-spin h-12 w-12 text-cyan-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <h1 class="text-3xl font-bold mt-6">Loading The Book of Curiosity...</h1>
+      <p class="text-slate-400 mt-2">If this message persists, a script error may have occurred.</p>
     </div>
   </div>
 
-  <!-- Main application script -->
+  <!-- Main App -->
   <script type="module" src="index.tsx"></script>
 </body>
 </html>
