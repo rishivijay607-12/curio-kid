@@ -1,7 +1,8 @@
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MysteryState } from './types.ts';
+import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MysteryState, MultiplayerGameState } from './types.ts';
 
 // Service Imports
 import {
@@ -24,6 +25,7 @@ import {
     continueMystery,
 } from './services/geminiService.ts';
 import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
+import * as multiplayerService from './services/multiplayerService.ts';
 
 // Component Imports
 import GradeSelector from './components/GradeSelector.tsx';
@@ -70,6 +72,11 @@ import LabToolMatchGame from './components/LabToolMatchGame.tsx';
 import AnatomyQuizGame from './components/AnatomyQuizGame.tsx';
 import TicTacToeGame from './components/TicTacToeGame.tsx';
 import MysteryOfScienceGame from './components/MysteryOfScienceGame.tsx';
+import MultiplayerHomeScreen from './components/MultiplayerHomeScreen.tsx';
+import MultiplayerLobby from './components/MultiplayerLobby.tsx';
+import MultiplayerQuiz from './components/MultiplayerQuiz.tsx';
+import MultiplayerRoundLeaderboard from './components/MultiplayerRoundLeaderboard.tsx';
+import MultiplayerFinalScore from './components/MultiplayerFinalScore.tsx';
 
 // --- App Logo Icon ---
 const IconLogo: React.FC = () => (
@@ -121,7 +128,9 @@ const App: React.FC = () => {
     const [scienceFairIdeas, setScienceFairIdeas] = useState<ScienceFairIdea[]>([]);
     const [selectedScienceFairIdea, setSelectedScienceFairIdea] = useState<ScienceFairIdea | null>(null);
     const [mysteryState, setMysteryState] = useState<MysteryState | null>(null);
+    const [multiplayerGameData, setMultiplayerGameData] = useState<MultiplayerGameState | null>(null);
     const generationController = useRef<AbortController | null>(null);
+    const multiplayerPollingInterval = useRef<number | null>(null);
     
 
     // --- Effects ---
@@ -164,6 +173,7 @@ const App: React.FC = () => {
         setSelectedScientist(null);
         setUserProfile(null);
         setMysteryState(null);
+        setMultiplayerGameData(null);
     }, []);
 
     const resetToHome = useCallback(() => {
@@ -221,6 +231,7 @@ const App: React.FC = () => {
             'science_lens': 'science_lens', 'science_fair_buddy': 'science_fair_buddy',
             'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION', 'science_game': 'science_game_selection',
             'profile': 'profile', 'leaderboard': 'leaderboard', 'admin_panel': 'admin_panel',
+            'multiplayer_quiz': 'MULTIPLAYER_HOME',
         };
         if (directFeatures[mode]) {
             setGameState(directFeatures[mode]);
@@ -281,6 +292,33 @@ const App: React.FC = () => {
         }
     };
     const handleCancelGeneration = () => { generationController.current?.abort(); setIsLoading(false); };
+
+    // --- Multiplayer Handlers ---
+    const handleCreateGame = async (isPublic: boolean) => {
+        const data = await multiplayerService.createGame(currentUser!.username, isPublic);
+        setMultiplayerGameData(data);
+    };
+    const handleJoinGame = async (gameId: string) => {
+        const data = await multiplayerService.joinGame(gameId, currentUser!.username);
+        setMultiplayerGameData(data);
+    };
+    const handleStartGame = async (gameId: string, grade: Grade, topic: string, quizLength: number) => {
+        const data = await multiplayerService.startGame(gameId, grade, topic, quizLength);
+        setMultiplayerGameData(data);
+    };
+    const handleSubmitAnswer = async (gameId: string, questionIndex: number, answer: string, timeTaken: number) => {
+        await multiplayerService.submitAnswer(gameId, currentUser!.username, questionIndex, answer, timeTaken);
+        // Optimistically update local state
+        setMultiplayerGameData(prev => {
+            if (!prev) return null;
+            const newPlayers = prev.players.map(p => p.username === currentUser!.username ? { ...p, answeredThisRound: true } : p);
+            return { ...prev, players: newPlayers };
+        });
+    };
+    const handleNextQuestion = async (gameId: string) => {
+        const data = await multiplayerService.nextQuestion(gameId);
+        setMultiplayerGameData(data);
+    };
     
     // --- Data Fetching Effects ---
     useEffect(() => {
@@ -302,6 +340,38 @@ const App: React.FC = () => {
             handleApiCall(() => generateMysteryStart(topic, grade), (data) => { setMysteryState(data); setGameState('mystery_of_science'); });
         }
     }, [gameState, topic, grade, difficulty, quizLength, language, appMode, selectedScientist, currentUser, userProfile]);
+
+    // --- Multiplayer Polling & State Sync ---
+    useEffect(() => {
+        const pollGameState = async () => {
+            if (!multiplayerGameData?.gameId) return;
+            try {
+                const updatedState = await multiplayerService.getGameState(multiplayerGameData.gameId);
+                if (updatedState) setMultiplayerGameData(updatedState);
+                else handleGlobalError(new multiplayerService.ApiError("The game session could not be found. It may have expired.", 404));
+            } catch (err) { console.error("Polling error:", err); }
+        };
+
+        if (multiplayerGameData) {
+            let interval = 4000;
+            if (multiplayerGameData.status === 'in_progress' || multiplayerGameData.status === 'round_over') interval = 2000;
+            if (multiplayerGameData.status !== 'finished') {
+                multiplayerPollingInterval.current = window.setInterval(pollGameState, interval);
+            }
+        }
+        return () => { if (multiplayerPollingInterval.current) clearInterval(multiplayerPollingInterval.current); };
+    }, [multiplayerGameData?.gameId]);
+
+    useEffect(() => {
+        if (!multiplayerGameData) return;
+        switch (multiplayerGameData.status) {
+            case 'lobby': setGameState('MULTIPLAYER_LOBBY'); break;
+            case 'in_progress': setGameState('MULTIPLAYER_QUIZ'); break;
+            case 'round_over': setGameState('MULTIPLAYER_ROUND_OVER'); break;
+            case 'finished': setGameState('MULTIPLAYER_FINISHED'); break;
+        }
+    }, [multiplayerGameData?.status]);
+
 
     const handleGenerativeText = (input: string) => handleApiCall(() => generateTextForMode(appMode, input, grade, topic), (data) => { setGenerativeTextResult(data); });
     const handleScienceLens = (img: string, mime: string, p: string) => handleApiCall(() => explainImageWithText(img, mime, p), setScienceLensResult);
@@ -372,6 +442,13 @@ const App: React.FC = () => {
             case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={() => setGameState('science_game_selection')} />;
             case 'game_tic_tac_toe': return <TicTacToeGame onEnd={() => setGameState('science_game_selection')} />;
             case 'mystery_of_science': return <MysteryOfScienceGame mystery={mysteryState!} onChoiceSelect={handleMysteryChoice} isLoading={isLoading} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
+
+            // Multiplayer states
+            case 'MULTIPLAYER_HOME': return <MultiplayerHomeScreen onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />;
+            case 'MULTIPLAYER_LOBBY': return <MultiplayerLobby gameData={multiplayerGameData!} currentUser={currentUser.username} onStartGame={handleStartGame} />;
+            case 'MULTIPLAYER_QUIZ': return <MultiplayerQuiz gameData={multiplayerGameData!} currentUser={currentUser.username} onSubmitAnswer={handleSubmitAnswer} />;
+            case 'MULTIPLAYER_ROUND_OVER': return <MultiplayerRoundLeaderboard gameData={multiplayerGameData!} currentUser={currentUser.username} onNextQuestion={handleNextQuestion} />;
+            case 'MULTIPLAYER_FINISHED': return <MultiplayerFinalScore gameData={multiplayerGameData!} onExit={resetToHome} />;
             
             default: return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={() => setGameState('profile')} onShowLeaderboard={() => setGameState('leaderboard')} onGoToAdminPanel={() => setGameState('admin_panel')} />;
         }

@@ -34,7 +34,8 @@ export type AppMode =
   | 'game_lab_tool_match'
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
-  | 'mystery_of_science'; // New mode
+  | 'mystery_of_science'
+  | 'multiplayer_quiz'; // New mode for multiplayer
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -152,7 +153,7 @@ export interface MysteryState {
   isEnd: boolean;
 }
 
-// FIX: Add Multiplayer type definitions.
+// Multiplayer type definitions.
 export interface MultiplayerPlayer {
     username: string;
     score: number;
