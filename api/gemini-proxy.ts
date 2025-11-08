@@ -69,7 +69,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
             case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
             case 'generateSudokuPuzzle': result = await generateSudokuPuzzle(ai, params); break;
-            // FIX: Add cases for video generation.
             case 'generateEducationalVideo': result = await generateEducationalVideo(ai, params); break;
             case 'checkVideoOperationStatus': result = await checkVideoOperationStatus(ai, params); break;
             case 'generateMysteryStart': result = await generateMysteryStart(ai, params); break;
@@ -439,7 +438,6 @@ Provide the response in JSON format with three fields:
     return JSON.parse(response.text) as SudokuPuzzle;
 };
 
-// FIX: Add functions for video generation.
 const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
     const prompt = `Create a short, engaging educational video for a Grade ${grade} student.
 Topic: "${topic}".
@@ -448,7 +446,7 @@ It should be visually appealing, simple to understand, and scientifically accura
 Start with a catchy title screen. Use clear narration and graphics.`;
 
     const operation = await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001',
+        model: 'veo-3.1-fast-generate-preview',
         prompt: prompt,
         config: {
             numberOfVideos: 1

@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MysteryState, MultiplayerGameState } from './types.ts';
 
@@ -77,6 +78,8 @@ import MultiplayerLobby from './components/MultiplayerLobby.tsx';
 import MultiplayerQuiz from './components/MultiplayerQuiz.tsx';
 import MultiplayerRoundLeaderboard from './components/MultiplayerRoundLeaderboard.tsx';
 import MultiplayerFinalScore from './components/MultiplayerFinalScore.tsx';
+import DurationSelector from './components/DurationSelector.tsx';
+import VideoGenerator from './components/VideoGenerator.tsx';
 
 // --- App Logo Icon ---
 const IconLogo: React.FC = () => (
@@ -109,6 +112,7 @@ const App: React.FC = () => {
     const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
     const [quizLength, setQuizLength] = useState<number | null>(null);
     const [timerDuration, setTimerDuration] = useState<number | null>(null);
+    const [videoDuration, setVideoDuration] = useState<number | null>(null);
     const [language, setLanguage] = useState<Language | null>(null);
     const [selectedScientist, setSelectedScientist] = useState<Scientist | null>(null);
     const [userScienceFairTopic, setUserScienceFairTopic] = useState<string>('');
@@ -158,6 +162,7 @@ const App: React.FC = () => {
         setDifficulty(null);
         setQuizLength(null);
         setTimerDuration(null);
+        setVideoDuration(null);
         setLanguage(null);
         setError(null);
         setErrorDetails(null);
@@ -248,7 +253,8 @@ const App: React.FC = () => {
             'flashcards': 'GENERATING_FLASHCARDS', 'doubt_solver': 'LANGUAGE_SELECTION', 'voice_tutor': 'LANGUAGE_SELECTION',
             'concept_deep_dive': 'GENERATIVE_TEXT_INPUT', 'virtual_lab': 'GENERATIVE_TEXT_INPUT',
             'real_world_links': 'GENERATIVE_TEXT_INPUT', 'story_weaver': 'GENERATIVE_TEXT_INPUT',
-            'what_if': 'GENERATIVE_TEXT_INPUT', 'mystery_of_science': 'GENERATING_MYSTERY'
+            'what_if': 'GENERATIVE_TEXT_INPUT', 'mystery_of_science': 'GENERATING_MYSTERY',
+            'educational_video': 'DURATION_SELECTION',
         };
         if (nextStateMap[appMode]) setGameState(nextStateMap[appMode]);
     };
@@ -258,6 +264,7 @@ const App: React.FC = () => {
     };
     const handleQuestionCountSelect = (c: number) => { setQuizLength(c); setGameState('TIMER_SELECTION'); };
     const handleTimerSelect = (d: number) => { setTimerDuration(d); setGameState('QUIZ'); };
+    const handleDurationSelect = (d: number) => { setVideoDuration(d); setGameState('GENERATING_VIDEO'); };
     const handleWorksheetCountSelect = (c: number) => { setQuizLength(c); setGameState('GENERATING_WORKSHEET'); };
     const handleLanguageSelect = (l: Language) => { setLanguage(l);
         if (appMode === 'doubt_solver') setGameState('GENERATING_GREETING');
@@ -442,6 +449,10 @@ const App: React.FC = () => {
             case 'game_anatomy_quiz': return <AnatomyQuizGame onEnd={() => setGameState('science_game_selection')} />;
             case 'game_tic_tac_toe': return <TicTacToeGame onEnd={() => setGameState('science_game_selection')} />;
             case 'mystery_of_science': return <MysteryOfScienceGame mystery={mysteryState!} onChoiceSelect={handleMysteryChoice} isLoading={isLoading} onRestart={() => setGameState('TOPIC_SELECTION')} grade={grade!} topic={topic!} />;
+
+            // Video states
+            case 'DURATION_SELECTION': return <DurationSelector onDurationSelect={handleDurationSelect} />;
+            case 'GENERATING_VIDEO': return <VideoGenerator grade={grade!} topic={topic!} duration={videoDuration!} onRestart={() => setGameState('TOPIC_SELECTION')} />;
 
             // Multiplayer states
             case 'MULTIPLAYER_HOME': return <MultiplayerHomeScreen onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />;

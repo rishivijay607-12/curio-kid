@@ -35,6 +35,7 @@ export type AppMode =
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
   | 'mystery_of_science'
+  | 'educational_video'
   | 'multiplayer_quiz'; // New mode for multiplayer
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';

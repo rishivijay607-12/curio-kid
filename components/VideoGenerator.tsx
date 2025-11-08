@@ -68,6 +68,7 @@ const VideoGenerator: React.FC<VideoGeneratorProps> = ({ grade, topic, duration,
 
         // Poll every 10 seconds, as recommended in the documentation.
         pollingIntervalRef.current = window.setInterval(pollStatus, 10000);
+        pollStatus(); // check immediately
 
         return () => {
             if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);

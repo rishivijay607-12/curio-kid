@@ -106,7 +106,6 @@ export const generateSudokuPuzzle = (difficulty: Difficulty): Promise<SudokuPuzz
     return callApi('generateSudokuPuzzle', { difficulty });
 };
 
-// FIX: Add generateEducationalVideo and checkVideoOperationStatus to call the API proxy.
 export const generateEducationalVideo = (topic: string, grade: Grade, duration: number): Promise<{ operationId: string }> => {
     return callApi('generateEducationalVideo', { topic, grade, duration });
 };
