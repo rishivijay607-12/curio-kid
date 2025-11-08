@@ -1,3 +1,4 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import { createClient, RedisClientType } from 'redis';
@@ -190,7 +191,6 @@ const startGame = async (gameId: string, grade: Grade, topic: string, quizLength
 
     gameState.questions = questions;
     gameState.grade = grade;
-    gameState.topic = topic;
     gameState.quizLength = quizLength;
     gameState.status = 'in_progress';
     gameState.currentQuestionIndex = 0;
@@ -221,8 +221,7 @@ const submitAnswer = async (gameId: string, username: string, questionIndex: num
 
     player.answeredThisRound = true;
     if (answer === question.answer) {
-        const timeRemaining = gameState.roundEndTime - (Date.now() - timeTaken);
-        const scoreForRound = 50 + Math.max(0, Math.floor((timeRemaining / QUIZ_ROUND_DURATION_MS) * 50));
+        const scoreForRound = 10;
         player.score += scoreForRound;
     }
 
