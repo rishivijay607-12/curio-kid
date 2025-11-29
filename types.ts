@@ -1,3 +1,4 @@
+
 export type Grade = 6 | 7 | 8 | 9 | 10;
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -35,7 +36,6 @@ export type AppMode =
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
   | 'mystery_of_science'
-  | 'educational_video'
   | 'multiplayer_quiz'; // New mode for multiplayer
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';

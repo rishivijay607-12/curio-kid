@@ -1,9 +1,8 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold, Type } from '@google/genai';
 import { createClient, RedisClientType } from 'redis';
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle, MysteryState } from '../types.ts';
-
-const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 let redisClient: RedisClientType | null = null;
 
@@ -69,10 +68,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'analyzeGenerationFailure': result = await analyzeGenerationFailure(ai, params); break;
             case 'generateScienceRiddle': result = await generateScienceRiddle(ai); break;
             case 'generateSudokuPuzzle': result = await generateSudokuPuzzle(ai, params); break;
-            case 'generateEducationalVideo': result = await generateEducationalVideo(ai, params); break;
-            case 'checkVideoOperationStatus': result = await checkVideoOperationStatus(ai, params); break;
             case 'generateMysteryStart': result = await generateMysteryStart(ai, params); break;
             case 'continueMystery': result = await continueMystery(ai, params); break;
+            case 'generateEducationalVideo': result = await generateEducationalVideo(ai, params); break;
+            case 'checkVideoOperationStatus': result = await checkVideoOperationStatus(ai, params); break;
             default: return res.status(400).json({ error: 'Invalid action specified.' });
         }
         return res.status(200).json(result);
@@ -438,59 +437,6 @@ Provide the response in JSON format with three fields:
     return JSON.parse(response.text) as SudokuPuzzle;
 };
 
-const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
-    const prompt = `Create a short, engaging educational video for a Grade ${grade} student.
-Topic: "${topic}".
-The video should be approximately ${duration} seconds long.
-It should be visually appealing, simple to understand, and scientifically accurate for the grade level.
-Start with a catchy title screen. Use clear narration and graphics.`;
-
-    const operation = await ai.models.generateVideos({
-        model: 'veo-3.1-fast-generate-preview',
-        prompt: prompt,
-        config: {
-            numberOfVideos: 1
-        }
-    });
-    
-    const operationId = generateUniqueId();
-    const redis = await getRedisClient();
-    // Store the operation object, which is needed for polling, with a 1-hour TTL.
-    await redis.set(`video_op:${operationId}`, JSON.stringify(operation), { 'EX': 3600 });
-    
-    return { operationId };
-};
-
-const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string; videoUrl?: string }> => {
-    if (!operationId) {
-        throw new Error("operationId is required.");
-    }
-
-    const redis = await getRedisClient();
-    const storedOperationJson = await redis.get(`video_op:${operationId}`);
-    if (!storedOperationJson) {
-        return { status: 'expired' }; // Operation not found or expired
-    }
-    
-    let operation = JSON.parse(storedOperationJson);
-    
-    operation = await ai.operations.getVideosOperation({ operation });
-
-    // Update the operation in Redis for the next poll
-    await redis.set(`video_op:${operationId}`, JSON.stringify(operation), { 'EX': 3600 });
-
-    if (operation.done) {
-        if (operation.response?.generatedVideos?.[0]?.video?.uri) {
-            return { status: 'complete', videoUrl: operation.response.generatedVideos[0].video.uri };
-        } else {
-            console.error("Video operation done but no video URI found:", operation);
-            return { status: 'failed' };
-        }
-    } else {
-        return { status: 'in-progress' };
-    }
-};
-
 const mysterySchema = {
     type: Type.OBJECT,
     properties: {
@@ -535,4 +481,43 @@ const continueMystery = async (ai: GoogleGenAI, { topic, grade, currentStory, ch
         },
     });
     return JSON.parse(response.text) as MysteryState;
+};
+
+const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
+    const prompt = `Create a short educational video for Grade ${grade} students about "${topic}". The video should be engaging, visually clear, and approximately ${duration} seconds long.`;
+    
+    // We initiate the video generation operation.
+    // The SDK's generateVideos returns an Operation object which we can poll.
+    // We'll return the operation name (ID) to the client so the client can poll status.
+    const operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: prompt,
+        config: {
+             aspectRatio: '16:9',
+             resolution: '720p',
+        }
+    });
+
+    return { operationId: operation.name };
+};
+
+const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string, videoUrl?: string, error?: string }> => {
+    // We check the status of the operation using its name.
+    const operation = await ai.operations.getVideosOperation({ name: operationId });
+    
+    if (operation.done) {
+        if (operation.error) {
+             return { status: 'failed', error: operation.error.message };
+        }
+        
+        // Extract the video URI from the completed operation.
+        const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
+        if (videoUri) {
+            return { status: 'complete', videoUrl: videoUri };
+        } else {
+             return { status: 'failed', error: 'No video URI returned in response.' };
+        }
+    }
+    
+    return { status: 'in-progress' };
 };

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from '@google/genai';
 // FIX: Import SudokuPuzzle type.
 import type { QuizQuestion, Grade, Difficulty, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, Scientist, Flashcard, ScienceRiddle, SudokuPuzzle, MysteryState } from '../types.ts';
@@ -106,20 +107,20 @@ export const generateSudokuPuzzle = (difficulty: Difficulty): Promise<SudokuPuzz
     return callApi('generateSudokuPuzzle', { difficulty });
 };
 
-export const generateEducationalVideo = (topic: string, grade: Grade, duration: number): Promise<{ operationId: string }> => {
-    return callApi('generateEducationalVideo', { topic, grade, duration });
-};
-
-export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired'; videoUrl?: string }> => {
-    return callApi('checkVideoOperationStatus', { operationId });
-};
-
 export const generateMysteryStart = (topic: string, grade: Grade): Promise<MysteryState> => {
     return callApi('generateMysteryStart', { topic, grade });
 };
 
 export const continueMystery = (topic: string, grade: Grade, currentStory: string, choice: string): Promise<MysteryState> => {
     return callApi('continueMystery', { topic, grade, currentStory, choice });
+};
+
+export const generateEducationalVideo = (topic: string, grade: Grade, duration: number): Promise<{ operationId: string }> => {
+    return callApi('generateEducationalVideo', { topic, grade, duration });
+};
+
+export const checkVideoOperationStatus = (operationId: string): Promise<{ status: 'in-progress' | 'complete' | 'failed' | 'expired'; videoUrl?: string; error?: string }> => {
+    return callApi('checkVideoOperationStatus', { operationId });
 };
 
 

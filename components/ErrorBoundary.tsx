@@ -1,4 +1,5 @@
-import React, { ErrorInfo, ReactNode } from 'react';
+
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -9,12 +10,11 @@ interface State {
   error?: Error;
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
-  // FIX: Use a class property to initialize state. This is a common and robust pattern in modern React with TypeScript and avoids potential issues with `this` context in constructors that can occur with some build configurations. This resolves errors where `this.props` and `this.state` are not correctly recognized.
-  state: State = {
-    hasError: false,
-    error: undefined,
-  };
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
