@@ -1,9 +1,4 @@
 
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Grade, Difficulty, QuizQuestion, ChatMessage, Language, NoteSection, AppMode, GenerativeTextResult, ScienceFairIdea, ScienceFairPlanStep, Scientist, User, UserProfile, Flashcard, MysteryState, MultiplayerGameState } from './types.ts';
 
@@ -27,7 +22,7 @@ import {
     generateMysteryStart,
     continueMystery,
 } from './services/geminiService.ts';
-import { login, register, getCurrentUser, logout, addQuizScore, getProfile } from './services/userService.ts';
+import { login, register, getCurrentUser, logout, addQuizScore, getProfile, logActivity } from './services/userService.ts';
 import * as multiplayerService from './services/multiplayerService.ts';
 
 // Component Imports
@@ -229,6 +224,9 @@ const App: React.FC = () => {
 
     // --- Navigation Handlers ---
     const handleStartFeature = (mode: AppMode) => {
+        if (currentUser) {
+            logActivity(currentUser.username, 'Started Feature', mode);
+        }
         setAppMode(mode);
         const directFeatures: Record<string, string> = {
             'science_lens': 'science_lens', 'science_fair_buddy': 'science_fair_buddy',
@@ -243,9 +241,20 @@ const App: React.FC = () => {
         }
     };
     
-    const handleGameSelect = (gameMode: AppMode) => { setAppMode(gameMode); setGameState(gameMode); };
+    const handleGameSelect = (gameMode: AppMode) => { 
+        if (currentUser) {
+            logActivity(currentUser.username, 'Started Game', gameMode);
+        }
+        setAppMode(gameMode); 
+        setGameState(gameMode); 
+    };
     const handleGradeSelect = (g: Grade) => { setGrade(g); setGameState('TOPIC_SELECTION'); };
-    const handleTopicSelect = (t: string) => { setTopic(t);
+    
+    const handleTopicSelect = (t: string) => { 
+        setTopic(t);
+        if (currentUser && grade) {
+            logActivity(currentUser.username, 'Selected Topic', appMode, `Grade ${grade}: ${t}`);
+        }
         const nextStateMap: Record<string, string> = {
             'quiz': 'DIFFICULTY_SELECTION', 'worksheet': 'DIFFICULTY_SELECTION', 'notes': 'GENERATING_NOTES',
             'flashcards': 'GENERATING_FLASHCARDS', 'doubt_solver': 'LANGUAGE_SELECTION', 'voice_tutor': 'LANGUAGE_SELECTION',
@@ -271,7 +280,10 @@ const App: React.FC = () => {
     // --- Feature-Specific Handlers ---
     const handleQuizEnd = (score: number, actualLength: number) => {
         setLastScore(score); setLastQuizActualLength(actualLength);
-        if (currentUser) { addQuizScore(currentUser.username, score, actualLength).catch(console.error); }
+        if (currentUser) { 
+            addQuizScore(currentUser.username, score, actualLength).catch(console.error); 
+            logActivity(currentUser.username, 'Completed Quiz', 'quiz', `Score: ${score}/${actualLength}`);
+        }
         setGameState('SCORE');
     };
 

@@ -36,7 +36,7 @@ export type AppMode =
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
   | 'mystery_of_science'
-  | 'multiplayer_quiz'; // New mode for multiplayer
+  | 'multiplayer_quiz';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -85,7 +85,6 @@ export interface GenerativeTextResult {
   sources?: GroundingChunk[];
 }
 
-// FIX: Added the missing 'Flashcard' type definition.
 export interface Flashcard {
   term: string;
   definition: string;
@@ -138,7 +137,6 @@ export interface ScienceRiddle {
     answer: string;
 }
 
-// FIX: Add SudokuPuzzle type definition.
 export interface SudokuPuzzle {
     puzzle: number[][];
     solution: number[][];
@@ -147,7 +145,6 @@ export interface SudokuPuzzle {
 
 export type TicTacToeBoard = ( 'X' | 'O' | null )[];
 
-// New type for the Mystery game
 export interface MysteryState {
   story: string;
   choices: string[];
@@ -175,4 +172,12 @@ export interface MultiplayerGameState {
     grade: Grade;
     topic: string;
     quizLength: number;
+}
+
+export interface AnalyticsLog {
+    username: string;
+    action: string;
+    feature: string;
+    details?: string;
+    timestamp: string;
 }

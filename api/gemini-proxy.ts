@@ -483,41 +483,28 @@ const continueMystery = async (ai: GoogleGenAI, { topic, grade, currentStory, ch
     return JSON.parse(response.text) as MysteryState;
 };
 
-const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any): Promise<{ operationId: string }> => {
-    const prompt = `Create a short educational video for Grade ${grade} students about "${topic}". The video should be engaging, visually clear, and approximately ${duration} seconds long.`;
+const generateEducationalVideo = async (ai: GoogleGenAI, { topic, grade, duration }: any) => {
+    const prompt = `A ${duration}-second educational video about ${topic} designed for ${grade}th grade students. High quality, clear visuals.`;
     
-    // We initiate the video generation operation.
-    // The SDK's generateVideos returns an Operation object which we can poll.
-    // We'll return the operation name (ID) to the client so the client can poll status.
     const operation = await ai.models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
         prompt: prompt,
         config: {
-             aspectRatio: '16:9',
-             resolution: '720p',
+            numberOfVideos: 1,
+            resolution: '720p',
+            aspectRatio: '16:9'
         }
     });
-
     return { operationId: operation.name };
 };
 
-const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any): Promise<{ status: string, videoUrl?: string, error?: string }> => {
-    // We check the status of the operation using its name.
+const checkVideoOperationStatus = async (ai: GoogleGenAI, { operationId }: any) => {
     const operation = await ai.operations.getVideosOperation({ name: operationId });
-    
     if (operation.done) {
         if (operation.error) {
-             return { status: 'failed', error: operation.error.message };
+            return { status: 'failed', error: operation.error.message };
         }
-        
-        // Extract the video URI from the completed operation.
-        const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-        if (videoUri) {
-            return { status: 'complete', videoUrl: videoUri };
-        } else {
-             return { status: 'failed', error: 'No video URI returned in response.' };
-        }
+        return { status: 'complete', videoUrl: operation.response?.generatedVideos?.[0]?.video?.uri };
     }
-    
     return { status: 'in-progress' };
 };

@@ -2,7 +2,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, RedisClientType } from 'redis';
 import * as bcrypt from 'bcryptjs';
-import type { QuizScore, User, UserProfile } from '../types';
+import type { QuizScore, User, UserProfile, AnalyticsLog } from '../types';
 
 let redisClient: RedisClientType | null = null;
 
@@ -100,6 +100,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'getLeaderboard':
                 result = await getLeaderboard();
                 break;
+            case 'logActivity':
+                await logActivity(params.username, params.action, params.feature, params.details);
+                result = { success: true };
+                break;
             // Admin actions
             case 'getAllUsers':
                 await verifyAdmin(params.currentUser);
@@ -112,6 +116,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'getAllScores':
                 await verifyAdmin(params.currentUser);
                 result = await getAllScores();
+                break;
+            case 'getAnalyticsLogs':
+                await verifyAdmin(params.currentUser);
+                result = await getAnalyticsLogs();
                 break;
             case 'deleteUser':
                  await verifyAdmin(params.currentUser);
@@ -322,6 +330,22 @@ const getLeaderboard = async (): Promise<QuizScore[]> => {
     return leaderboard;
 };
 
+// --- Logging ---
+
+const logActivity = async (username: string, action: string, feature: string, details?: string) => {
+    const client = await getRedisClient();
+    const log: AnalyticsLog = {
+        username,
+        action,
+        feature,
+        details: details || '',
+        timestamp: new Date().toISOString()
+    };
+    // Push to the beginning of the list
+    await client.lPush('app:analytics', JSON.stringify(log));
+    // Trim the list to keep only the last 1000 records to manage storage space
+    await client.lTrim('app:analytics', 0, 999);
+};
 
 // --- Admin Functions (Server-Side) ---
 
@@ -375,6 +399,13 @@ const getAllScores = async (): Promise<QuizScore[]> => {
     
     const scoreJsonArray = await client.mGet(scoreKeys);
     return scoreJsonArray.filter(s => s).map(s => JSON.parse(s!));
+};
+
+const getAnalyticsLogs = async (): Promise<AnalyticsLog[]> => {
+    const client = await getRedisClient();
+    // Get all logs (capped at 1000 by logActivity)
+    const logs = await client.lRange('app:analytics', 0, -1);
+    return logs.map(l => JSON.parse(l));
 };
 
 const deleteUser = async (usernameToDelete: string): Promise<void> => {

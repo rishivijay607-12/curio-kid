@@ -1,4 +1,5 @@
-import type { QuizScore, User, UserProfile } from '../types';
+
+import type { QuizScore, User, UserProfile, AnalyticsLog } from '../types';
 
 // Custom error for client-side logic
 export class ApiError extends Error {
@@ -87,6 +88,13 @@ export const getLeaderboard = async (): Promise<QuizScore[]> => {
     return callUserApi('getLeaderboard');
 };
 
+// --- Logging Functions ---
+
+export const logActivity = async (username: string, action: string, feature: string, details?: string): Promise<void> => {
+    // Fire and forget to avoid blocking UI
+    callUserApi('logActivity', { username, action, feature, details }).catch(err => console.error("Logging failed:", err));
+};
+
 // --- Admin Functions ---
 
 const verifyAdminClient = () => {
@@ -110,6 +118,11 @@ export const getAllProfiles = async (): Promise<Record<string, UserProfile>> => 
 export const getAllScores = async (): Promise<QuizScore[]> => {
     const currentUser = verifyAdminClient();
     return callUserApi('getAllScores', { currentUser });
+};
+
+export const getAnalyticsLogs = async (): Promise<AnalyticsLog[]> => {
+    const currentUser = verifyAdminClient();
+    return callUserApi('getAnalyticsLogs', { currentUser });
 };
 
 export const deleteUser = async (usernameToDelete: string): Promise<void> => {
