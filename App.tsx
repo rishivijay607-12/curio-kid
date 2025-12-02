@@ -233,7 +233,7 @@ const App: React.FC = () => {
             'science_lens': 'science_lens', 'science_fair_buddy': 'science_fair_buddy',
             'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION', 'science_game': 'science_game_selection',
             'profile': 'profile', 'leaderboard': 'leaderboard', 'admin_panel': 'admin_panel',
-            'multiplayer_quiz': 'MULTIPLAYER_HOME', 'community_chat': 'COMMUNITY_CHAT',
+            'multiplayer_quiz': 'MULTIPLAYER_HOME',
         };
         if (directFeatures[mode]) {
             setGameState(directFeatures[mode]);
@@ -466,9 +466,6 @@ const App: React.FC = () => {
             case 'MULTIPLAYER_ROUND_OVER': return <MultiplayerRoundLeaderboard gameData={multiplayerGameData!} currentUser={currentUser.username} onNextQuestion={handleNextQuestion} />;
             case 'MULTIPLAYER_FINISHED': return <MultiplayerFinalScore gameData={multiplayerGameData!} onExit={resetToHome} />;
             
-            // Community Chat
-            case 'COMMUNITY_CHAT': return <CommunityChat username={currentUser.username} onExit={resetToHome} />;
-
             default: return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={() => setGameState('profile')} onShowLeaderboard={() => setGameState('leaderboard')} onGoToAdminPanel={() => setGameState('admin_panel')} />;
         }
     };
@@ -476,7 +473,7 @@ const App: React.FC = () => {
     const showHeader = !['login', 'register', 'initializing', 'error'].includes(gameState);
 
     return (
-        <div className="bg-slate-950 text-slate-100 min-h-screen font-sans bg-grid-pattern">
+        <div className="bg-slate-950 text-slate-100 min-h-screen font-sans bg-grid-pattern relative">
             {showHeader && (
                 <header className="p-4 flex justify-between items-center bg-slate-950/50 backdrop-blur-sm border-b border-slate-800 sticky top-0 z-10">
                     <div className="flex items-center gap-3">
@@ -499,6 +496,9 @@ const App: React.FC = () => {
             <main className="p-4 md:p-8 flex items-center justify-center">
                 {renderContent()}
             </main>
+            {currentUser && (
+                <CommunityChat username={currentUser.username} />
+            )}
         </div>
     );
 };
