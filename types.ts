@@ -36,7 +36,8 @@ export type AppMode =
   | 'game_anatomy_quiz'
   | 'game_tic_tac_toe'
   | 'mystery_of_science'
-  | 'multiplayer_quiz';
+  | 'multiplayer_quiz'
+  | 'community_chat';
 
 export type QuestionType = 'MCQ' | 'True/False' | 'Assertion/Reason' | 'Q&A';
 
@@ -180,4 +181,12 @@ export interface AnalyticsLog {
     feature: string;
     details?: string;
     timestamp: string;
+}
+
+export interface CommunityMessage {
+    id: string;
+    username: string;
+    text: string;
+    timestamp: string;
+    isSanitized: boolean;
 }

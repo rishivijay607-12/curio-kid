@@ -75,6 +75,7 @@ import MultiplayerLobby from './components/MultiplayerLobby.tsx';
 import MultiplayerQuiz from './components/MultiplayerQuiz.tsx';
 import MultiplayerRoundLeaderboard from './components/MultiplayerRoundLeaderboard.tsx';
 import MultiplayerFinalScore from './components/MultiplayerFinalScore.tsx';
+import CommunityChat from './components/CommunityChat.tsx';
 
 // --- App Logo Icon ---
 const IconLogo: React.FC = () => (
@@ -232,7 +233,7 @@ const App: React.FC = () => {
             'science_lens': 'science_lens', 'science_fair_buddy': 'science_fair_buddy',
             'chat_with_history': 'HISTORICAL_SCIENTIST_SELECTION', 'science_game': 'science_game_selection',
             'profile': 'profile', 'leaderboard': 'leaderboard', 'admin_panel': 'admin_panel',
-            'multiplayer_quiz': 'MULTIPLAYER_HOME',
+            'multiplayer_quiz': 'MULTIPLAYER_HOME', 'community_chat': 'COMMUNITY_CHAT',
         };
         if (directFeatures[mode]) {
             setGameState(directFeatures[mode]);
@@ -465,6 +466,9 @@ const App: React.FC = () => {
             case 'MULTIPLAYER_ROUND_OVER': return <MultiplayerRoundLeaderboard gameData={multiplayerGameData!} currentUser={currentUser.username} onNextQuestion={handleNextQuestion} />;
             case 'MULTIPLAYER_FINISHED': return <MultiplayerFinalScore gameData={multiplayerGameData!} onExit={resetToHome} />;
             
+            // Community Chat
+            case 'COMMUNITY_CHAT': return <CommunityChat username={currentUser.username} onExit={resetToHome} />;
+
             default: return <HomeScreen onStartFeature={handleStartFeature} user={currentUser} onShowProfile={() => setGameState('profile')} onShowLeaderboard={() => setGameState('leaderboard')} onGoToAdminPanel={() => setGameState('admin_panel')} />;
         }
     };
